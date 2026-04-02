@@ -360,6 +360,10 @@ function openChat(chatId, userId) {
     });
 }
 
+function loadChatMessages(chatId) {
+    renderMessages(chatId);
+}
+
 function renderMessages(chatId) {
     var messages = Storage.get('messages') || [];
     var messagesContainer = document.getElementById('chat-messages');
@@ -378,13 +382,34 @@ function renderMessages(chatId) {
     chatMessages.forEach(function(msg) {
         var isSent = msg.senderId === currentUser.id;
         html += '<div class="message ' + (isSent ? 'sent' : 'received') + '">';
-        html += '<div class="message-text">' + escapeHtml(msg.text) + '</div>';
+        
+        // Check for image
+        if (msg.fileData && msg.fileType && msg.fileType.startsWith('image/')) {
+            html += '<div class="message-media"><img src="' + msg.fileData + '" alt="Image" onclick="viewImage(this.src)"></div>';
+        }
+        // Check for audio
+        else if (msg.audioData) {
+            html += '<div class="message-audio"><audio controls src="' + msg.audioData + '"></audio></div>';
+        }
+        // Check for file
+        else if (msg.fileData) {
+            html += '<div class="message-file"><a href="' + msg.fileData + '" download="' + (msg.fileName || 'file') + '">' + escapeHtml(msg.text) + '</a></div>';
+        }
+        // Regular text
+        else {
+            html += '<div class="message-text">' + escapeHtml(msg.text) + '</div>';
+        }
+        
         html += '<div class="message-time">' + formatTime(msg.timestamp) + '</div>';
         html += '</div>';
     });
     
     messagesContainer.innerHTML = html;
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function viewImage(src) {
+    showModal('<div class="image-viewer"><img src="' + src + '" style="max-width:100%;max-height:80vh;"></div>');
 }
 
 function sendMessage(text) {
@@ -780,19 +805,171 @@ function deleteChat() {
 // File & Media Functions
 // ==========================================
 function attachFile() {
-    showToast('File attachment coming soon', 'info');
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.txt';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var messages = Storage.get('messages') || [];
+                var newMessage = {
+                    id: generateId(),
+                    chatId: activeChat.id,
+                    senderId: currentUser.id,
+                    text: '📎 ' + file.name,
+                    fileData: event.target.result,
+                    fileName: file.name,
+                    fileType: file.type,
+                    timestamp: new Date().toISOString(),
+                    read: false,
+                    status: 'sent',
+                    reactions: {},
+                    edited: false,
+                    starred: false,
+                    replyTo: null,
+                    forwarded: false
+                };
+                messages.push(newMessage);
+                Storage.set('messages', messages);
+                loadChatMessages(activeChat.id);
+                showToast('File sent!', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    input.click();
 }
 
 function showGifPicker() {
-    showToast('GIF picker coming soon', 'info');
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var gifs = ['😀', '😂', '🤣', '😍', '🥰', '😎', '🤔', '👍', '👏', '🎉', '❤️', '🔥', '💯', '✨', '🙌', '💪'];
+    var html = '<div class="gif-picker"><h3>Send GIF/Emoji</h3><div class="gif-grid">';
+    gifs.forEach(function(gif) {
+        html += '<div class="gif-item" onclick="sendGif(\'' + gif + '\')">' + gif + '</div>';
+    });
+    html += '</div></div>';
+    showModal(html);
+}
+
+function sendGif(emoji) {
+    var messages = Storage.get('messages') || [];
+    var newMessage = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        text: emoji,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    messages.push(newMessage);
+    Storage.set('messages', messages);
+    closeModal();
+    loadChatMessages(activeChat.id);
+    showToast('Sent!', 'success');
 }
 
 function toggleVoiceMessage() {
-    showToast('Voice messages coming soon', 'info');
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('Voice recording not supported', 'error');
+        return;
+    }
+    
+    showModal('<div class="voice-message"><h3>Voice Message</h3><p>Click to start recording</p><button class="btn btn-primary" id="record-btn" onclick="startRecording()"><i class="fas fa-microphone"></i> Record</button></div>');
+}
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) {
+            var mediaRecorder = new MediaRecorder(stream);
+            var audioChunks = [];
+            
+            mediaRecorder.ondataavailable = function(e) {
+                audioChunks.push(e.data);
+            };
+            
+            mediaRecorder.onstop = function() {
+                var audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var messages = Storage.get('messages') || [];
+                    var newMessage = {
+                        id: generateId(),
+                        chatId: activeChat.id,
+                        senderId: currentUser.id,
+                        text: '🎤 Voice message',
+                        audioData: event.target.result,
+                        timestamp: new Date().toISOString(),
+                        read: false,
+                        status: 'sent',
+                        reactions: {},
+                        edited: false,
+                        starred: false,
+                        replyTo: null,
+                        forwarded: false
+                    };
+                    messages.push(newMessage);
+                    Storage.set('messages', messages);
+                    closeModal();
+                    loadChatMessages(activeChat.id);
+                    showToast('Voice message sent!', 'success');
+                };
+                reader.readAsDataURL(audioBlob);
+                stream.getTracks().forEach(function(track) { track.stop(); });
+            };
+            
+            mediaRecorder.start();
+            document.getElementById('record-btn').innerHTML = '<i class="fas fa-stop"></i> Stop';
+            document.getElementById('record-btn').onclick = function() {
+                mediaRecorder.stop();
+            };
+        })
+        .catch(function(err) {
+            showToast('Microphone access denied', 'error');
+        });
 }
 
 function toggleEmojiPicker() {
-    showToast('Emoji picker coming soon', 'info');
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐'];
+    var html = '<div class="emoji-picker"><h3>Emoji</h3><div class="emoji-grid">';
+    emojis.forEach(function(emoji) {
+        html += '<div class="emoji-item" onclick="insertEmoji(\'' + emoji + '\')">' + emoji + '</div>';
+    });
+    html += '</div></div>';
+    showModal(html);
+}
+
+function insertEmoji(emoji) {
+    var input = document.getElementById('message-input');
+    input.value += emoji;
+    input.focus();
+    closeModal();
 }
 
 // ==========================================
@@ -1004,6 +1181,22 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('active');
             document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
             document.getElementById(this.dataset.tab + '-form').classList.add('active');
+        };
+    });
+    
+    // Toggle password visibility
+    document.querySelectorAll('.toggle-password').forEach(function(toggle) {
+        toggle.onclick = function() {
+            var input = this.previousElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.classList.remove('fa-eye');
+                this.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                this.classList.remove('fa-eye-slash');
+                this.classList.add('fa-eye');
+            }
         };
     });
     

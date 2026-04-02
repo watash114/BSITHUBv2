@@ -2729,3 +2729,101 @@ body {
         right: -100%;
     }
 }
+
+/* Message Media */
+.message-media img {
+    max-width: 250px;
+    max-height: 300px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.message-audio audio {
+    width: 200px;
+    height: 40px;
+}
+
+.message-file a {
+    color: var(--primary);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.message-file a:hover {
+    text-decoration: underline;
+}
+
+/* Emoji Picker */
+.emoji-picker {
+    width: 300px;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.emoji-item {
+    font-size: 24px;
+    text-align: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.emoji-item:hover {
+    background: var(--bg-secondary);
+}
+
+/* GIF Picker */
+.gif-picker {
+    width: 300px;
+}
+
+.gif-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.gif-item {
+    font-size: 32px;
+    text-align: center;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.gif-item:hover {
+    background: var(--bg-secondary);
+}
+
+/* Image Viewer */
+.image-viewer {
+    text-align: center;
+}
+
+.image-viewer img {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 8px;
+}
+
+/* Voice Message */
+.voice-message {
+    text-align: center;
+}
+
+.voice-message button {
+    font-size: 18px;
+    padding: 15px 30px;
+}
