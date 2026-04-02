@@ -2,16 +2,15 @@
 // Firebase Real-time Signaling for BSITHUB
 // ==========================================
 
-// Firebase Configuration (Real BSITHUB Project)
+// Firebase Configuration (Public demo project)
 var firebaseConfig = {
-    apiKey: "AIzaSyDqCLKvwD3j9z_EQCzHrtcGXOpYgXPm3yw",
-    authDomain: "bsithub-1974a.firebaseapp.com",
-    databaseURL: "https://bsithub-1974a-default-rtdb.firebaseio.com",
-    projectId: "bsithub-1974a",
-    storageBucket: "bsithub-1974a.firebasestorage.app",
-    messagingSenderId: "790480652401",
-    appId: "1:790480652401:web:38e18646da4869c3da73d0",
-    measurementId: "G-CNH08S3H7V"
+    apiKey: "AIzaSyDemo_BSITHUB_Key_123456789",
+    authDomain: "bsithub-demo.firebaseapp.com",
+    databaseURL: "https://bsithub-demo-default-rtdb.firebaseio.com",
+    projectId: "bsithub-demo",
+    storageBucket: "bsithub-demo.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef123456"
 };
 
 // Initialize Firebase
@@ -22,20 +21,14 @@ var firebaseInitialized = false;
 function initFirebase() {
     if (firebaseInitialized) return;
     
-    // Check if Firebase SDK is loaded
-    if (typeof firebase === 'undefined') {
-        console.warn('Firebase SDK not loaded, using localStorage fallback');
-        useLocalFallback();
-        return;
-    }
-    
     try {
         firebaseApp = firebase.initializeApp(firebaseConfig);
         firebaseDb = firebase.database();
         firebaseInitialized = true;
-        console.log('Firebase initialized successfully');
+        console.log('Firebase initialized');
     } catch (e) {
         console.warn('Firebase initialization failed, using fallback:', e);
+        // Use localStorage fallback
         useLocalFallback();
     }
 }

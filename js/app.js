@@ -1,7 +1,7 @@
 // ==========================================
 // BSITHUB v2.0.1 - Main Application
 // ==========================================
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.0.0';
 
 // ==========================================
 // Storage Manager
@@ -210,10 +210,6 @@ function register(name, username, email, password) {
 }
 
 function logout() {
-    // Set user offline in Firebase
-    if (currentUser && typeof setUserPresenceOffline === 'function') {
-        setUserPresenceOffline(currentUser.id);
-    }
     if (peer) {
         try { peer.destroy(); } catch(e) {}
     }
@@ -610,11 +606,7 @@ function initPeerJS() {
     
     peer.on('open', function(id) {
         console.log('PeerJS connected:', id);
-        // Store peer ID in Firebase for cross-browser signaling
-        if (typeof setUserPresenceOnline === 'function') {
-            setUserPresenceOnline(currentUser.id, id);
-        }
-        // Also store locally for fallback
+        // Store peer ID so other tabs can find us
         localStorage.setItem('bsithub_peer_' + currentUser.id, JSON.stringify({
             peerId: id,
             timestamp: Date.now()
@@ -639,29 +631,15 @@ function initPeerJS() {
         }
     });
     
-    // Listen for call signals from Firebase (cross-browser)
-    if (typeof listenForIncomingCalls === 'function') {
-        listenForIncomingCalls(currentUser.id, function(signal) {
-            console.log('Received call signal via Firebase:', signal);
-            var users = Storage.get('users') || [];
-            var caller = users.find(function(u) { return u.id === signal.callerId; });
-            if (caller && signal.data) {
-                window.callerPeerId = signal.data.callerPeerId;
-                isVideoCall = signal.data.isVideo;
-                showIncomingCall(caller, isVideoCall);
-            }
-        });
-    } else {
-        // Fallback: Poll for call signals from localStorage (same-browser only)
-        callPollInterval = setInterval(pollForCalls, 1000);
-    }
+    // Poll for call signals from other tabs
+    callPollInterval = setInterval(pollForCalls, 1000);
 }
 
 function pollForCalls() {
     if (!currentUser || !peer) return;
     
     try {
-        // Check for call signals meant for us (localStorage fallback)
+        // Check for call signals meant for us
         var callSignal = localStorage.getItem('bsithub_call_' + currentUser.id);
         if (callSignal) {
             var signal = JSON.parse(callSignal);
@@ -701,53 +679,27 @@ function initiateCall(isVideo) {
     console.log('Initiating call to:', targetUserId);
     showToast('Calling...', 'info');
     
-    // Get target user's peer ID from Firebase
+    // Get target user's peer ID
+    var targetPeerData = localStorage.getItem('bsithub_peer_' + targetUserId);
     var targetPeerId = null;
     
-    // First try to get from Firebase
-    if (typeof getUserPresence === 'function') {
-        getUserPresence(targetUserId, function(presence) {
-            if (presence && presence.online && presence.peerId) {
-                targetPeerId = presence.peerId;
-                console.log('Found peer ID via Firebase:', targetPeerId);
-                proceedWithCall(targetPeerId, isVideo, targetUserId);
-            } else {
-                // Fallback to localStorage
-                tryLocalFallback();
+    if (targetPeerData) {
+        try {
+            var data = JSON.parse(targetPeerData);
+            if (data && data.peerId && (Date.now() - data.timestamp < 60000)) {
+                targetPeerId = data.peerId;
             }
-        });
-    } else {
-        tryLocalFallback();
+        } catch(e) {}
     }
     
-    function tryLocalFallback() {
-        var targetPeerData = localStorage.getItem('bsithub_peer_' + targetUserId);
-        if (targetPeerData) {
-            try {
-                var data = JSON.parse(targetPeerData);
-                if (data && data.peerId && (Date.now() - data.timestamp < 60000)) {
-                    targetPeerId = data.peerId;
-                    console.log('Found peer ID via localStorage:', targetPeerId);
-                    proceedWithCall(targetPeerId, isVideo, targetUserId);
-                    return;
-                }
-            } catch(e) {}
-        }
+    if (!targetPeerId) {
         showToast('User is offline. Please make sure they have BSITHUB open.', 'error');
-    }
-}
-
-function proceedWithCall(targetPeerId, isVideo, targetUserId) {
-    // Send call signal via Firebase
-    if (typeof sendCallSignal === 'function') {
-        sendCallSignal(currentUser.id, targetUserId, {
-            callerId: currentUser.id,
-            callerPeerId: peer.id,
-            isVideo: isVideo
-        });
+        return;
     }
     
-    // Also store locally for fallback
+    console.log('Target peer ID:', targetPeerId);
+    
+    // Send call signal to target
     localStorage.setItem('bsithub_call_' + targetUserId, JSON.stringify({
         callerId: currentUser.id,
         callerPeerId: peer.id,
@@ -755,16 +707,6 @@ function proceedWithCall(targetPeerId, isVideo, targetUserId) {
         timestamp: Date.now(),
         processed: false
     }));
-    
-    // Listen for call response via Firebase
-    if (typeof listenForCallResponse === 'function') {
-        listenForCallResponse(currentUser.id, function(response) {
-            if (response.accepted === false) {
-                showToast('Call declined', 'info');
-                endCall();
-            }
-        });
-    }
     
     // Get user media and place the call
     navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true })
@@ -845,11 +787,6 @@ function acceptCall() {
     
     console.log('Accepting call. Caller peer:', callerPeerId);
     
-    // Send acceptance signal via Firebase
-    if (callerUserId && typeof acceptCallSignal === 'function') {
-        acceptCallSignal(currentUser.id, callerUserId);
-    }
-    
     navigator.mediaDevices.getUserMedia({ video: isVideoCall, audio: true })
         .then(function(stream) {
             localStream = stream;
@@ -901,15 +838,6 @@ function acceptCall() {
 
 function declineCall() {
     document.getElementById('incoming-call-overlay').style.display = 'none';
-    
-    var callerPeerId = currentCall ? currentCall.peer : window.callerPeerId;
-    var callerUserId = callerPeerId ? callerPeerId.split('_')[0] : null;
-    
-    // Send decline signal via Firebase
-    if (callerUserId && typeof declineCallSignal === 'function') {
-        declineCallSignal(currentUser.id, callerUserId);
-    }
-    
     if (currentCall) {
         try { currentCall.close(); } catch(e) {}
         currentCall = null;

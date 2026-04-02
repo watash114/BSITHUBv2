@@ -1,19 +1,8 @@
 {
   "app": "BSITHUB",
-  "version": "2.1.0",
+  "version": "2.0.0",
   "buildDate": "2026-04-02",
   "changelog": [
-    {
-      "version": "2.1.0",
-      "date": "2026-04-02",
-      "features": [
-        "Cross-browser voice/video calls",
-        "Firebase Realtime Database integration",
-        "Call signaling across different devices",
-        "Works in incognito mode",
-        "Works across Chrome, Firefox, Safari, Edge"
-      ]
-    },
     {
       "version": "2.0.0",
       "date": "2026-04-02",
