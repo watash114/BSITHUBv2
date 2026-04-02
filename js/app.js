@@ -1029,13 +1029,21 @@ function showGifPicker() {
         return;
     }
     
-    var gifs = ['😀', '😂', '🤣', '😍', '🥰', '😎', '🤔', '👍', '👏', '🎉', '❤️', '🔥', '💯', '✨', '🙌', '💪'];
-    var html = '<div class="gif-picker"><h3>Send GIF/Emoji</h3><div class="gif-grid">';
-    gifs.forEach(function(gif) {
-        html += '<div class="gif-item" onclick="sendGif(\'' + gif + '\')">' + gif + '</div>';
+    var gifs = ['😀', '😂', '🤣', '😍', '🥰', '😎', '🤔', '👍', '👏', '🎉', '❤️', '🔥', '💯', '✨', '🙌', '💪', '😎', '🤩', '😋', '🤪', '😴', '🤗', '🤭', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤'];
+    var html = '<div class="gif-picker"><h3>Send Sticker</h3><div class="gif-grid">';
+    gifs.forEach(function(gif, index) {
+        html += '<div class="gif-item" data-index="' + index + '">' + gif + '</div>';
     });
     html += '</div></div>';
     showModal(html);
+    
+    setTimeout(function() {
+        document.querySelectorAll('.gif-item').forEach(function(item, index) {
+            item.onclick = function() {
+                sendGif(gifs[index]);
+            };
+        });
+    }, 50);
 }
 
 function sendGif(emoji) {
@@ -1132,13 +1140,21 @@ function toggleEmojiPicker() {
         return;
     }
     
-    var emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐'];
+    var emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸'];
     var html = '<div class="emoji-picker"><h3>Emoji</h3><div class="emoji-grid">';
-    emojis.forEach(function(emoji) {
-        html += '<div class="emoji-item" onclick="insertEmoji(\'' + emoji + '\')">' + emoji + '</div>';
+    emojis.forEach(function(emoji, index) {
+        html += '<div class="emoji-item" data-index="' + index + '">' + emoji + '</div>';
     });
     html += '</div></div>';
     showModal(html);
+    
+    setTimeout(function() {
+        document.querySelectorAll('.emoji-item').forEach(function(item, index) {
+            item.onclick = function() {
+                insertEmoji(emojis[index]);
+            };
+        });
+    }, 50);
 }
 
 function insertEmoji(emoji) {
