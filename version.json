@@ -1,0 +1,67 @@
+{
+  "app": "BSITHUB",
+  "version": "2.1.0",
+  "buildDate": "2026-04-02",
+  "changelog": [
+    {
+      "version": "2.1.0",
+      "date": "2026-04-02",
+      "features": [
+        "Cross-browser voice/video calls",
+        "Firebase Realtime Database integration",
+        "Call signaling across different devices",
+        "Works in incognito mode",
+        "Works across Chrome, Firefox, Safari, Edge"
+      ]
+    },
+    {
+      "version": "2.0.0",
+      "date": "2026-04-02",
+      "features": [
+        "Reply to messages",
+        "Star/bookmark messages",
+        "Message forwarding",
+        "Mute individual chats",
+        "Archive chats",
+        "Disappearing messages",
+        "Link previews",
+        "Chat wallpapers",
+        "Group chats",
+        "Voice messages",
+        "Message threads",
+        "@mentions support",
+        "GIF support",
+        "Polls feature"
+      ]
+    },
+    {
+      "version": "1.5.0",
+      "date": "2026-04-02",
+      "features": [
+        "Typing indicator",
+        "Message reactions",
+        "Edit/delete messages",
+        "Date separators",
+        "Emoji picker",
+        "Message status",
+        "Pinned chats",
+        "Message search",
+        "Browser notifications",
+        "Blocked users"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2026-04-02",
+      "features": [
+        "Login/Register",
+        "Chat functionality",
+        "User profiles",
+        "Admin dashboard",
+        "Settings",
+        "Dark/Light mode",
+        "Online status"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSITHUB v2.1.0 - Connect & Chat</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Login/Register Page -->
+    <div id="auth-page" class="page active">
+        <div class="auth-container">
+            <div class="auth-left">
+                <div class="auth-brand">
+                    <i class="fas fa-comments"></i>
+                    <h1>BSITHUB</h1>
+                    <p>Connect, Chat, Collaborate</p>
+                    <span class="version-badge">v2.1.0</span>
+                </div>
+            </div>
+            <div class="auth-right">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-tab="login">Login</button>
+                    <button class="auth-tab" data-tab="register">Register</button>
+                </div>
+                
+                <form id="login-form" class="auth-form active">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <div class="password-input">
+                            <input type="password" id="login-password" placeholder="Enter your password" required>
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                    </div>
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="remember-me">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="#" class="forgot-password" id="forgot-password-link">Forgot Password?</a>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <div id="login-error" class="error-message"></div>
+                </form>
+
+                <form id="register-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="register-name">Full Name</label>
+                        <input type="text" id="register-name" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-username">Username</label>
+                        <input type="text" id="register-username" placeholder="Choose a username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email</label>
+                        <input type="email" id="register-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <div class="password-input">
+                            <input type="password" id="register-password" placeholder="Create a password" required>
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                        <div class="password-strength" id="password-strength"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm">Confirm Password</label>
+                        <div class="password-input">
+                            <input type="password" id="register-confirm" placeholder="Confirm your password" required>
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                    </div>
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="agree-terms" required>
+                            <span>I agree to the <a href="#">Terms of Service</a></span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                    <div id="register-error" class="error-message"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app-page" class="page">
+        <div class="app-container">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <div class="brand">
+                        <i class="fas fa-comments"></i>
+                        <span>BSITHUB</span>
+                    </div>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" data-section="chats">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>Chats</span>
+                        <span class="badge" id="chat-badge">0</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="starred">
+                        <i class="fas fa-star"></i>
+                        <span>Starred</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="groups">
+                        <i class="fas fa-users"></i>
+                        <span>Groups</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="profile">
+                        <i class="fas fa-user"></i>
+                        <span>Profile</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                    <a href="#" class="nav-item admin-only" data-section="admin">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Admin</span>
+                    </a>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="user-info">
+                        <div class="user-avatar" id="sidebar-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="user-details">
+                            <span class="user-name" id="sidebar-username">Username</span>
+                            <span class="user-status" id="sidebar-status">Online</span>
+                        </div>
+                    </div>
+                    <button class="btn-icon" id="logout-btn" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+                <div class="version-info">
+                    <span>v2.0.0</span>
+                    <button class="btn-icon" id="version-history-btn" title="Version History">
+                        <i class="fas fa-history"></i>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Chats Section -->
+                <section id="chats-section" class="content-section active">
+                    <div class="chat-container">
+                        <div class="chat-sidebar">
+                            <div class="chat-header">
+                                <h2>Messages</h2>
+                                <div class="chat-header-actions">
+                                    <button class="btn-icon" id="archived-chats-btn" title="Archived">
+                                        <i class="fas fa-archive"></i>
+                                    </button>
+                                    <button class="btn-icon" id="new-chat-btn" title="New Chat">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="chat-tabs">
+                                <button class="chat-tab active" data-tab="all">All</button>
+                                <button class="chat-tab" data-tab="pinned">Pinned</button>
+                                <button class="chat-tab" data-tab="unread">Unread</button>
+                            </div>
+                            <div class="search-bar">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="chat-search" placeholder="Search conversations...">
+                            </div>
+                            <div class="chat-list" id="chat-list">
+                                <!-- Chat items will be dynamically added -->
+                            </div>
+                        </div>
+                        <div class="chat-main">
+                            <div class="chat-placeholder" id="chat-placeholder">
+                                <i class="fas fa-comments"></i>
+                                <h3>Select a conversation</h3>
+                                <p>Choose a chat from the list or start a new conversation</p>
+                            </div>
+                            <div class="chat-active" id="chat-active" style="display:none;">
+                                <div class="chat-main-header">
+                                    <div class="chat-user-info">
+                                        <div class="chat-avatar" id="chat-avatar">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div class="chat-user-details">
+                                            <h3 id="chat-user-name">User Name</h3>
+                                            <span id="chat-user-status">Online</span>
+                                        </div>
+                                    </div>
+                                    <div class="chat-actions">
+                                        <button class="btn-icon" id="search-messages-btn" title="Search Messages">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                        <button class="btn-icon" id="starred-messages-btn" title="Starred Messages">
+                                            <i class="fas fa-star"></i>
+                                        </button>
+                                        <button class="btn-icon" title="Voice Call">
+                                            <i class="fas fa-phone"></i>
+                                        </button>
+                                        <button class="btn-icon" title="Video Call">
+                                            <i class="fas fa-video"></i>
+                                        </button>
+                                        <button class="btn-icon" id="chat-options-btn" title="More Options">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="chat-search-bar" id="chat-search-bar" style="display: none;">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="message-search-input" placeholder="Search in conversation...">
+                                    <button class="btn-icon" id="close-message-search">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="chat-wallpaper" id="chat-wallpaper"></div>
+                                <div class="chat-messages" id="chat-messages">
+                                    <!-- Messages will be dynamically added -->
+                                </div>
+                                <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                                    <span>typing</span>
+                                    <div class="typing-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
+                                <div class="reply-preview" id="reply-preview" style="display: none;">
+                                    <div class="reply-preview-content">
+                                        <span class="reply-to" id="reply-to"></span>
+                                        <span class="reply-text" id="reply-text"></span>
+                                    </div>
+                                    <button class="btn-icon" id="cancel-reply">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="chat-input">
+                                    <button class="btn-icon" title="Attach File" id="attach-file-btn">
+                                        <i class="fas fa-paperclip"></i>
+                                    </button>
+                                    <input type="file" id="file-input" style="display: none;" accept="image/*,.pdf,.doc,.docx,.txt">
+                                    <button class="btn-icon" title="GIF" id="gif-btn">
+                                        <i class="fas fa-image"></i>
+                                    </button>
+                                    <div class="gif-picker" id="gif-picker" style="display: none;">
+                                        <input type="text" id="gif-search" placeholder="Search GIFs...">
+                                        <div class="gif-grid" id="gif-grid"></div>
+                                    </div>
+                                    <div class="mentions-dropdown" id="mentions-dropdown" style="display: none;"></div>
+                                    <input type="text" id="message-input" placeholder="Type a message... Use @ to mention" autocomplete="off">
+                                    <button class="btn-icon" title="Voice Message" id="voice-btn">
+                                        <i class="fas fa-microphone"></i>
+                                    </button>
+                                    <button class="btn-icon" title="Emoji" id="emoji-btn">
+                                        <i class="fas fa-smile"></i>
+                                    </button>
+                                    <div class="emoji-picker" id="emoji-picker" style="display: none;">
+                                        <div class="emoji-categories">
+                                            <button class="emoji-category active" data-category="smileys">😀</button>
+                                            <button class="emoji-category" data-category="hearts">❤️</button>
+                                            <button class="emoji-category" data-category="thumbs">👍</button>
+                                            <button class="emoji-category" data-category="animals">🐱</button>
+                                            <button class="emoji-category" data-category="food">🍕</button>
+                                        </div>
+                                        <div class="emoji-list" id="emoji-list"></div>
+                                    </div>
+                                    <button class="btn-icon btn-send" id="send-btn" title="Send">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Starred Messages Section -->
+                <section id="starred-section" class="content-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-star"></i> Starred Messages</h2>
+                    </div>
+                    <div class="starred-container" id="starred-container">
+                        <!-- Starred messages will be dynamically added -->
+                    </div>
+                </section>
+
+                <!-- Groups Section -->
+                <section id="groups-section" class="content-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-users"></i> Groups</h2>
+                        <button class="btn btn-primary" id="create-group-btn">
+                            <i class="fas fa-plus"></i> Create Group
+                        </button>
+                    </div>
+                    <div class="groups-container" id="groups-container">
+                        <!-- Groups will be dynamically added -->
+                    </div>
+                </section>
+
+                <!-- Profile Section -->
+                <section id="profile-section" class="content-section">
+                    <div class="section-header">
+                        <h2>My Profile</h2>
+                    </div>
+                    <div class="profile-container">
+                        <div class="profile-card">
+                            <div class="profile-banner"></div>
+                            <div class="profile-avatar-container">
+                                <div class="profile-avatar" id="profile-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                                <input type="file" id="avatar-input" style="display: none;" accept="image/*">
+                            </div>
+                            <div class="profile-info">
+                                <h2 id="profile-name">User Name</h2>
+                                <p class="profile-username" id="profile-username">@username</p>
+                                <p class="profile-bio" id="profile-bio">No bio yet</p>
+                                <div class="profile-stats">
+                                    <div class="stat">
+                                        <span class="stat-value" id="profile-chats">0</span>
+                                        <span class="stat-label">Chats</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-value" id="profile-friends">0</span>
+                                        <span class="stat-label">Friends</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-value" id="profile-joined">-</span>
+                                        <span class="stat-label">Joined</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="profile-edit-card">
+                            <h3>Edit Profile</h3>
+                            <form id="profile-form">
+                                <div class="form-group">
+                                    <label for="edit-name">Full Name</label>
+                                    <input type="text" id="edit-name" placeholder="Your full name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-username">Username</label>
+                                    <input type="text" id="edit-username" placeholder="Your username">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-email">Email</label>
+                                    <input type="email" id="edit-email" placeholder="Your email">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-bio">Bio</label>
+                                    <textarea id="edit-bio" placeholder="Tell us about yourself" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-phone">Phone</label>
+                                    <input type="tel" id="edit-phone" placeholder="Your phone number">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-location">Location</label>
+                                    <input type="text" id="edit-location" placeholder="Your location">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Settings Section -->
+                <section id="settings-section" class="content-section">
+                    <div class="section-header">
+                        <h2>Settings</h2>
+                    </div>
+                    <div class="settings-container">
+                        <div class="settings-card">
+                            <h3><i class="fas fa-palette"></i> Appearance</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Dark Mode</span>
+                                    <span class="setting-desc">Switch between light and dark themes</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="dark-mode-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Font Size</span>
+                                    <span class="setting-desc">Adjust text size for better readability</span>
+                                </div>
+                                <select id="font-size-select" class="setting-select">
+                                    <option value="small">Small</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="large">Large</option>
+                                </select>
+                            </div>
+                            <div class="setting-item clickable" id="chat-wallpaper-btn">
+                                <div class="setting-info">
+                                    <span class="setting-label">Chat Wallpaper</span>
+                                    <span class="setting-desc">Set a custom background for chats</span>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-bell"></i> Notifications</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Push Notifications</span>
+                                    <span class="setting-desc">Receive notifications for new messages</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="push-notifications" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Sound Alerts</span>
+                                    <span class="setting-desc">Play sound when receiving messages</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="sound-alerts" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Email Notifications</span>
+                                    <span class="setting-desc">Receive email summaries of unread messages</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="email-notifications">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Browser Notifications</span>
+                                    <span class="setting-desc">Show desktop notifications</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="browser-notifications">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-lock"></i> Privacy & Security</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Online Status</span>
+                                    <span class="setting-desc">Show when you're online</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="online-status" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Read Receipts</span>
+                                    <span class="setting-desc">Let others know when you've read their messages</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="read-receipts" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Typing Indicator</span>
+                                    <span class="setting-desc">Show when you're typing</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="typing-indicator-toggle" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Disappearing Messages</span>
+                                    <span class="setting-desc">Auto-delete messages after set time</span>
+                                </div>
+                                <select id="disappearing-messages" class="setting-select">
+                                    <option value="off">Off</option>
+                                    <option value="1h">1 Hour</option>
+                                    <option value="24h">24 Hours</option>
+                                    <option value="7d">7 Days</option>
+                                    <option value="30d">30 Days</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Two-Factor Authentication</span>
+                                    <span class="setting-desc">Add an extra layer of security to your account</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="two-factor">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item clickable" id="change-password-btn">
+                                <div class="setting-info">
+                                    <span class="setting-label">Change Password</span>
+                                    <span class="setting-desc">Update your account password</span>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                            <div class="setting-item clickable" id="blocked-users-btn">
+                                <div class="setting-info">
+                                    <span class="setting-label">Blocked Users</span>
+                                    <span class="setting-desc">Manage blocked contacts</span>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-database"></i> Data & Storage</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Auto-download Media</span>
+                                    <span class="setting-desc">Automatically download photos and videos</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="auto-download" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item clickable" id="export-data-btn">
+                                <div class="setting-info">
+                                    <span class="setting-label">Export Data</span>
+                                    <span class="setting-desc">Download your chat history and data</span>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                            <div class="setting-item clickable" id="clear-cache-btn">
+                                <div class="setting-info">
+                                    <span class="setting-label">Clear Cache</span>
+                                    <span class="setting-desc">Free up storage space</span>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                            <div class="setting-item clickable danger" id="delete-account-btn">
+                                <div class="setting-info">
+                                    <span class="setting-label">Delete Account</span>
+                                    <span class="setting-desc">Permanently delete your account and all data</span>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Admin Section -->
+                <section id="admin-section" class="content-section">
+                    <div class="section-header">
+                        <h2>Admin Dashboard</h2>
+                    </div>
+                    <div class="admin-container">
+                        <div class="admin-stats">
+                            <div class="stat-card">
+                                <i class="fas fa-users"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="total-users">0</span>
+                                    <span class="stat-label">Total Users</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-comment-dots"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="total-messages">0</span>
+                                    <span class="stat-label">Messages</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-user-check"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="active-users">0</span>
+                                    <span class="stat-label">Active Users</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-ban"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="banned-users">0</span>
+                                    <span class="stat-label">Banned Users</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="admin-card">
+                            <div class="admin-card-header">
+                                <h3>User Management</h3>
+                                <div class="search-bar">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="admin-user-search" placeholder="Search users...">
+                                </div>
+                            </div>
+                            <div class="users-table-container">
+                                <table class="users-table" id="users-table">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Joined</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="users-table-body">
+                                        <!-- Users will be dynamically added -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="admin-card">
+                            <h3>System Logs</h3>
+                            <div class="logs-container" id="system-logs">
+                                <!-- Logs will be dynamically added -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modal-content">
+            <!-- Modal content will be dynamically added -->
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Version History Panel -->
+    <div class="version-panel" id="version-panel">
+        <div class="version-panel-header">
+            <h3><i class="fas fa-history"></i> Version History</h3>
+            <button class="modal-close" id="close-version-panel">&times;</button>
+        </div>
+        <div class="version-list" id="version-list"></div>
+    </div>
+
+    <!-- Call UI Overlay -->
+    <div class="call-overlay" id="call-overlay" style="display: none;">
+        <div class="call-container">
+            <div class="call-video-container">
+                <video id="remote-video" autoplay playsinline></video>
+                <video id="local-video" autoplay playsinline muted class="local-video"></video>
+            </div>
+            <div class="call-info">
+                <div class="call-avatar" id="call-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <h3 id="call-name">User Name</h3>
+                <p id="call-status">Calling...</p>
+                <p id="call-timer" style="display: none;">00:00</p>
+            </div>
+            <div class="call-controls">
+                <button class="call-btn" id="toggle-mic-btn" title="Toggle Microphone">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="call-btn" id="toggle-video-btn" title="Toggle Video">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button class="call-btn end-call" id="end-call-btn" title="End Call">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <button class="call-btn" id="toggle-speaker-btn" title="Toggle Speaker">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Call Overlay -->
+    <div class="incoming-call-overlay" id="incoming-call-overlay" style="display: none;">
+        <div class="incoming-call-container">
+            <div class="incoming-call-avatar" id="incoming-call-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <h3 id="incoming-call-name">User Name</h3>
+            <p id="incoming-call-type">Incoming Voice Call</p>
+            <div class="incoming-call-controls">
+                <button class="call-btn accept-call" id="accept-call-btn" title="Accept">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <button class="call-btn decline-call" id="decline-call-btn" title="Decline">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for ringtone -->
+    <audio id="ringtone" loop>
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2tele" type="audio/wav">
+    </audio>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="js/firebase.js"></script>
+    
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
