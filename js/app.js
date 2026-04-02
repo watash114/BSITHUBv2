@@ -556,20 +556,144 @@ function applySettings() {
     } else {
         document.documentElement.removeAttribute('data-theme');
     }
+    if (settings.fontSize) {
+        document.documentElement.style.fontSize = settings.fontSize === 'small' ? '14px' : settings.fontSize === 'large' ? '18px' : '16px';
+    }
 }
 
 function initSettings() {
+    var settings = Storage.get('settings') || {};
+    
+    // Dark mode toggle
     var darkToggle = document.getElementById('dark-mode-toggle');
     if (darkToggle) {
-        darkToggle.checked = (Storage.get('settings') || {}).darkMode;
+        darkToggle.checked = settings.darkMode || false;
         darkToggle.onchange = function() {
-            var settings = Storage.get('settings') || {};
             settings.darkMode = this.checked;
             Storage.set('settings', settings);
             applySettings();
             showToast(this.checked ? 'Dark mode on' : 'Dark mode off', 'info');
         };
     }
+    
+    // Font size select
+    var fontSizeSelect = document.getElementById('font-size-select');
+    if (fontSizeSelect) {
+        fontSizeSelect.value = settings.fontSize || 'medium';
+        fontSizeSelect.onchange = function() {
+            settings.fontSize = this.value;
+            Storage.set('settings', settings);
+            applySettings();
+            showToast('Font size: ' + this.value, 'info');
+        };
+    }
+    
+    // Push notifications
+    var pushNotif = document.getElementById('push-notifications');
+    if (pushNotif) {
+        pushNotif.checked = settings.pushNotifications !== false;
+        pushNotif.onchange = function() {
+            settings.pushNotifications = this.checked;
+            Storage.set('settings', settings);
+            if (this.checked && Notification.permission !== 'granted') {
+                Notification.requestPermission();
+            }
+            showToast(this.checked ? 'Push notifications on' : 'Push notifications off', 'info');
+        };
+    }
+    
+    // Sound alerts
+    var soundAlerts = document.getElementById('sound-alerts');
+    if (soundAlerts) {
+        soundAlerts.checked = settings.sound !== false;
+        soundAlerts.onchange = function() {
+            settings.sound = this.checked;
+            Storage.set('settings', settings);
+            showToast(this.checked ? 'Sound alerts on' : 'Sound alerts off', 'info');
+        };
+    }
+    
+    // Email notifications
+    var emailNotif = document.getElementById('email-notifications');
+    if (emailNotif) {
+        emailNotif.checked = settings.emailNotifications || false;
+        emailNotif.onchange = function() {
+            settings.emailNotifications = this.checked;
+            Storage.set('settings', settings);
+            showToast(this.checked ? 'Email notifications on' : 'Email notifications off', 'info');
+        };
+    }
+    
+    // Browser notifications
+    var browserNotif = document.getElementById('browser-notifications');
+    if (browserNotif) {
+        browserNotif.checked = settings.browserNotifications || false;
+        browserNotif.onchange = function() {
+            settings.browserNotifications = this.checked;
+            Storage.set('settings', settings);
+            if (this.checked && Notification.permission !== 'granted') {
+                Notification.requestPermission();
+            }
+            showToast(this.checked ? 'Browser notifications on' : 'Browser notifications off', 'info');
+        };
+    }
+    
+    // Online status
+    var onlineStatus = document.getElementById('online-status');
+    if (onlineStatus) {
+        onlineStatus.checked = settings.onlineStatus !== false;
+        onlineStatus.onchange = function() {
+            settings.onlineStatus = this.checked;
+            Storage.set('settings', settings);
+            showToast(this.checked ? 'Online status visible' : 'Online status hidden', 'info');
+        };
+    }
+    
+    // Read receipts
+    var readReceipts = document.getElementById('read-receipts');
+    if (readReceipts) {
+        readReceipts.checked = settings.readReceipts !== false;
+        readReceipts.onchange = function() {
+            settings.readReceipts = this.checked;
+            Storage.set('settings', settings);
+            showToast(this.checked ? 'Read receipts on' : 'Read receipts off', 'info');
+        };
+    }
+    
+    // Typing indicator
+    var typingIndicator = document.getElementById('typing-indicator-toggle');
+    if (typingIndicator) {
+        typingIndicator.checked = settings.typingIndicator !== false;
+        typingIndicator.onchange = function() {
+            settings.typingIndicator = this.checked;
+            Storage.set('settings', settings);
+            showToast(this.checked ? 'Typing indicator on' : 'Typing indicator off', 'info');
+        };
+    }
+    
+    // Disappearing messages
+    var disappearing = document.getElementById('disappearing-messages');
+    if (disappearing) {
+        disappearing.value = settings.disappearing || 'off';
+        disappearing.onchange = function() {
+            settings.disappearing = this.value;
+            Storage.set('settings', settings);
+            showToast('Disappearing messages: ' + this.value, 'info');
+        };
+    }
+    
+    // Two-factor authentication
+    var twoFactor = document.getElementById('two-factor');
+    if (twoFactor) {
+        twoFactor.checked = settings.twoFactor || false;
+        twoFactor.onchange = function() {
+            settings.twoFactor = this.checked;
+            Storage.set('settings', settings);
+            showToast(this.checked ? 'Two-factor on' : 'Two-factor off', 'info');
+        };
+    }
+    
+    applySettings();
 }
 
 // ==========================================
