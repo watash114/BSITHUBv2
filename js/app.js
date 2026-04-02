@@ -284,10 +284,36 @@ function initNavigation() {
             document.getElementById(section + '-section').classList.add('active');
             
             if (section === 'chats') loadChats();
+            if (section === 'groups') loadGroups();
             if (section === 'profile') loadProfile();
             if (section === 'admin') loadAdminData();
         };
     });
+}
+
+// ==========================================
+// Groups
+// ==========================================
+function loadGroups() {
+    var groupsContainer = document.getElementById('groups-container');
+    var chats = Storage.get('chats') || [];
+    var myGroups = chats.filter(function(c) { return c.participants.indexOf(currentUser.id) !== -1 && c.isGroup; });
+    
+    if (myGroups.length === 0) {
+        groupsContainer.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No groups yet</p><p>Create a group to get started</p></div>';
+        return;
+    }
+    
+    var html = '';
+    myGroups.forEach(function(group) {
+        html += '<div class="group-card" onclick="openChat(\'' + group.id + '\', \'' + group.participants[0] + '\')">';
+        html += '<div class="group-avatar"><i class="fas fa-users"></i></div>';
+        html += '<div class="group-name">' + (group.groupName || 'Group') + '</div>';
+        html += '<div class="group-members">' + group.participants.length + ' members</div>';
+        html += '</div>';
+    });
+    
+    groupsContainer.innerHTML = html;
 }
 
 // ==========================================
@@ -373,6 +399,10 @@ function openChat(chatId, userId) {
         document.getElementById('chat-user-name').textContent = otherUser.name;
         document.getElementById('chat-user-status').textContent = 'Online';
     }
+    
+    // Apply wallpaper
+    var wallpaper = chat.wallpaper || (Storage.get('settings') || {}).wallpaper || 'none';
+    document.getElementById('chat-wallpaper').style.background = wallpaper;
     
     renderMessages(chatId);
     
@@ -1197,6 +1227,17 @@ function setWallpaper(color) {
     var settings = Storage.get('settings') || {};
     settings.wallpaper = color;
     Storage.set('settings', settings);
+    
+    // Also save to current chat if active
+    if (activeChat) {
+        var chats = Storage.get('chats') || [];
+        var chat = chats.find(function(c) { return c.id === activeChat.id; });
+        if (chat) {
+            chat.wallpaper = color;
+            Storage.set('chats', chats);
+        }
+    }
+    
     closeModal();
     showToast('Wallpaper changed', 'success');
 }
