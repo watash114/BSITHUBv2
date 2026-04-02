@@ -93,6 +93,12 @@ function handleTypingIndicator() {
 function sendTypingIndicator() {
     if (!currentUser || !activeChat) return;
     
+    // Send via Firebase for cross-browser/device
+    if (typeof sendTypingIndicatorFirebase === 'function') {
+        sendTypingIndicatorFirebase(activeChat.id, currentUser.id);
+    }
+    
+    // Also set in localStorage for same-browser
     var typingData = Storage.get('typingIndicator') || {};
     typingData[activeChat.id] = {
         userId: currentUser.id,
@@ -133,6 +139,12 @@ function updateOnlineStatus() {
 
 function setUserOffline() {
     if (!currentUser) return;
+    
+    // Set offline in Firebase
+    if (typeof setUserOfflineFirebase === 'function') {
+        setUserOfflineFirebase(currentUser.id);
+    }
+    
     var onlineUsers = Storage.get('onlineUsers') || {};
     delete onlineUsers[currentUser.id];
     Storage.set('onlineUsers', onlineUsers);
@@ -349,6 +361,11 @@ function showApp() {
     document.getElementById('auth-page').classList.remove('active');
     document.getElementById('app-page').classList.add('active');
     initializeApp();
+    
+    // Set user online in Firebase
+    if (currentUser && typeof setUserOnlineFirebase === 'function') {
+        setUserOnlineFirebase(currentUser.id);
+    }
 }
 
 function initAuth() {
@@ -526,6 +543,30 @@ function openChat(chatId, userId) {
     
     renderMessages(chatId);
     
+    // Listen for messages from Firebase (cross-browser/device)
+    if (typeof listenForMessages === 'function') {
+        listenForMessages(chatId, function(fbMessages) {
+            renderMessages(chatId);
+            loadChats();
+        });
+    }
+    
+    // Listen for typing indicator
+    if (typeof listenForTypingIndicator === 'function' && currentUser) {
+        listenForTypingIndicator(chatId, currentUser.id, function(typing) {
+            var users = Storage.get('users') || [];
+            var typingUser = users.find(function(u) { return u.id === typing.userId; });
+            if (typingUser) {
+                document.getElementById('typing-indicator').style.display = 'flex';
+                document.getElementById('typing-indicator').querySelector('span').textContent = typingUser.name + ' is typing';
+                
+                setTimeout(function() {
+                    document.getElementById('typing-indicator').style.display = 'none';
+                }, 3000);
+            }
+        });
+    }
+    
     document.querySelectorAll('.chat-item').forEach(function(item) {
         item.classList.remove('active');
         if (item.dataset.chatId === chatId) item.classList.add('active');
@@ -671,27 +712,12 @@ function sendMessage(text) {
     messages.push(newMessage);
     Storage.set('messages', messages);
     
+    // Sync to Firebase for cross-browser/device messaging
+    syncMessageToFirebase(newMessage);
+    
     renderMessages(activeChat.id);
     loadChats();
-    
-    // Simulate reply
-    setTimeout(function() {
-        simulateReply();
-    }, 2000);
 }
-
-function simulateReply() {
-    if (!activeChat) return;
-    var replies = ['Sounds good!', 'I agree!', 'Let me think about it.', 'Thanks!', 'Got it!', 'Sure thing!'];
-    
-    var messages = Storage.get('messages') || [];
-    var reply = {
-        id: generateId(),
-        chatId: activeChat.id,
-        senderId: activeChat.userId,
-        text: replies[Math.floor(Math.random() * replies.length)],
-        timestamp: new Date().toISOString(),
-        read: true,
         status: 'read',
         reactions: {},
         edited: false,
