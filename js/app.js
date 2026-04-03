@@ -1612,8 +1612,8 @@ function startRecording() {
                     Storage.set('messages', messages);
                     
                     // Send to Firebase for real-time delivery
-                    if (typeof sendMessageToFirebase === 'function') {
-                        sendMessageToFirebase(newMessage).then(function() {
+                    if (typeof sendMsgToFirebase === 'function') {
+                        sendMsgToFirebase(newMessage).then(function() {
                             newMessage.status = 'delivered';
                             Storage.set('messages', messages);
                             renderMessages(activeChat.id);
