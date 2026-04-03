@@ -3980,13 +3980,13 @@ async function initVideoCall() {
             showToast('Loading VideoSDK...', 'info');
             await new Promise(function(resolve, reject) {
                 var script = document.createElement('script');
-                script.src = 'https://cdn.videosdk.live/js-sdk/0.0.83/videosdk.js';
+                script.src = 'https://unpkg.com/@videosdk.live/js-sdk@0.1.83/dist/videosdk.live.js';
                 script.onload = resolve;
                 script.onerror = reject;
                 document.head.appendChild(script);
             });
             // Wait a bit for SDK to initialize
-            await new Promise(function(r) { setTimeout(r, 1000); });
+            await new Promise(function(r) { setTimeout(r, 2000); });
         }
         
         // Check again
