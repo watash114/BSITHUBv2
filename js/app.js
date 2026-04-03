@@ -984,14 +984,26 @@ function renderMessages(chatId) {
         
         // Reactions
         if (msg.reactions && Object.keys(msg.reactions).length > 0) {
-            html += '<div class="message-reactions">';
-            var reactionCounts = {};
-            Object.values(msg.reactions).forEach(function(emoji) {
-                reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+            html += '<div class="message-reactions" onclick="showReactionDetails(\'' + msg.id + '\')">';
+            
+            // Group reactions by emoji
+            var reactionGroups = {};
+            Object.entries(msg.reactions).forEach(function(entry) {
+                var userId = entry[0];
+                var emoji = entry[1];
+                if (!reactionGroups[emoji]) {
+                    reactionGroups[emoji] = [];
+                }
+                reactionGroups[emoji].push(userId);
             });
-            Object.entries(reactionCounts).forEach(function(entry) {
-                html += '<span class="reaction-badge">' + entry[0] + ' ' + entry[1] + '</span>';
+            
+            // Display each emoji with count
+            Object.entries(reactionGroups).forEach(function(entry) {
+                var emoji = entry[0];
+                var userIds = entry[1];
+                html += '<span class="reaction-badge" title="Click to see who reacted">' + emoji + ' ' + userIds.length + '</span>';
             });
+            
             html += '</div>';
         }
         
@@ -1085,6 +1097,56 @@ function addReaction(messageId, emoji) {
         }
         showToast('Reacted with ' + emoji, 'info');
     }
+}
+
+function showReactionDetails(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message || !message.reactions || Object.keys(message.reactions).length === 0) {
+        showToast('No reactions yet', 'info');
+        return;
+    }
+    
+    var users = Storage.get('users') || [];
+    
+    // Group reactions by emoji
+    var reactionGroups = {};
+    Object.entries(message.reactions).forEach(function(entry) {
+        var userId = entry[0];
+        var emoji = entry[1];
+        if (!reactionGroups[emoji]) {
+            reactionGroups[emoji] = [];
+        }
+        reactionGroups[emoji].push(userId);
+    });
+    
+    var html = '<div class="reaction-details"><h3>Reactions</h3>';
+    
+    Object.entries(reactionGroups).forEach(function(entry) {
+        var emoji = entry[0];
+        var userIds = entry[1];
+        
+        html += '<div class="reaction-group">';
+        html += '<div class="reaction-emoji">' + emoji + '</div>';
+        html += '<div class="reaction-users">';
+        
+        userIds.forEach(function(userId) {
+            var user = users.find(function(u) { return u.id === userId; });
+            if (user) {
+                var avatar = user.avatar ? '<img src="' + user.avatar + '">' : user.name.charAt(0).toUpperCase();
+                html += '<div class="reaction-user">';
+                html += '<div class="reaction-user-avatar">' + avatar + '</div>';
+                html += '<span class="reaction-user-name">' + escapeHtml(user.name) + '</span>';
+                html += '</div>';
+            }
+        });
+        
+        html += '</div>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    showModal(html);
 }
 
 function clearReplyPreview() {
