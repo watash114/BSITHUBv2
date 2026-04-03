@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download App Icon</title>
+    <style>
+        body { font-family: Arial; padding: 20px; text-align: center; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        canvas { border: 1px solid #ddd; border-radius: 20px; margin: 20px 0; }
+        button { padding: 15px 30px; font-size: 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button:hover { background: #5a6fd6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BSITHUB App Icon</h1>
+        <p>1024 x 1024 pixels - Ready for Facebook</p>
+        <canvas id="canvas" width="1024" height="1024"></canvas>
+        <br>
+        <button onclick="downloadIcon()">Download PNG (1024x1024)</button>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Draw gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 1024, 1024);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        
+        // Rounded rectangle
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.roundRect(0, 0, 1024, 1024, 200);
+        ctx.fill();
+        
+        // Draw chat icon
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath();
+        ctx.roundRect(250, 200, 524, 350, 50);
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.roundRect(250, 450, 524, 400, 50);
+        ctx.fill();
+        
+        // Draw dots
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(400, 650, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(512, 650, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(624, 650, 30, 0, Math.PI * 2);
+        ctx.fill();
+        
+        function downloadIcon() {
+            const link = document.createElement('a');
+            link.download = 'bsithub-icon-1024x1024.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>
