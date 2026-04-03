@@ -2857,9 +2857,9 @@ body {
 
 .message-audio audio {
     width: 100%;
-    max-width: 250px;
-    height: 40px;
-    border-radius: 20px;
+    min-width: 250px;
+    height: 50px;
+    border-radius: 25px;
 }
 
 /* Video Player */
