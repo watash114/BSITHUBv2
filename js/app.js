@@ -2301,6 +2301,45 @@ function showNewChat() {
     showModal(html);
 }
 
+function createNewChat(userId) {
+    // Check if chat already exists
+    var chats = Storage.get('chats') || [];
+    var existingChat = chats.find(function(c) {
+        return !c.isGroup && c.participants.indexOf(currentUser.id) !== -1 && c.participants.indexOf(userId) !== -1;
+    });
+    
+    if (existingChat) {
+        closeModal();
+        loadChats();
+        openChat(existingChat.id, userId);
+        return;
+    }
+    
+    // Create new chat
+    var newChat = {
+        id: generateId(),
+        participants: [currentUser.id, userId],
+        createdAt: new Date().toISOString(),
+        pinned: false,
+        muted: false,
+        archived: false,
+        isGroup: false
+    };
+    
+    // Save locally
+    chats.push(newChat);
+    Storage.set('chats', chats);
+    
+    // Sync to Firebase
+    if (typeof syncChat === 'function') {
+        syncChat(newChat);
+    }
+    
+    closeModal();
+    loadChats();
+    openChat(newChat.id, userId);
+}
+
 function deleteAccount() {
     var users = Storage.get('users') || [];
     users = users.filter(function(u) { return u.id !== currentUser.id; });
