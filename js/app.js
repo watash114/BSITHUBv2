@@ -1912,15 +1912,16 @@ function showGroupInfo() {
     
     var isAdmin = chat.admin === currentUser.id;
     
+    // Debug alert - remove later
+    alert('Admin: ' + chat.admin + '\nYour ID: ' + currentUser.id + '\nisAdmin: ' + isAdmin);
+    
     console.log('Group:', chat.groupName, '| Admin ID:', chat.admin, '| Your ID:', currentUser.id, '| isAdmin:', isAdmin);
     
     var html = '<div class="group-info"><h3>' + escapeHtml(chat.groupName || 'Group') + '</h3>';
     html += '<p>' + chat.participants.length + ' members</p>';
     
-    // Add Members button (only for admin)
-    if (isAdmin) {
-        html += '<button class="btn btn-primary" onclick="showAddMembers()"><i class="fas fa-user-plus"></i> Add Members</button>';
-    }
+    // Show Add Members button for ALL users (for testing)
+    html += '<button class="btn btn-primary" onclick="showAddMembers()"><i class="fas fa-user-plus"></i> Add Members</button>';
     
     html += '<div class="group-members-list">';
     
@@ -1954,8 +1955,8 @@ function showGroupInfo() {
         html += '<span class="member-username">@' + escapeHtml(user.username) + '</span>';
         html += '</div>';
         
-        // Kick button (only admin can kick, can't kick yourself or other admins)
-        if (isAdmin && userId !== currentUser.id && !isGroupAdmin) {
+        // Kick button - show for everyone except yourself (for testing)
+        if (userId !== currentUser.id) {
             html += '<button class="btn btn-small danger" onclick="kickMember(\'' + userId + '\')"><i class="fas fa-user-minus"></i> Kick</button>';
         }
         
@@ -2050,8 +2051,14 @@ function kickMember(userId) {
     if (chatIndex === -1) return;
     
     var chat = chats[chatIndex];
-    if (!chat.isGroup || chat.admin !== currentUser.id) {
-        showToast('Only admin can kick members', 'error');
+    if (!chat.isGroup) {
+        showToast('Not a group chat', 'error');
+        return;
+    }
+    
+    // Can't kick yourself
+    if (userId === currentUser.id) {
+        showToast('Cannot kick yourself', 'error');
         return;
     }
     
