@@ -471,13 +471,11 @@ function socialLogin(provider) {
             
             if (error.code === 'auth/popup-closed-by-user') {
                 showToast('Login cancelled', 'info');
-            } else if (error.code === 'auth/configuration-not-found') {
+            } else if (error.code === 'auth/configuration-not-found' || error.code === 'auth/unauthorized-domain') {
                 // Show setup instructions
-                showModal('<div class="setup-instructions"><h3>Setup Required</h3><p>To enable social login, you need to:</p><ol><li>Go to <a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank">Firebase Console</a></li><li>Click "Authentication" → "Sign-in method"</li><li>Enable "Google" provider</li><li>Click Save</li></ol><p><strong>That\'s it!</strong> Then try again.</p><button class="btn btn-primary" onclick="closeModal()">Got it</button></div>');
+                showModal('<div class="setup-instructions"><h3>Setup Required</h3><p>To enable social login, you need to:</p><ol><li>Go to <a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank">Firebase Console</a></li><li>Click <strong>Authentication</strong> → <strong>Sign-in method</strong></li><li>Enable <strong>Google</strong> provider</li><li>Click <strong>Save</strong></li><li>Go to <strong>Settings</strong> (gear icon) → <strong>Authorized domains</strong></li><li>Click <strong>Add domain</strong></li><li>Add: <code>bsithub.vercel.app</code></li><li>Click <strong>Add</strong></li></ol><p><strong>Then try again!</strong></p><button class="btn btn-primary" onclick="closeModal()">Got it</button></div>');
             } else if (error.code === 'auth/account-exists-with-different-credential') {
                 showToast('Account already exists with different login method', 'error');
-            } else if (error.code === 'auth/unauthorized-domain') {
-                showToast('This domain is not authorized. Add it in Firebase Console → Authentication → Settings → Authorized domains', 'error');
             } else {
                 showToast('Login failed: ' + error.message, 'error');
             }
