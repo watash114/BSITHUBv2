@@ -4807,3 +4807,72 @@ body {
     font-size: 13px;
     margin: 15px 0;
 }
+
+/* Forgot Password Modal */
+.forgot-password-modal {
+    text-align: center;
+    padding: 10px;
+}
+
+.forgot-icon {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    font-size: 28px;
+    color: white;
+}
+
+.forgot-password-modal h3 {
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.forgot-password-modal p {
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.forgot-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.forgot-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.forgot-input i {
+    position: absolute;
+    left: 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.forgot-input input {
+    width: 100%;
+    padding: 12px 12px 12px 38px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.forgot-input input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.forgot-form .btn {
+    width: 100%;
+    margin-top: 5px;
+}

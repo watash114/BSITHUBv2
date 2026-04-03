@@ -3596,13 +3596,26 @@ function deleteAccount() {
 }
 
 function showForgotPassword() {
-    var html = '<div class="forgot-password"><h3>Reset Password</h3>';
-    html += '<p>Enter your email and new password to reset.</p>';
+    var html = '<div class="forgot-password-modal">';
+    html += '<div class="forgot-icon"><i class="fas fa-key"></i></div>';
+    html += '<h3>Reset Password</h3>';
+    html += '<p>Enter your email and new password</p>';
+    html += '<div class="forgot-form">';
+    html += '<div class="forgot-input">';
+    html += '<i class="fas fa-envelope"></i>';
     html += '<input type="email" id="reset-email" placeholder="Your email">';
-    html += '<input type="password" id="reset-new-password" placeholder="New password">';
-    html += '<input type="password" id="reset-confirm-password" placeholder="Confirm new password">';
-    html += '<button class="btn btn-primary" onclick="sendPasswordReset()">Reset Password</button>';
     html += '</div>';
+    html += '<div class="forgot-input">';
+    html += '<i class="fas fa-lock"></i>';
+    html += '<input type="password" id="reset-new-password" placeholder="New password">';
+    html += '</div>';
+    html += '<div class="forgot-input">';
+    html += '<i class="fas fa-lock"></i>';
+    html += '<input type="password" id="reset-confirm-password" placeholder="Confirm new password">';
+    html += '</div>';
+    html += '<button class="btn btn-primary" onclick="sendPasswordReset()"><i class="fas fa-check"></i> Reset Password</button>';
+    html += '<button class="btn-text" onclick="closeModal()">Cancel</button>';
+    html += '</div></div>';
     showModal(html);
 }
 
