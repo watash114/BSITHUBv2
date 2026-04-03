@@ -419,9 +419,19 @@ function showApp() {
         goOnline(currentUser.id);
     }
     
+    // Sync current user to Firebase
+    if (currentUser && typeof syncUserToFirebase === 'function') {
+        syncUserToFirebase(currentUser);
+    }
+    
     // Force sync all chats and messages to Firebase on login
     setTimeout(function() {
         console.log('=== SYNCING ALL DATA TO FIREBASE ===');
+        
+        // Sync all users
+        if (typeof syncAllUsersToFirebase === 'function') {
+            syncAllUsersToFirebase();
+        }
         
         // Sync all chats
         var chats = Storage.get('chats') || [];
@@ -436,12 +446,26 @@ function showApp() {
         var messages = Storage.get('messages') || [];
         messages.forEach(function(msg) {
             if (typeof sendMsgToFirebase === 'function') {
-                console.log('Syncing message:', msg.id, 'to chat:', msg.chatId);
                 sendMsgToFirebase(msg);
             }
         });
         
+        // Fetch all users from chats
+        chats.forEach(function(chat) {
+            chat.participants.forEach(function(userId) {
+                if (userId !== currentUser.id && typeof fetchUserFromFirebase === 'function') {
+                    fetchUserFromFirebase(userId);
+                }
+            });
+        });
+        
         console.log('=== SYNC COMPLETE ===');
+        
+        // Reload chats after fetching users
+        setTimeout(function() {
+            loadChats();
+            loadGroups();
+        }, 2000);
     }, 2000);
     
     // Listen for new chats from other users
@@ -711,7 +735,11 @@ function loadChats() {
                 chatName = otherUser.name;
                 chatAvatar = otherUser.avatar ? '<img src="' + otherUser.avatar + '">' : otherUser.name.charAt(0).toUpperCase();
             } else {
-                chatName = 'User ' + (otherUserId ? otherUserId.substring(0, 5) : 'Unknown');
+                // Fetch from Firebase if not in localStorage
+                if (otherUserId && typeof fetchUserFromFirebase === 'function') {
+                    fetchUserFromFirebase(otherUserId);
+                }
+                chatName = otherUserId ? otherUserId.substring(0, 8) : 'Unknown';
                 chatAvatar = '?';
             }
             chatUserId = otherUserId || currentUser.id;

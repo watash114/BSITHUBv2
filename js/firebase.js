@@ -195,4 +195,56 @@ function goOffline(userId) {
     tryGo();
 }
 
+// ==========================================
+// User Data Sync
+// ==========================================
+function syncUserToFirebase(user) {
+    if (!user) return;
+    function trySync() {
+        if (!firebaseDb) { setTimeout(trySync, 1000); return; }
+        // Only sync public info (no password)
+        var userData = {
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            avatar: user.avatar || null
+        };
+        firebaseDb.ref('users/' + user.id).set(userData);
+        console.log('User synced to Firebase:', user.username);
+    }
+    trySync();
+}
+
+function fetchUserFromFirebase(userId) {
+    return new Promise(function(resolve) {
+        function tryFetch() {
+            if (!firebaseDb) { setTimeout(tryFetch, 1000); return; }
+            firebaseDb.ref('users/' + userId).once('value').then(function(snap) {
+                var user = snap.val();
+                if (user) {
+                    // Add to local storage
+                    var localUsers = Storage.get('users') || [];
+                    var existingIndex = localUsers.findIndex(function(u) { return u.id === userId; });
+                    if (existingIndex === -1) {
+                        localUsers.push(user);
+                    } else {
+                        localUsers[existingIndex] = Object.assign({}, localUsers[existingIndex], user);
+                    }
+                    Storage.set('users', localUsers);
+                    console.log('Fetched user from Firebase:', user.username);
+                }
+                resolve(user);
+            }).catch(function() { resolve(null); });
+        }
+        tryFetch();
+    });
+}
+
+function syncAllUsersToFirebase() {
+    var users = Storage.get('users') || [];
+    users.forEach(function(user) {
+        syncUserToFirebase(user);
+    });
+}
+
 console.log('Firebase module loaded');
