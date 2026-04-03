@@ -2964,18 +2964,18 @@ body {
 }
 
 .message.sent .message-bubble {
-    background: var(--primary);
-    color: white;
+    background: transparent;
+    color: var(--text-primary);
     margin-left: auto;
-    border-radius: 18px 18px 4px 18px;
-    padding: 10px 15px;
+    border-radius: 0;
+    padding: 5px 10px;
 }
 
 .message.received .message-bubble {
-    background: var(--bg-secondary);
+    background: transparent;
     margin-right: auto;
-    border-radius: 18px 18px 18px 4px;
-    padding: 10px 15px;
+    border-radius: 0;
+    padding: 5px 10px;
 }
 
 .message-footer {
