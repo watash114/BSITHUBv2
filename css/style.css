@@ -3471,3 +3471,95 @@ body {
 .reaction-badge:hover {
     transform: scale(1.1);
 }
+
+/* Edited Message */
+.message-edited {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-left: 5px;
+}
+
+/* Edit Message Modal */
+.edit-message-modal {
+    text-align: center;
+}
+
+.edit-message-modal textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    margin: 15px 0;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+/* Forward Message Modal */
+.forward-modal {
+    text-align: center;
+}
+
+.forward-preview {
+    background: var(--bg-secondary);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-size: 14px;
+}
+
+.forward-chats {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.forward-chat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.forward-chat-item:hover {
+    background: var(--bg-secondary);
+}
+
+.forward-chat-item i {
+    color: var(--primary);
+}
+
+/* Delete Confirm */
+.delete-confirm {
+    text-align: center;
+}
+
+.delete-confirm p {
+    margin: 15px 0;
+    color: var(--text-secondary);
+}
+
+/* Typing Indicator in Groups */
+.typing-users {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.typing-user {
+    background: var(--bg-secondary);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}

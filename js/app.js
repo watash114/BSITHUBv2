@@ -1011,6 +1011,11 @@ function renderMessages(chatId) {
             html += '</div>';
         }
         
+        // Show edited indicator
+        if (msg.edited) {
+            html += '<span class="message-edited">(edited)</span>';
+        }
+        
         html += '<div class="message-footer">';
         html += '<span class="message-time">' + formatTime(msg.timestamp) + '</span>';
         if (isSent) {
@@ -1022,6 +1027,11 @@ function renderMessages(chatId) {
         // Action buttons
         html += '<div class="message-actions">';
         html += '<button class="message-action-btn" onclick="showReactionPicker(\'' + msg.id + '\')" title="React">😀</button>';
+        html += '<button class="message-action-btn" onclick="forwardMessage(\'' + msg.id + '\')" title="Forward"><i class="fas fa-share"></i></button>';
+        if (isSent) {
+            html += '<button class="message-action-btn" onclick="editMessage(\'' + msg.id + '\')" title="Edit"><i class="fas fa-edit"></i></button>';
+            html += '<button class="message-action-btn" onclick="deleteMessage(\'' + msg.id + '\')" title="Delete"><i class="fas fa-trash"></i></button>';
+        }
         html += '</div>';
         html += '</div>';
         html += '</div>';
@@ -1157,6 +1167,173 @@ function clearReplyPreview() {
     currentReplyTo = null;
     var preview = document.getElementById('reply-preview');
     if (preview) preview.style.display = 'none';
+}
+
+function editMessage(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message) return;
+    
+    // Can't edit GIFs, files, or audio
+    if (message.gifUrl || message.fileData || message.audioData) {
+        showToast('Cannot edit this message type', 'error');
+        return;
+    }
+    
+    var html = '<div class="edit-message-modal"><h3>Edit Message</h3>';
+    html += '<textarea id="edit-message-input" rows="3">' + escapeHtml(message.text) + '</textarea>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="saveEditedMessage(\'' + messageId + '\')">Save</button>';
+    html += '</div></div>';
+    showModal(html);
+    
+    // Focus the input
+    setTimeout(function() {
+        document.getElementById('edit-message-input').focus();
+    }, 100);
+}
+
+function saveEditedMessage(messageId) {
+    var newText = document.getElementById('edit-message-input').value.trim();
+    if (!newText) {
+        showToast('Message cannot be empty', 'error');
+        return;
+    }
+    
+    var messages = Storage.get('messages') || [];
+    var messageIndex = messages.findIndex(function(m) { return m.id === messageId; });
+    if (messageIndex === -1) return;
+    
+    messages[messageIndex].text = newText;
+    messages[messageIndex].edited = true;
+    Storage.set('messages', messages);
+    
+    // Sync to Firebase
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(messages[messageIndex]);
+    }
+    
+    closeModal();
+    if (activeChat) {
+        renderMessages(activeChat.id);
+    }
+    showToast('Message edited', 'success');
+}
+
+function deleteMessage(messageId) {
+    showModal('<div class="delete-confirm"><h3>Delete Message?</h3><p>This will delete the message for everyone.</p><div class="modal-buttons"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn danger" onclick="confirmDeleteMessage(\'' + messageId + '\')">Delete</button></div></div>');
+}
+
+function confirmDeleteMessage(messageId) {
+    var messages = Storage.get('messages') || [];
+    var chatId = null;
+    
+    messages = messages.filter(function(m) {
+        if (m.id === messageId) {
+            chatId = m.chatId;
+            return false;
+        }
+        return true;
+    });
+    
+    Storage.set('messages', messages);
+    
+    // Sync deletion to Firebase (store a "deleted" message)
+    if (typeof sendMsgToFirebase === 'function' && chatId) {
+        var deletedMessage = {
+            id: messageId,
+            chatId: chatId,
+            deleted: true
+        };
+        sendMsgToFirebase(deletedMessage);
+    }
+    
+    closeModal();
+    if (activeChat) {
+        renderMessages(activeChat.id);
+        loadChats();
+    }
+    showToast('Message deleted', 'success');
+}
+
+function forwardMessage(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message) return;
+    
+    var chats = Storage.get('chats') || [];
+    var users = Storage.get('users') || [];
+    var myChats = chats.filter(function(c) { return c.participants.indexOf(currentUser.id) !== -1; });
+    
+    if (myChats.length === 0) {
+        showToast('No chats to forward to', 'info');
+        return;
+    }
+    
+    var html = '<div class="forward-modal"><h3>Forward Message</h3>';
+    html += '<div class="forward-preview"><p>' + escapeHtml(message.text.substring(0, 100)) + '</p></div>';
+    html += '<div class="forward-chats">';
+    
+    myChats.forEach(function(chat) {
+        if (chat.id === activeChat.id) return; // Skip current chat
+        
+        var chatName = '';
+        if (chat.isGroup) {
+            chatName = chat.groupName || 'Group';
+        } else {
+            var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
+            var otherUser = users.find(function(u) { return u.id === otherUserId; });
+            chatName = otherUser ? otherUser.name : 'Chat';
+        }
+        
+        html += '<div class="forward-chat-item" onclick="confirmForward(\'' + messageId + '\', \'' + chat.id + '\')">';
+        html += '<i class="fas fa-' + (chat.isGroup ? 'users' : 'user') + '"></i>';
+        html += '<span>' + escapeHtml(chatName) + '</span>';
+        html += '</div>';
+    });
+    
+    html += '</div></div>';
+    showModal(html);
+}
+
+function confirmForward(messageId, toChatId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message) return;
+    
+    var newMessage = {
+        id: generateId(),
+        chatId: toChatId,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: message.text,
+        fileData: message.fileData || null,
+        fileName: message.fileName || null,
+        fileType: message.fileType || null,
+        gifUrl: message.gifUrl || null,
+        audioData: message.audioData || null,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: true
+    };
+    
+    messages.push(newMessage);
+    Storage.set('messages', messages);
+    
+    // Sync to Firebase
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(newMessage);
+    }
+    
+    closeModal();
+    showToast('Message forwarded', 'success');
+    loadChats();
 }
 
 function handleMentionInput(input) {
