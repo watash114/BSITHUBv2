@@ -2308,21 +2308,76 @@ function showChatOptions() {
     var chats = Storage.get('chats') || [];
     var chat = chats.find(function(c) { return c.id === activeChat.id; });
     
-    var html = '<div class="chat-options"><h3>Chat Options</h3>';
+    var html = '<div class="chat-options-modal">';
+    html += '<div class="chat-options-header">';
+    html += '<h3><i class="fas fa-cog"></i> Chat Options</h3>';
+    html += '</div>';
+    html += '<div class="chat-options-list">';
     
-    // Show group info option for groups
+    // Group-specific options
     if (chat && chat.isGroup) {
-        html += '<button class="btn" onclick="showGroupInfo()"><i class="fas fa-users"></i> Group Info</button>';
-        html += '<button class="btn danger" onclick="leaveGroup()"><i class="fas fa-sign-out-alt"></i> Leave Group</button>';
+        html += '<div class="option-item" onclick="showGroupInfo()">';
+        html += '<i class="fas fa-users"></i>';
+        html += '<span>Group Info</span>';
+        html += '<i class="fas fa-chevron-right"></i>';
+        html += '</div>';
+        html += '<div class="option-item" onclick="leaveGroup()">';
+        html += '<i class="fas fa-sign-out-alt" style="color: #ff4d4d;"></i>';
+        html += '<span style="color: #ff4d4d;">Leave Group</span>';
+        html += '<i class="fas fa-chevron-right"></i>';
+        html += '</div>';
+        html += '<div class="option-divider"></div>';
     }
     
-    html += '<button class="btn" onclick="toggleMuteChat()"><i class="fas fa-bell"></i> ' + (chat && chat.muted ? 'Unmute' : 'Mute') + ' Notifications</button>';
-    html += '<button class="btn" onclick="togglePinChat()"><i class="fas fa-thumbtack"></i> ' + (chat && chat.pinned ? 'Unpin' : 'Pin') + ' Chat</button>';
-    html += '<button class="btn" onclick="showWallpaperPicker()"><i class="fas fa-palette"></i> Chat Wallpaper</button>';
-    html += '<button class="btn" onclick="archiveChat()"><i class="fas fa-archive"></i> Archive Chat</button>';
-    html += '<button class="btn" onclick="clearChatHistory()"><i class="fas fa-eraser"></i> Clear Chat History</button>';
-    html += '<button class="btn danger" onclick="deleteChat()"><i class="fas fa-trash"></i> Delete Chat</button>';
+    // Notification toggle
+    var isMuted = chat && chat.muted;
+    html += '<div class="option-item" onclick="toggleMuteChat()">';
+    html += '<i class="fas fa-bell' + (isMuted ? '-slash' : '') + '"></i>';
+    html += '<span>' + (isMuted ? 'Unmute' : 'Mute') + ' Notifications</span>';
+    html += '<div class="option-toggle ' + (isMuted ? 'active' : '') + '"></div>';
     html += '</div>';
+    
+    // Pin toggle
+    var isPinned = chat && chat.pinned;
+    html += '<div class="option-item" onclick="togglePinChat()">';
+    html += '<i class="fas fa-thumbtack"></i>';
+    html += '<span>' + (isPinned ? 'Unpin' : 'Pin') + ' Chat</span>';
+    html += '<div class="option-toggle ' + (isPinned ? 'active' : '') + '"></div>';
+    html += '</div>';
+    
+    html += '<div class="option-divider"></div>';
+    
+    // Wallpaper
+    html += '<div class="option-item" onclick="showWallpaperPicker()">';
+    html += '<i class="fas fa-palette"></i>';
+    html += '<span>Chat Wallpaper</span>';
+    html += '<i class="fas fa-chevron-right"></i>';
+    html += '</div>';
+    
+    // Archive
+    html += '<div class="option-item" onclick="archiveChat()">';
+    html += '<i class="fas fa-archive"></i>';
+    html += '<span>Archive Chat</span>';
+    html += '<i class="fas fa-chevron-right"></i>';
+    html += '</div>';
+    
+    // Clear history
+    html += '<div class="option-item" onclick="clearChatHistory()">';
+    html += '<i class="fas fa-eraser"></i>';
+    html += '<span>Clear Chat History</span>';
+    html += '<i class="fas fa-chevron-right"></i>';
+    html += '</div>';
+    
+    html += '<div class="option-divider"></div>';
+    
+    // Delete
+    html += '<div class="option-item danger" onclick="deleteChat()">';
+    html += '<i class="fas fa-trash"></i>';
+    html += '<span>Delete Chat</span>';
+    html += '<i class="fas fa-chevron-right"></i>';
+    html += '</div>';
+    
+    html += '</div></div>';
     showModal(html);
 }
 

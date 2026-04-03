@@ -5017,3 +5017,105 @@ body {
     color: var(--text-secondary);
     font-size: 14px;
 }
+
+/* Chat Options Modal */
+.chat-options-modal {
+    max-width: 350px;
+    margin: 0 auto;
+}
+
+.chat-options-header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.chat-options-header h3 {
+    font-size: 18px;
+}
+
+.chat-options-header i {
+    color: var(--primary);
+    margin-right: 8px;
+}
+
+.chat-options-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.option-item:hover {
+    background: var(--bg-secondary);
+}
+
+.option-item i:first-child {
+    width: 20px;
+    text-align: center;
+    color: var(--primary);
+    font-size: 16px;
+}
+
+.option-item span {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.option-item .fa-chevron-right {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.option-item.danger {
+    color: #ff4d4d;
+}
+
+.option-item.danger i:first-child {
+    color: #ff4d4d;
+}
+
+.option-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 5px 10px;
+}
+
+/* Toggle Switch */
+.option-toggle {
+    width: 40px;
+    height: 22px;
+    background: var(--border);
+    border-radius: 11px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.option-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.3s;
+}
+
+.option-toggle.active {
+    background: var(--primary);
+}
+
+.option-toggle.active::after {
+    left: 20px;
+}
