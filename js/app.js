@@ -3633,7 +3633,7 @@ function sendResetCode() {
     resetVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     resetUserEmail = email;
     
-    // Send email via EmailJS
+    // Try to send email (may not work due to Cloudflare routing)
     if (typeof emailjs !== 'undefined') {
         var templateParams = {
             email: email,
@@ -3648,20 +3648,15 @@ function sendResetCode() {
         emailjs.send('service_32be10s', 'template_600032u', templateParams)
             .then(function(response) {
                 console.log('EmailJS success:', response);
-                showToast('Verification code sent to ' + email, 'success');
-                showVerificationInput(email);
             })
             .catch(function(error) {
                 console.error('EmailJS error:', error);
-                // Show code on screen as fallback
-                showToast('Email failed. Code shown below.', 'info');
-                showVerificationInput(email, true);
             });
-    } else {
-        // EmailJS not loaded - show code for demo
-        showToast('Email service not configured. Code shown for demo.', 'info');
-        showVerificationInput(email, true);
     }
+    
+    // Always show code on screen (since email delivery is unreliable)
+    showToast('Verification code generated', 'info');
+    showVerificationInput(email, true);
 }
 
 function showVerificationInput(email, showDemoCode) {
