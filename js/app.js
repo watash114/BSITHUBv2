@@ -1899,7 +1899,6 @@ function populateGifPicker(type) {
             grid.innerHTML = '<div class="gif-no-results">Could not load GIFs. Try again later.</div>';
         });
 }
-}
 
 function sendMessage(text) {
     if (!activeChat || !text.trim()) return;
