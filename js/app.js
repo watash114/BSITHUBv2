@@ -3936,12 +3936,18 @@ function showTermsOfService() {
 }
 
 // ==========================================
-// Video Calling (Simple WebRTC)
+// Video Calling (VideoSDK.live)
 // ==========================================
-var videoStream = null;
+var meeting = null;
+var localStream = null;
 var isVideoCallActive = false;
 var callTimer = null;
 var callSeconds = 0;
+var isMuted = false;
+var isCameraOff = false;
+
+// TODO: Replace with your VideoSDK API key
+var VIDEOSDK_API_KEY = 'YOUR_VIDEOSDK_API_KEY';
 
 function startVideoCall() {
     if (!activeChat) {
@@ -3954,52 +3960,79 @@ function startVideoCall() {
         return;
     }
     
-    // Show confirmation modal
-    showModal('<div class="video-call-setup"><h3><i class="fas fa-video"></i> Start Video Call</h3><p>Camera and microphone access required</p><button class="btn btn-primary" onclick="initVideoCall()"><i class="fas fa-phone"></i> Start Call</button><button class="btn" onclick="closeModal()">Cancel</button></div>');
+    showModal('<div class="video-call-setup"><h3><i class="fas fa-video"></i> Start Video Call</h3><p>Enter your VideoSDK API key to start</p><div class="forgot-input"><i class="fas fa-key"></i><input type="text" id="videosdk-key" placeholder="Enter API Key" value="' + VIDEOSDK_API_KEY + '"></div><a href="https://app.videosdk.live/api-keys" target="_blank" style="display:block;margin:10px 0;font-size:13px;">Get free API key</a><button class="btn btn-primary" onclick="initVideoCall()"><i class="fas fa-phone"></i> Start Call</button><button class="btn" onclick="closeModal()">Cancel</button></div>');
 }
 
 async function initVideoCall() {
+    var apiKey = document.getElementById('videosdk-key').value;
+    if (!apiKey || apiKey === 'YOUR_VIDEOSDK_API_KEY') {
+        showToast('Please enter a valid API key', 'error');
+        return;
+    }
+    
+    VIDEOSDK_API_KEY = apiKey;
     closeModal();
     
     try {
-        // Check if camera is available
-        var devices = await navigator.mediaDevices.enumerateDevices();
-        var videoDevices = devices.filter(function(d) { return d.kind === 'videoinput'; });
-        
-        if (videoDevices.length === 0) {
-            showToast('No camera found. Please connect a camera.', 'error');
+        // Check if VideoSDK is loaded
+        if (typeof VideoSDK === 'undefined') {
+            showToast('VideoSDK not loaded. Please refresh.', 'error');
             return;
         }
         
-        // Stop any existing video tracks first
-        if (videoStream) {
-            videoStream.getTracks().forEach(function(track) { track.stop(); });
-        }
+        // Initialize VideoSDK
+        VideoSDK.config(apiKey);
         
-        // Try to get camera with constraints
-        var constraints = { 
-            video: { 
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                facingMode: 'user'
-            }, 
-            audio: true 
-        };
+        // Generate unique meeting ID
+        var meetingId = 'bsithub-' + activeChat.id + '-' + Date.now();
         
-        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        // Create meeting
+        meeting = await VideoSDK.initMeeting({
+            meetingId: meetingId,
+            name: currentUser.name,
+            micEnabled: true,
+            webcamEnabled: true
+        });
         
-        // Show video call UI
+        // Join meeting
+        await meeting.join();
+        
+        // Show video UI
         showVideoCallUI();
         
-        // Attach local video
-        var localVideo = document.getElementById('local-video-element');
-        if (localVideo) {
-            localVideo.srcObject = videoStream;
-        }
+        // Handle local stream
+        meeting.localParticipant.on("stream-enabled", function(stream) {
+            if (stream.kind === "video") {
+                var localVideo = document.getElementById('local-video-element');
+                if (localVideo) {
+                    localVideo.srcObject = stream.mediaStream;
+                }
+            }
+        });
         
-        isVideoCallActive = true;
+        // Handle remote participants
+        meeting.on("participant-joined", function(participant) {
+            console.log('Participant joined:', participant.displayName);
+            participant.on("stream-enabled", function(stream) {
+                if (stream.kind === "video") {
+                    addRemoteParticipant(participant.id, participant.displayName, stream.mediaStream);
+                }
+            });
+            participant.on("stream-disabled", function(stream) {
+                if (stream.kind === "video") {
+                    removeRemoteParticipant(participant.id);
+                }
+            });
+            updateCallStatus();
+        });
         
-        // Start call timer
+        meeting.on("participant-left", function(participant) {
+            console.log('Participant left:', participant.displayName);
+            removeRemoteParticipant(participant.id);
+            updateCallStatus();
+        });
+        
+        // Start timer
         callSeconds = 0;
         callTimer = setInterval(function() {
             callSeconds++;
@@ -4009,38 +4042,26 @@ async function initVideoCall() {
             if (timer) timer.textContent = mins + ':' + secs;
         }, 1000);
         
-        document.getElementById('call-status').textContent = 'Connected';
-        showToast('Video call started', 'success');
+        isVideoCallActive = true;
+        document.getElementById('call-status').textContent = 'Connected - Share meeting ID: ' + meetingId;
+        showToast('Video call started!', 'success');
         
     } catch (error) {
         console.error('Video call error:', error);
-        
-        if (error.name === 'NotAllowedError') {
-            showToast('Camera/microphone permission denied. Please allow access in browser settings.', 'error');
-        } else if (error.name === 'NotFoundError') {
-            showToast('No camera/microphone found. Please connect a device.', 'error');
-        } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
-            showToast('Camera is being used by another app. Please close other apps using the camera.', 'error');
-        } else if (error.name === 'OverconstrainedError') {
-            showToast('Camera does not support the requested settings.', 'error');
-        } else if (error.name === 'SecurityError') {
-            showToast('Camera access blocked. Please use HTTPS.', 'error');
-        } else {
-            showToast('Could not start video: ' + error.message, 'error');
-        }
+        showToast('Could not start video: ' + error.message, 'error');
     }
 }
 
 function showVideoCallUI() {
     var html = '<div class="video-call-overlay" id="video-call-overlay">';
     html += '<div class="video-call-content">';
-    html += '<div class="video-grid">';
+    html += '<div class="video-grid" id="video-grid">';
     html += '<div class="video-participant local">';
     html += '<video id="local-video-element" autoplay muted playsinline></video>';
     html += '<span class="participant-name">' + currentUser.name + ' (You)</span>';
     html += '</div>';
-    html += '<div class="video-participant remote">';
-    html += '<div class="remote-placeholder"><i class="fas fa-user"></i><span>Waiting for ' + (activeChat ? 'participant' : '') + '...</span></div>';
+    html += '<div class="video-participant remote" id="remote-placeholder">';
+    html += '<div class="remote-placeholder"><i class="fas fa-user"></i><span>Waiting for others...</span></div>';
     html += '</div>';
     html += '</div>';
     html += '<div class="call-info">';
@@ -4048,53 +4069,99 @@ function showVideoCallUI() {
     html += '<p id="call-timer">00:00</p>';
     html += '</div>';
     html += '<div class="call-controls">';
-    html += '<button class="call-btn" id="toggle-camera" onclick="toggleCamera()"><i class="fas fa-video"></i></button>';
     html += '<button class="call-btn" id="toggle-mic" onclick="toggleMic()"><i class="fas fa-microphone"></i></button>';
+    html += '<button class="call-btn" id="toggle-camera" onclick="toggleCamera()"><i class="fas fa-video"></i></button>';
     html += '<button class="call-btn call-end" onclick="endVideoCall()"><i class="fas fa-phone-slash"></i></button>';
     html += '</div></div></div>';
     
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-function toggleCamera() {
-    if (!videoStream) return;
+function addRemoteParticipant(participantId, name, stream) {
+    var grid = document.getElementById('video-grid');
+    if (!grid) return;
     
-    var videoTrack = videoStream.getVideoTracks()[0];
-    if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        var btn = document.getElementById('toggle-camera');
-        btn.classList.toggle('disabled', !videoTrack.enabled);
+    // Remove placeholder
+    var placeholder = document.getElementById('remote-placeholder');
+    if (placeholder) placeholder.remove();
+    
+    // Check if already exists
+    var existing = document.getElementById('remote-' + participantId);
+    if (existing) {
+        var video = existing.querySelector('video');
+        if (video) video.srcObject = stream;
+        return;
+    }
+    
+    var div = document.createElement('div');
+    div.className = 'video-participant remote';
+    div.id = 'remote-' + participantId;
+    div.innerHTML = '<video autoplay playsinline></video><span class="participant-name">' + name + '</span>';
+    grid.appendChild(div);
+    
+    var video = div.querySelector('video');
+    if (video) video.srcObject = stream;
+}
+
+function removeRemoteParticipant(participantId) {
+    var el = document.getElementById('remote-' + participantId);
+    if (el) el.remove();
+}
+
+function updateCallStatus() {
+    var statusEl = document.getElementById('call-status');
+    if (statusEl && meeting) {
+        var count = Object.keys(meeting.participants).length;
+        statusEl.textContent = count + ' participant(s)';
     }
 }
 
 function toggleMic() {
-    if (!videoStream) return;
+    if (!meeting) return;
     
-    var audioTrack = videoStream.getAudioTracks()[0];
-    if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        var btn = document.getElementById('toggle-mic');
-        btn.classList.toggle('disabled', !audioTrack.enabled);
+    if (isMuted) {
+        meeting.unmuteMic();
+        isMuted = false;
+    } else {
+        meeting.muteMic();
+        isMuted = true;
     }
+    
+    var btn = document.getElementById('toggle-mic');
+    btn.classList.toggle('disabled', isMuted);
+}
+
+function toggleCamera() {
+    if (!meeting) return;
+    
+    if (isCameraOff) {
+        meeting.enableWebcam();
+        isCameraOff = false;
+    } else {
+        meeting.disableWebcam();
+        isCameraOff = true;
+    }
+    
+    var btn = document.getElementById('toggle-camera');
+    btn.classList.toggle('disabled', isCameraOff);
 }
 
 function endVideoCall() {
-    // Stop all tracks
-    if (videoStream) {
-        videoStream.getTracks().forEach(function(track) { track.stop(); });
-        videoStream = null;
+    if (meeting) {
+        meeting.leave();
+        meeting = null;
     }
     
-    // Stop timer
     if (callTimer) {
         clearInterval(callTimer);
         callTimer = null;
     }
     
     isVideoCallActive = false;
+    isMuted = false;
+    isCameraOff = false;
     callSeconds = 0;
     
-    // Remove overlay
     var overlay = document.getElementById('video-call-overlay');
     if (overlay) overlay.remove();
     
