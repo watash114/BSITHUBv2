@@ -3947,7 +3947,8 @@ var isMuted = false;
 var isCameraOff = false;
 
 // TODO: Replace with your VideoSDK API key
-var VIDEOSDK_API_KEY = 'YOUR_VIDEOSDK_API_KEY';
+var VIDEOSDK_API_KEY = '89a01300-acc4-4b67-a96d-cca215bacbe7';
+var VIDEOSDK_SECRET = '347924b5eabb89915df92f8fef9a24206814382d9e6c71ad2aab993eef507be5';
 
 function startVideoCall() {
     if (!activeChat) {
