@@ -2321,26 +2321,49 @@ function deleteAccount() {
 
 function showForgotPassword() {
     var html = '<div class="forgot-password"><h3>Reset Password</h3>';
-    html += '<p>Enter your email to receive reset instructions.</p>';
+    html += '<p>Enter your email and new password to reset.</p>';
     html += '<input type="email" id="reset-email" placeholder="Your email">';
-    html += '<button class="btn btn-primary" onclick="sendPasswordReset()">Send Reset Link</button>';
+    html += '<input type="password" id="reset-new-password" placeholder="New password">';
+    html += '<input type="password" id="reset-confirm-password" placeholder="Confirm new password">';
+    html += '<button class="btn btn-primary" onclick="sendPasswordReset()">Reset Password</button>';
     html += '</div>';
     showModal(html);
 }
 
 function sendPasswordReset() {
     var email = document.getElementById('reset-email').value;
-    var users = Storage.get('users') || [];
-    var user = users.find(function(u) { return u.email === email; });
+    var newPassword = document.getElementById('reset-new-password').value;
+    var confirmPassword = document.getElementById('reset-confirm-password').value;
     
-    if (!user) {
+    if (!email || !newPassword || !confirmPassword) {
+        showToast('Please fill in all fields', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+    
+    var users = Storage.get('users') || [];
+    var userIndex = users.findIndex(function(u) { return u.email === email; });
+    
+    if (userIndex === -1) {
         showToast('Email not found', 'error');
         return;
     }
     
-    // In a real app, this would send an email. For now, just show a success message.
+    // Update password
+    users[userIndex].password = hashPassword(newPassword);
+    Storage.set('users', users);
+    
     closeModal();
-    showToast('Password reset link sent to ' + email, 'success');
+    showToast('Password reset successfully! You can now login.', 'success');
 }
 
 function showTermsOfService() {
