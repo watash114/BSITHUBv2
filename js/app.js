@@ -480,22 +480,25 @@ function socialLogin(provider) {
                     showApp();
                 }
             })
-            .catch(function(error) {
-                window.socialLoginInProgress = false;
-                console.error('Social login error:', error);
-                
-                if (error.code === 'auth/popup-closed-by-user') {
-                    showToast('Login cancelled', 'info');
-                } else if (error.code === 'auth/cancelled-popup-request') {
-                    showToast('Please try again', 'info');
-                } else if (error.code === 'auth/configuration-not-found' || error.code === 'auth/unauthorized-domain') {
-                    showModal('<div class="setup-instructions"><h3>Setup Required</h3><p>Click the links below to enable social login:</p><div class="setup-steps"><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank" class="setup-link"><i class="fab fa-google"></i> Step 1: Enable Google Provider</a><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/settings" target="_blank" class="setup-link"><i class="fas fa-globe"></i> Step 2: Add Domain (bsithub.vercel.app)</a></div><p class="setup-note">After completing both steps, click Done and try again.</p><button class="btn btn-primary" onclick="closeModal()">Done</button></div>');
-                } else if (error.code === 'auth/account-exists-with-different-credential') {
-                    showToast('Account already exists with different login method', 'error');
-                } else {
-                    showToast('Login failed: ' + error.message, 'error');
-                }
-            });
+        .catch(function(error) {
+            window.socialLoginInProgress = false;
+            console.error('Social login error:', error);
+            
+            if (error.code === 'auth/popup-closed-by-user') {
+                // Don't show toast for user closing popup
+            } else if (error.code === 'auth/cancelled-popup-request') {
+                // Don't show toast for cancelled request
+            } else if (error.code === 'auth/configuration-not-found' || 
+                       error.code === 'auth/unauthorized-domain' || 
+                       error.code === 'auth/operation-not-allowed') {
+                // Show setup instructions with direct links
+                showModal('<div class="setup-instructions"><h3>Setup Required</h3><p>Click the links below to enable social login:</p><div class="setup-steps"><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank" class="setup-link"><i class="fab fa-google"></i> Step 1: Enable Google Provider</a><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/settings" target="_blank" class="setup-link"><i class="fas fa-globe"></i> Step 2: Add Domain (bsithub.vercel.app)</a></div><p class="setup-note">After completing both steps, click Done and try again.</p><button class="btn btn-primary" onclick="closeModal()">Done</button></div>');
+            } else if (error.code === 'auth/account-exists-with-different-credential') {
+                showToast('Account already exists with different login method', 'error');
+            } else {
+                showToast('Login failed: ' + error.message, 'error');
+            }
+        });
     }, 500);
 }
 
