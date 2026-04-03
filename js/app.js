@@ -2689,16 +2689,70 @@ function showCreateGroup() {
     var users = Storage.get('users') || [];
     var otherUsers = users.filter(function(u) { return u.id !== currentUser.id; });
     
-    var html = '<div class="create-group"><h3>Create Group</h3>';
-    html += '<input type="text" id="group-name-input" placeholder="Group name">';
-    html += '<div class="user-list">';
+    if (otherUsers.length === 0) {
+        showToast('No users available to create a group', 'info');
+        return;
+    }
+    
+    var html = '<div class="create-group-modal">';
+    html += '<div class="create-group-header">';
+    html += '<h3><i class="fas fa-users"></i> Create New Group</h3>';
+    html += '</div>';
+    
+    // Group name input
+    html += '<div class="create-group-input">';
+    html += '<input type="text" id="group-name-input" placeholder="Enter group name..." maxlength="50">';
+    html += '</div>';
+    
+    // Search users
+    html += '<div class="create-group-search">';
+    html += '<i class="fas fa-search"></i>';
+    html += '<input type="text" id="search-users-input" placeholder="Search users..." oninput="filterUsers(this.value)">';
+    html += '</div>';
+    
+    // Selected count
+    html += '<div class="selected-count"><span id="selected-count">0</span> selected</div>';
+    
+    // User list
+    html += '<div class="create-group-users" id="user-selection-list">';
     otherUsers.forEach(function(user) {
-        html += '<label><input type="checkbox" value="' + user.id + '"> ' + user.name + '</label>';
+        var avatar = user.avatar ? '<img src="' + user.avatar + '">' : user.name.charAt(0).toUpperCase();
+        html += '<div class="user-select-item" data-user-name="' + user.name.toLowerCase() + '">';
+        html += '<div class="user-select-avatar">' + avatar + '</div>';
+        html += '<div class="user-select-info">';
+        html += '<span class="user-select-name">' + escapeHtml(user.name) + '</span>';
+        html += '<span class="user-select-username">@' + escapeHtml(user.username) + '</span>';
+        html += '</div>';
+        html += '<label class="user-select-checkbox">';
+        html += '<input type="checkbox" value="' + user.id + '" onchange="updateSelectedCount()">';
+        html += '<span class="checkmark"></span>';
+        html += '</label>';
+        html += '</div>';
     });
     html += '</div>';
-    html += '<button class="btn btn-primary" onclick="createGroup()">Create</button>';
+    
+    // Create button
+    html += '<button class="btn btn-primary create-group-btn" onclick="createGroup()"><i class="fas fa-check"></i> Create Group</button>';
     html += '</div>';
     showModal(html);
+}
+
+function filterUsers(query) {
+    var items = document.querySelectorAll('.user-select-item');
+    query = query.toLowerCase();
+    items.forEach(function(item) {
+        var name = item.dataset.userName;
+        if (name.includes(query)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function updateSelectedCount() {
+    var checked = document.querySelectorAll('#modal input[type="checkbox"]:checked');
+    document.getElementById('selected-count').textContent = checked.length;
 }
 
 function createGroup() {
