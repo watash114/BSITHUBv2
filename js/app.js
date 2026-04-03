@@ -188,16 +188,50 @@ function generateId() {
 
 // Format date
 function formatDate(date) {
-    return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
+    if (!date) return 'N/A';
+    
+    var d = new Date(date);
+    
+    // Check if date is valid
+    if (isNaN(d.getTime())) {
+        // Try to parse as ISO string
+        d = new Date(date);
+        if (isNaN(d.getTime())) {
+            return 'N/A';
+        }
+    }
+    
+    // Get current date for relative formatting
+    var now = new Date();
+    var diff = now - d;
+    var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) {
+        return 'Today';
+    } else if (days === 1) {
+        return 'Yesterday';
+    } else if (days < 7) {
+        return days + ' days ago';
+    } else if (days < 30) {
+        var weeks = Math.floor(days / 7);
+        return weeks + ' week' + (weeks > 1 ? 's' : '') + ' ago';
+    } else {
+        return d.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
 }
 
 // Format time
 function formatTime(date) {
-    return new Date(date).toLocaleTimeString('en-US', {
+    if (!date) return '';
+    
+    var d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    return d.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit'
     });
