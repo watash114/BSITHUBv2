@@ -419,13 +419,30 @@ function showApp() {
         goOnline(currentUser.id);
     }
     
-    // Load chats from Firebase
-    if (currentUser && typeof getUserChats === 'function') {
-        getUserChats(currentUser.id).then(function(chatIds) {
-            console.log('User has', chatIds.length, 'chats from Firebase');
-            // We'll handle this when user opens the chats section
+    // Force sync all chats and messages to Firebase on login
+    setTimeout(function() {
+        console.log('=== SYNCING ALL DATA TO FIREBASE ===');
+        
+        // Sync all chats
+        var chats = Storage.get('chats') || [];
+        chats.forEach(function(chat) {
+            if (typeof syncChat === 'function') {
+                console.log('Syncing chat:', chat.id);
+                syncChat(chat);
+            }
         });
-    }
+        
+        // Sync all messages
+        var messages = Storage.get('messages') || [];
+        messages.forEach(function(msg) {
+            if (typeof sendMsgToFirebase === 'function') {
+                console.log('Syncing message:', msg.id, 'to chat:', msg.chatId);
+                sendMsgToFirebase(msg);
+            }
+        });
+        
+        console.log('=== SYNC COMPLETE ===');
+    }, 2000);
     
     // Listen for new chats from other users
     if (currentUser && typeof listenNewChats === 'function') {
