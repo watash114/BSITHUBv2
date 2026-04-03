@@ -4077,58 +4077,6 @@ function endVideoCall() {
 // ==========================================
 // Quick Actions Menu
 // ==========================================
-        await activeCall.microphone.enable();
-        btn.classList.remove('disabled');
-    }
-}
-
-async function endVideoCall() {
-    if (activeCall) {
-        await activeCall.leave();
-        activeCall = null;
-    }
-    
-    isVideoCallActive = false;
-    
-    var overlay = document.getElementById('video-call-overlay');
-    if (overlay) overlay.remove();
-    
-    showToast('Call ended', 'info');
-}
-
-function updateCallParticipants() {
-    if (!activeCall) return;
-    
-    var participants = activeCall.state.participants;
-    var videoGrid = document.getElementById('video-grid');
-    if (!videoGrid) return;
-    
-    // Clear remote participants
-    var remoteVideos = videoGrid.querySelectorAll('.video-participant:not(.local)');
-    remoteVideos.forEach(function(v) { v.remove(); });
-    
-    // Add remote participants
-    participants.forEach(function(participant) {
-        if (participant.userId !== currentUser.id) {
-            var div = document.createElement('div');
-            div.className = 'video-participant remote';
-            div.innerHTML = '<video id="video-' + participant.userId + '" autoplay playsinline></video><span class="participant-name">' + participant.name + '</span>';
-            videoGrid.appendChild(div);
-            
-            // Attach video stream
-            var video = document.getElementById('video-' + participant.userId);
-            if (video && participant.videoStream) {
-                video.srcObject = participant.videoStream;
-            }
-        }
-    });
-    
-    document.getElementById('call-status').textContent = participants.length + ' participant(s)';
-}
-
-// ==========================================
-// Quick Actions Menu
-// ==========================================
 function showQuickActions() {
     if (!activeChat) {
         showToast('Select a chat first', 'info');
