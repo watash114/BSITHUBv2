@@ -3974,11 +3974,25 @@ async function initVideoCall() {
     closeModal();
     
     try {
-        // Get camera and microphone
-        localStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 640, height: 480 }, 
-            audio: true 
-        });
+        // Try video+audio first, fallback to audio only
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480 }, 
+                audio: true 
+            });
+        } catch (videoError) {
+            console.log('Video not available, trying audio only:', videoError.message);
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: false, 
+                    audio: true 
+                });
+                showToast('Camera unavailable. Audio-only mode.', 'info');
+            } catch (audioError) {
+                showToast('Camera and microphone not available', 'error');
+                return;
+            }
+        }
         
         // Generate call ID
         currentCallId = activeChat.id + '-call-' + Date.now();
@@ -4083,11 +4097,25 @@ async function joinCall() {
     closeModal();
     
     try {
-        // Get camera and microphone
-        localStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 640, height: 480 }, 
-            audio: true 
-        });
+        // Try video+audio first, fallback to audio only
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480 }, 
+                audio: true 
+            });
+        } catch (videoError) {
+            console.log('Video not available, trying audio only:', videoError.message);
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: false, 
+                    audio: true 
+                });
+                showToast('Camera unavailable. Audio-only mode.', 'info');
+            } catch (audioError) {
+                showToast('Camera and microphone not available', 'error');
+                return;
+            }
+        }
         
         currentCallId = callId;
         
