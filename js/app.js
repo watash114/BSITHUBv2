@@ -2094,6 +2094,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var email = document.getElementById('login-email').value;
         var password = document.getElementById('login-password').value;
         console.log('Email:', email);
+        
+        // Handle remember me
+        var rememberMe = document.getElementById('remember-me');
+        if (rememberMe && rememberMe.checked) {
+            localStorage.setItem('rememberedEmail', email);
+        } else {
+            localStorage.removeItem('rememberedEmail');
+        }
+        
         var result = login(email, password);
         console.log('Login result:', result);
         
@@ -2107,21 +2116,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     };
     
-    // Remember me checkbox
-    var rememberMe = document.getElementById('remember-me');
+    // Load remembered email
     var savedEmail = localStorage.getItem('rememberedEmail');
     if (savedEmail) {
         document.getElementById('login-email').value = savedEmail;
-        rememberMe.checked = true;
+        var rememberMe = document.getElementById('remember-me');
+        if (rememberMe) rememberMe.checked = true;
     }
-    
-    document.getElementById('login-form').addEventListener('submit', function() {
-        if (rememberMe.checked) {
-            localStorage.setItem('rememberedEmail', document.getElementById('login-email').value);
-        } else {
-            localStorage.removeItem('rememberedEmail');
-        }
-    });
     
     // Password strength meter
     document.getElementById('register-password').addEventListener('input', function(e) {
