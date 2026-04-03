@@ -4060,11 +4060,25 @@ async function initVideoCall() {
         // Show video UI
         showVideoCallUI();
         
-        // Attach local video
-        var localVideo = document.getElementById('local-video-element');
-        if (localVideo) {
-            localVideo.srcObject = localStream;
-        }
+        // Attach local video (with timeout to ensure DOM is ready)
+        setTimeout(function() {
+            var localVideo = document.getElementById('local-video-element');
+            if (localVideo && localStream) {
+                localVideo.srcObject = localStream;
+                
+                // Check if video has tracks
+                var videoTracks = localStream.getVideoTracks();
+                if (videoTracks.length === 0) {
+                    // Audio only - show indicator
+                    localVideo.style.display = 'none';
+                    var container = localVideo.parentElement;
+                    var audioIndicator = document.createElement('div');
+                    audioIndicator.className = 'audio-only-indicator';
+                    audioIndicator.innerHTML = '<i class="fas fa-microphone"></i><span>Audio Only</span>';
+                    container.appendChild(audioIndicator);
+                }
+            }
+        }, 100);
         
         // Start timer
         callSeconds = 0;

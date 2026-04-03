@@ -5261,3 +5261,19 @@ body {
 .remote-placeholder span {
     font-size: 14px;
 }
+
+/* Audio Only Indicator */
+.audio-only-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(255,255,255,0.7);
+    font-size: 16px;
+}
+
+.audio-only-indicator i {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
