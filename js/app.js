@@ -385,6 +385,14 @@ function login(email, password) {
 }
 
 function socialLogin(provider) {
+    // Prevent multiple clicks
+    if (window.socialLoginInProgress) {
+        showToast('Please wait...', 'info');
+        return;
+    }
+    
+    window.socialLoginInProgress = true;
+    
     // Initialize Firebase if not already done
     if (typeof firebase !== 'undefined' && !firebase.apps.length) {
         initFirebase();
@@ -392,12 +400,14 @@ function socialLogin(provider) {
     
     if (typeof firebase === 'undefined' || !firebase.apps.length) {
         showToast('Firebase not ready. Please refresh.', 'error');
+        window.socialLoginInProgress = false;
         return;
     }
     
     // Check if Auth is available
     if (!firebase.auth) {
         showToast('Firebase Auth not loaded. Please refresh.', 'error');
+        window.socialLoginInProgress = false;
         return;
     }
     
@@ -416,70 +426,77 @@ function socialLogin(provider) {
             break;
         default:
             showToast('Unknown provider', 'error');
+            window.socialLoginInProgress = false;
             return;
     }
     
-    auth.signInWithPopup(providerObj)
-        .then(function(result) {
-            var user = result.user;
-            console.log('Social login success:', user.displayName);
-            
-            // Check if user exists in our system
-            var users = Storage.get('users') || [];
-            var existingUser = users.find(function(u) { return u.email === user.email; });
-            
-            if (existingUser) {
-                // User exists - log them in
-                currentUser = existingUser;
-                Storage.set('currentUser', { id: existingUser.id });
-                showToast('Welcome back, ' + user.displayName + '!', 'success');
-                showApp();
-            } else {
-                // Create new user from social login
-                var newUser = {
-                    id: generateId(),
-                    name: user.displayName || 'User',
-                    username: user.email.split('@')[0],
-                    email: user.email,
-                    password: null,
-                    role: 'user',
-                    status: 'active',
-                    bio: '',
-                    phone: user.phoneNumber || '',
-                    location: '',
-                    createdAt: new Date().toISOString(),
-                    avatar: user.photoURL,
-                    blockedUsers: [],
-                    socialProvider: provider
-                };
+    // Close any existing popups first
+    auth.signOut().catch(function() {});
+    
+    setTimeout(function() {
+        auth.signInWithPopup(providerObj)
+            .then(function(result) {
+                window.socialLoginInProgress = false;
+                var user = result.user;
+                console.log('Social login success:', user.displayName);
                 
-                users.push(newUser);
-                Storage.set('users', users);
-                currentUser = newUser;
-                Storage.set('currentUser', { id: newUser.id });
+                // Check if user exists in our system
+                var users = Storage.get('users') || [];
+                var existingUser = users.find(function(u) { return u.email === user.email; });
                 
-                if (typeof syncUserToFirebase === 'function') {
-                    syncUserToFirebase(newUser);
+                if (existingUser) {
+                    currentUser = existingUser;
+                    Storage.set('currentUser', { id: existingUser.id });
+                    showToast('Welcome back, ' + user.displayName + '!', 'success');
+                    showApp();
+                } else {
+                    var newUser = {
+                        id: generateId(),
+                        name: user.displayName || 'User',
+                        username: user.email.split('@')[0],
+                        email: user.email,
+                        password: null,
+                        role: 'user',
+                        status: 'active',
+                        bio: '',
+                        phone: user.phoneNumber || '',
+                        location: '',
+                        createdAt: new Date().toISOString(),
+                        avatar: user.photoURL,
+                        blockedUsers: [],
+                        socialProvider: provider
+                    };
+                    
+                    users.push(newUser);
+                    Storage.set('users', users);
+                    currentUser = newUser;
+                    Storage.set('currentUser', { id: newUser.id });
+                    
+                    if (typeof syncUserToFirebase === 'function') {
+                        syncUserToFirebase(newUser);
+                    }
+                    
+                    showToast('Welcome to BSITHUB, ' + user.displayName + '!', 'success');
+                    showApp();
                 }
+            })
+            .catch(function(error) {
+                window.socialLoginInProgress = false;
+                console.error('Social login error:', error);
                 
-                showToast('Welcome to BSITHUB, ' + user.displayName + '!', 'success');
-                showApp();
-            }
-        })
-        .catch(function(error) {
-            console.error('Social login error:', error);
-            
-            if (error.code === 'auth/popup-closed-by-user') {
-                showToast('Login cancelled', 'info');
-            } else if (error.code === 'auth/configuration-not-found' || error.code === 'auth/unauthorized-domain') {
-                // Show setup instructions with direct links
-                showModal('<div class="setup-instructions"><h3>Setup Required</h3><p>Click the links below to enable social login:</p><div class="setup-steps"><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank" class="setup-link"><i class="fab fa-google"></i> Step 1: Enable Google Provider</a><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/settings" target="_blank" class="setup-link"><i class="fas fa-globe"></i> Step 2: Add Domain (bsithub.vercel.app)</a></div><p class="setup-note">After completing both steps, click Done and try again.</p><button class="btn btn-primary" onclick="closeModal()">Done</button></div>');
-            } else if (error.code === 'auth/account-exists-with-different-credential') {
-                showToast('Account already exists with different login method', 'error');
-            } else {
-                showToast('Login failed: ' + error.message, 'error');
-            }
-        });
+                if (error.code === 'auth/popup-closed-by-user') {
+                    showToast('Login cancelled', 'info');
+                } else if (error.code === 'auth/cancelled-popup-request') {
+                    showToast('Please try again', 'info');
+                } else if (error.code === 'auth/configuration-not-found' || error.code === 'auth/unauthorized-domain') {
+                    showModal('<div class="setup-instructions"><h3>Setup Required</h3><p>Click the links below to enable social login:</p><div class="setup-steps"><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank" class="setup-link"><i class="fab fa-google"></i> Step 1: Enable Google Provider</a><a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/settings" target="_blank" class="setup-link"><i class="fas fa-globe"></i> Step 2: Add Domain (bsithub.vercel.app)</a></div><p class="setup-note">After completing both steps, click Done and try again.</p><button class="btn btn-primary" onclick="closeModal()">Done</button></div>');
+                } else if (error.code === 'auth/account-exists-with-different-credential') {
+                    showToast('Account already exists with different login method', 'error');
+                } else {
+                    showToast('Login failed: ' + error.message, 'error');
+                }
+            });
+    }, 500);
 }
 
 function register(name, username, email, password) {
