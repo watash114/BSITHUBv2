@@ -3529,11 +3529,6 @@ function sendQuickReply(emoji) {
     renderMessages(activeChat.id);
     loadChats();
 }
-        if (btn) {
-            btn.innerHTML = remoteAudio.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-        }
-    }
-}
 
 function playConnectedSound() {
     try {
