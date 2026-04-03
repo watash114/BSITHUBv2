@@ -4107,138 +4107,27 @@ async function initVideoCall() {
     closeModal();
     
     try {
-        // Try video+audio first, fallback to audio only
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { width: 640, height: 480 }, 
-                audio: true 
-            });
-        } catch (videoError) {
-            console.log('Video not available, trying audio only:', videoError.message);
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: false, 
-                    audio: true 
-                });
-                showToast('Camera unavailable. Audio-only mode.', 'info');
-            } catch (audioError) {
-                showToast('Camera and microphone not available', 'error');
-                return;
-            }
-        }
-        
-        // Generate call ID
-        currentCallId = activeChat.id + '-call-' + Date.now();
-        
-        // ICE servers configuration
-        var iceServers = {
+        const pc = new RTCPeerConnection({
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
+                { urls: "stun:stun.l.google.com:19302" }
             ]
-        };
-        
-        // Create peer connection
-        peerConnection = new RTCPeerConnection(iceServers);
-        
-        // Add local stream
-        localStream.getTracks().forEach(function(track) {
-            peerConnection.addTrack(track, localStream);
         });
-        
-        // Handle remote stream
-        peerConnection.ontrack = function(event) {
-            console.log('Got remote stream');
-            var remoteVideo = document.getElementById('remote-video-element');
-            if (remoteVideo && event.streams[0]) {
-                remoteVideo.srcObject = event.streams[0];
-            }
-        };
-        
-        // Handle ICE candidates
-        peerConnection.onicecandidate = function(event) {
-            if (event.candidate && firebaseDb) {
-                firebaseDb.ref('calls/' + currentCallId + '/candidates/' + currentUser.id).push(event.candidate.toJSON());
-            }
-        };
-        
-        // Create offer
-        var offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        
-        // Store offer in Firebase
-        if (firebaseDb) {
-            await firebaseDb.ref('calls/' + currentCallId).set({
-                offer: offer,
-                caller: currentUser.id,
-                callerName: currentUser.name,
-                chatId: activeChat.id,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-            
-            // Listen for answer
-            firebaseDb.ref('calls/' + currentCallId + '/answer').on('value', async function(snapshot) {
-                var answer = snapshot.val();
-                if (answer && peerConnection) {
-                    console.log('Got answer');
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-                }
-            });
-            
-            // Listen for remote ICE candidates
-            firebaseDb.ref('calls/' + currentCallId + '/candidates').on('child_added', function(snapshot) {
-                if (snapshot.key !== currentUser.id) {
-                    snapshot.forEach(function(child) {
-                        var candidate = child.val();
-                        if (candidate && peerConnection) {
-                            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-                        }
-                    });
-                }
-            });
-        }
-        
-        // Show video UI
-        showVideoCallUI();
-        
-        // Attach local video (with timeout to ensure DOM is ready)
-        setTimeout(function() {
-            var localVideo = document.getElementById('local-video-element');
-            if (localVideo && localStream) {
-                localVideo.srcObject = localStream;
-                
-                // Check if video has tracks
-                var videoTracks = localStream.getVideoTracks();
-                if (videoTracks.length === 0) {
-                    // Audio only - show indicator
-                    localVideo.style.display = 'none';
-                    var container = localVideo.parentElement;
-                    var audioIndicator = document.createElement('div');
-                    audioIndicator.className = 'audio-only-indicator';
-                    audioIndicator.innerHTML = '<i class="fas fa-microphone"></i><span>Audio Only</span>';
-                    container.appendChild(audioIndicator);
-                }
-            }
-        }, 100);
-        
-        // Start timer
-        callSeconds = 0;
-        callTimer = setInterval(function() {
-            callSeconds++;
-            var mins = Math.floor(callSeconds / 60).toString().padStart(2, '0');
-            var secs = (callSeconds % 60).toString().padStart(2, '0');
-            var timer = document.getElementById('call-timer');
-            if (timer) timer.textContent = mins + ':' + secs;
-        }, 1000);
-        
-        isVideoCallActive = true;
-        document.getElementById('call-status').textContent = 'Waiting for other person to join...';
-        document.getElementById('call-id-display').textContent = 'Meeting ID: ' + currentCallId;
-        showToast('Call started! Share the Meeting ID.', 'success');
-        
-    } catch (error) {
-        console.error('Video call error:', error);
-        showToast('Camera error: ' + error.message, 'error');
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+        });
+
+        const localVideo = document.getElementById("local-video-element");
+        localVideo.srcObject = stream;
+
+        stream.getTracks().forEach(track => {
+            pc.addTrack(track, stream);
+        });
+
+        console.log("Video call initialized");
+    } catch (err) {
+        console.error("Video call error:", err);
     }
 }
 
@@ -4252,118 +4141,27 @@ async function joinCall() {
     closeModal();
     
     try {
-        // Try video+audio first, fallback to audio only
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { width: 640, height: 480 }, 
-                audio: true 
-            });
-        } catch (videoError) {
-            console.log('Video not available, trying audio only:', videoError.message);
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: false, 
-                    audio: true 
-                });
-                showToast('Camera unavailable. Audio-only mode.', 'info');
-            } catch (audioError) {
-                showToast('Camera and microphone not available', 'error');
-                return;
-            }
-        }
-        
-        currentCallId = callId;
-        
-        // ICE servers configuration
-        var iceServers = {
+        const pc = new RTCPeerConnection({
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
+                { urls: "stun:stun.l.google.com:19302" }
             ]
-        };
-        
-        // Create peer connection
-        peerConnection = new RTCPeerConnection(iceServers);
-        
-        // Add local stream
-        localStream.getTracks().forEach(function(track) {
-            peerConnection.addTrack(track, localStream);
         });
-        
-        // Handle remote stream
-        peerConnection.ontrack = function(event) {
-            console.log('Got remote stream');
-            var remoteVideo = document.getElementById('remote-video-element');
-            if (remoteVideo && event.streams[0]) {
-                remoteVideo.srcObject = event.streams[0];
-            }
-        };
-        
-        // Handle ICE candidates
-        peerConnection.onicecandidate = function(event) {
-            if (event.candidate && firebaseDb) {
-                firebaseDb.ref('calls/' + currentCallId + '/candidates/' + currentUser.id).push(event.candidate.toJSON());
-            }
-        };
-        
-        // Get offer from Firebase
-        if (firebaseDb) {
-            var snapshot = await firebaseDb.ref('calls/' + currentCallId + '/offer').once('value');
-            var offer = snapshot.val();
-            
-            if (offer) {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-                
-                // Create answer
-                var answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                
-                // Store answer in Firebase
-                await firebaseDb.ref('calls/' + currentCallId + '/answer').set(answer);
-                
-                // Listen for remote ICE candidates
-                firebaseDb.ref('calls/' + currentCallId + '/candidates').on('child_added', function(snapshot) {
-                    if (snapshot.key !== currentUser.id) {
-                        snapshot.forEach(function(child) {
-                            var candidate = child.val();
-                            if (candidate && peerConnection) {
-                                peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-                            }
-                        });
-                    }
-                });
-            } else {
-                showToast('Call not found', 'error');
-                return;
-            }
-        }
-        
-        // Show video UI
-        showVideoCallUI();
-        
-        // Attach local video
-        var localVideo = document.getElementById('local-video-element');
-        if (localVideo) {
-            localVideo.srcObject = localStream;
-        }
-        
-        // Start timer
-        callSeconds = 0;
-        callTimer = setInterval(function() {
-            callSeconds++;
-            var mins = Math.floor(callSeconds / 60).toString().padStart(2, '0');
-            var secs = (callSeconds % 60).toString().padStart(2, '0');
-            var timer = document.getElementById('call-timer');
-            if (timer) timer.textContent = mins + ':' + secs;
-        }, 1000);
-        
-        isVideoCallActive = true;
-        document.getElementById('call-status').textContent = 'Connected';
-        showToast('Joined call!', 'success');
-        
-    } catch (error) {
-        console.error('Join call error:', error);
-        showToast('Error joining: ' + error.message, 'error');
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+        });
+
+        const localVideo = document.getElementById("local-video-element");
+        localVideo.srcObject = stream;
+
+        stream.getTracks().forEach(track => {
+            pc.addTrack(track, stream);
+        });
+
+        console.log("Joined call");
+    } catch (err) {
+        console.error("Join call error:", err);
     }
 }
 
