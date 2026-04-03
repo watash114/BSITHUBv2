@@ -1867,24 +1867,24 @@ function searchGifs(query) {
 function populateGifPicker(type) {
     var grid = document.getElementById('gif-grid');
     
-    // Using Giphy's media CDN with reliable GIF IDs
+    // Reliable GIF URLs
     var gifs = [
-        'https://media.giphy.com/media/ZqlvCTNHpqrio/giphy.gif',
-        'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
-        'https://media.giphy.com/media/3oEdva9BUHPIs2SkGk/giphy.gif',
-        'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif',
-        'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif',
-        'https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif',
-        'https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif',
-        'https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif',
-        'https://media.giphy.com/media/l3vR6aasfs0Ae3qdG/giphy.gif',
-        'https://media.giphy.com/media/3o7aD4UFMvyNqDeRYQ/giphy.gif',
-        'https://media.giphy.com/media/l0MYy0BAxFfKx414A/giphy.gif',
-        'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif',
-        'https://media.giphy.com/media/l0HlFZ3c4NvBVaR3y/giphy.gif',
-        'https://media.giphy.com/media/3o7TKDEhacrNCODS0M/giphy.gif',
-        'https://media.giphy.com/media/l0MYATH9ZumUHCBq0/giphy.gif',
-        'https://media.giphy.com/media/3oEdv07JGXQLnu1mko/giphy.gif'
+        'https://media1.tenor.com/m/R9dRj4N5GmoAAAAC/hello-wave.gif',
+        'https://media1.tenor.com/m/y7UvHqh0vYMAAAAC/hi-hello.gif',
+        'https://media1.tenor.com/m/j-8UkMCCV9IAAAAC/thumbs-up-ok.gif',
+        'https://media1.tenor.com/m/abM2UoHKwFwAAAAC/happy-yes.gif',
+        'https://media1.tenor.com/m/1tAaEnS9V7oAAAAC/laughing-haha.gif',
+        'https://media1.tenor.com/m/QUxKqo9kDIAAAAC/cry-sad.gif',
+        'https://media1.tenor.com/m/2y6MRfMN_s0AAAAC/love-heart.gif',
+        'https://media1.tenor.com/m/TgBbfdl6hVUAAAAC/cool-awesome.gif',
+        'https://media1.tenor.com/m/YFn3SJ0UMpAAAAAC/funny-lol.gif',
+        'https://media1.tenor.com/m/MJLBEe6eqBIAAAAC/dance-dancing.gif',
+        'https://media1.tenor.com/m/1WJsHTNMNnUAAAAC/applause-clap.gif',
+        'https://media1.tenor.com/m/GfWZVu8K2ysAAAAC/thinking-hmm.gif',
+        'https://media1.tenor.com/m/nL9gE2z2se4AAAAC/surprised-wow.gif',
+        'https://media1.tenor.com/m/qKdDMN2VjKwAAAAC/sleepy-tired.gif',
+        'https://media1.tenor.com/m/fL3m6MJRkVUAAAAC/angry-mad.gif',
+        'https://media1.tenor.com/m/NxYJgGHm1FIAAAAC/cool-nice.gif'
     ];
     
     grid.innerHTML = '';
@@ -1895,7 +1895,6 @@ function populateGifPicker(type) {
         img.src = gifUrl;
         img.alt = 'GIF';
         img.onerror = function() {
-            // Hide broken images
             this.parentElement.style.display = 'none';
         };
         item.appendChild(img);
