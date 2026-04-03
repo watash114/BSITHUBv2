@@ -4077,21 +4077,6 @@ function endVideoCall() {
 // ==========================================
 // Quick Actions Menu
 // ==========================================
-        btn.classList.add('disabled');
-    } else {
-        await activeCall.camera.enable();
-        btn.classList.remove('disabled');
-    }
-}
-
-async function toggleMic() {
-    if (!activeCall) return;
-    
-    var btn = document.getElementById('toggle-mic');
-    if (activeCall.microphone.enabled) {
-        await activeCall.microphone.disable();
-        btn.classList.add('disabled');
-    } else {
         await activeCall.microphone.enable();
         btn.classList.remove('disabled');
     }
