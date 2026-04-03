@@ -1866,23 +1866,25 @@ function searchGifs(query) {
 
 function populateGifPicker(type) {
     var grid = document.getElementById('gif-grid');
+    
+    // Using Giphy's media CDN with reliable GIF IDs
     var gifs = [
-        'https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif',
+        'https://media.giphy.com/media/ZqlvCTNHpqrio/giphy.gif',
         'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
         'https://media.giphy.com/media/3oEdva9BUHPIs2SkGk/giphy.gif',
         'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif',
-        'https://media.giphy.com/media/3o7TKDEhacrNCODS0M/giphy.gif',
         'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif',
         'https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif',
         'https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif',
-        'https://media.giphy.com/media/l0MYC0LajbaPoEADu/giphy.gif',
-        'https://media.giphy.com/media/3o7TKUZfJKUKuSWTZe/giphy.gif',
         'https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif',
         'https://media.giphy.com/media/l3vR6aasfs0Ae3qdG/giphy.gif',
-        'https://media.giphy.com/media/3oEdv07JGXQLnu1mko/giphy.gif',
-        'https://media.giphy.com/media/l0MYATH9ZumUHCBq0/giphy.gif',
+        'https://media.giphy.com/media/3o7aD4UFMvyNqDeRYQ/giphy.gif',
+        'https://media.giphy.com/media/l0MYy0BAxFfKx414A/giphy.gif',
+        'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif',
+        'https://media.giphy.com/media/l0HlFZ3c4NvBVaR3y/giphy.gif',
         'https://media.giphy.com/media/3o7TKDEhacrNCODS0M/giphy.gif',
-        'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif'
+        'https://media.giphy.com/media/l0MYATH9ZumUHCBq0/giphy.gif',
+        'https://media.giphy.com/media/3oEdv07JGXQLnu1mko/giphy.gif'
     ];
     
     grid.innerHTML = '';
@@ -1892,6 +1894,10 @@ function populateGifPicker(type) {
         var img = document.createElement('img');
         img.src = gifUrl;
         img.alt = 'GIF';
+        img.onerror = function() {
+            // Hide broken images
+            this.parentElement.style.display = 'none';
+        };
         item.appendChild(img);
         item.onclick = function() {
             sendGif(gifUrl);
