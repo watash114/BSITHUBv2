@@ -3962,11 +3962,31 @@ async function initVideoCall() {
     closeModal();
     
     try {
-        // Get camera and microphone
-        videoStream = await navigator.mediaDevices.getUserMedia({ 
-            video: true, 
+        // Check if camera is available
+        var devices = await navigator.mediaDevices.enumerateDevices();
+        var videoDevices = devices.filter(function(d) { return d.kind === 'videoinput'; });
+        
+        if (videoDevices.length === 0) {
+            showToast('No camera found. Please connect a camera.', 'error');
+            return;
+        }
+        
+        // Stop any existing video tracks first
+        if (videoStream) {
+            videoStream.getTracks().forEach(function(track) { track.stop(); });
+        }
+        
+        // Try to get camera with constraints
+        var constraints = { 
+            video: { 
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user'
+            }, 
             audio: true 
-        });
+        };
+        
+        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
         
         // Show video call UI
         showVideoCallUI();
@@ -3994,10 +4014,17 @@ async function initVideoCall() {
         
     } catch (error) {
         console.error('Video call error:', error);
+        
         if (error.name === 'NotAllowedError') {
-            showToast('Camera/microphone access denied', 'error');
+            showToast('Camera/microphone permission denied. Please allow access in browser settings.', 'error');
         } else if (error.name === 'NotFoundError') {
-            showToast('No camera/microphone found', 'error');
+            showToast('No camera/microphone found. Please connect a device.', 'error');
+        } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
+            showToast('Camera is being used by another app. Please close other apps using the camera.', 'error');
+        } else if (error.name === 'OverconstrainedError') {
+            showToast('Camera does not support the requested settings.', 'error');
+        } else if (error.name === 'SecurityError') {
+            showToast('Camera access blocked. Please use HTTPS.', 'error');
         } else {
             showToast('Could not start video: ' + error.message, 'error');
         }
