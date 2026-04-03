@@ -4130,6 +4130,14 @@ async function initVideoCall() {
         // Generate call ID
         currentCallId = activeChat.id + '-call-' + Date.now();
         
+        // ICE servers configuration
+        var iceServers = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        
         // Create peer connection
         peerConnection = new RTCPeerConnection(iceServers);
         
@@ -4265,6 +4273,14 @@ async function joinCall() {
         }
         
         currentCallId = callId;
+        
+        // ICE servers configuration
+        var iceServers = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
         
         // Create peer connection
         peerConnection = new RTCPeerConnection(iceServers);
