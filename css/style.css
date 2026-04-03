@@ -153,17 +153,17 @@ body {
 
 /* Buttons */
 .btn {
-    padding: 10px 20px;
+    padding: 12px 24px;
     border: none;
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .btn-primary {
@@ -231,13 +231,13 @@ body {
 
 /* Form Elements */
 .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 4px;
-    font-size: 12px;
+    margin-bottom: 6px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-primary);
 }
@@ -246,10 +246,10 @@ body {
 .form-group textarea,
 .form-group select {
     width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
+    padding: 12px 14px;
+    border: 2px solid var(--border);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-primary);
     background: var(--bg-primary);
     transition: var(--transition);
@@ -294,15 +294,15 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 18px;
 }
 
 .checkbox-label {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
 }
 
@@ -324,8 +324,8 @@ body {
 
 .error-message {
     color: var(--danger);
-    font-size: 12px;
-    margin-top: 8px;
+    font-size: 13px;
+    margin-top: 10px;
     text-align: center;
     display: none;
 }
@@ -674,7 +674,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 15px 25px;
+    padding: 30px 40px;
     background: var(--bg-primary);
     overflow-y: auto;
     max-height: 100vh;
@@ -683,12 +683,12 @@ body {
 .auth-tabs {
     display: flex;
     gap: 8px;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .auth-tab {
     flex: 1;
-    padding: 8px;
+    padding: 10px;
     border: none;
     background: var(--bg-tertiary);
     color: var(--text-secondary);
@@ -714,16 +714,16 @@ body {
 
 /* Enhanced Form Styles */
 .form-title {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
-    margin-bottom: 2px;
+    margin-bottom: 5px;
     color: var(--text-primary);
 }
 
 .form-subtitle {
     color: var(--text-secondary);
-    margin-bottom: 12px;
-    font-size: 12px;
+    margin-bottom: 20px;
+    font-size: 14px;
 }
 
 .form-group label {
@@ -750,7 +750,7 @@ body {
 .auth-divider {
     display: flex;
     align-items: center;
-    margin: 12px 0;
+    margin: 18px 0;
 }
 
 .auth-divider::before,
@@ -762,9 +762,9 @@ body {
 }
 
 .auth-divider span {
-    padding: 0 10px;
+    padding: 0 15px;
     color: var(--text-secondary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .social-login {
@@ -774,16 +774,16 @@ body {
 }
 
 .social-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    border: 1px solid var(--border);
+    border: 2px solid var(--border);
     background: var(--bg-primary);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
     transition: all 0.3s;
 }
 
