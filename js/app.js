@@ -3633,12 +3633,43 @@ function sendResetCode() {
     resetVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     resetUserEmail = email;
     
-    // Show verification code modal
+    // Send email via EmailJS
+    if (typeof emailjs !== 'undefined') {
+        var templateParams = {
+            to_email: email,
+            to_name: user.name,
+            verification_code: resetVerificationCode,
+            app_name: 'BSITHUB'
+        };
+        
+        emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+            .then(function(response) {
+                showToast('Verification code sent to ' + email, 'success');
+                showVerificationInput(email);
+            })
+            .catch(function(error) {
+                console.error('EmailJS error:', error);
+                // Fallback: show code on screen for demo
+                showToast('Could not send email. Code shown for demo.', 'info');
+                showVerificationInput(email, true);
+            });
+    } else {
+        // EmailJS not loaded - show code for demo
+        showToast('Email service not configured. Code shown for demo.', 'info');
+        showVerificationInput(email, true);
+    }
+}
+
+function showVerificationInput(email, showDemoCode) {
     var html = '<div class="forgot-password-modal">';
     html += '<div class="forgot-icon"><i class="fas fa-envelope-open-text"></i></div>';
     html += '<h3>Enter Verification Code</h3>';
     html += '<p>We sent a code to ' + email + '</p>';
-    html += '<div class="demo-code"><small>Your verification code (demo):</small><strong>' + resetVerificationCode + '</strong></div>';
+    
+    if (showDemoCode) {
+        html += '<div class="demo-code"><small>Demo code:</small><strong>' + resetVerificationCode + '</strong></div>';
+    }
+    
     html += '<div class="code-inputs">';
     html += '<input type="text" maxlength="1" class="code-input" data-index="0">';
     html += '<input type="text" maxlength="1" class="code-input" data-index="1">';
