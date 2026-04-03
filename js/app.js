@@ -1550,17 +1550,98 @@ function showChatOptions() {
         return;
     }
     
-    var chat = Storage.get('chats') || [];
-    chat = chat.find(function(c) { return c.id === activeChat.id; });
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
     
     var html = '<div class="chat-options"><h3>Chat Options</h3>';
-    html += '<button class="btn" onclick="toggleMuteChat()">' + (chat && chat.muted ? 'Unmute' : 'Mute') + ' Notifications</button>';
-    html += '<button class="btn" onclick="togglePinChat()">' + (chat && chat.pinned ? 'Unpin' : 'Pin') + ' Chat</button>';
-    html += '<button class="btn" onclick="archiveChat()">Archive Chat</button>';
-    html += '<button class="btn" onclick="clearChatHistory()">Clear Chat History</button>';
-    html += '<button class="btn danger" onclick="deleteChat()">Delete Chat</button>';
+    
+    // Show group info option for groups
+    if (chat && chat.isGroup) {
+        html += '<button class="btn" onclick="showGroupInfo()"><i class="fas fa-users"></i> Group Info</button>';
+    }
+    
+    html += '<button class="btn" onclick="toggleMuteChat()"><i class="fas fa-bell"></i> ' + (chat && chat.muted ? 'Unmute' : 'Mute') + ' Notifications</button>';
+    html += '<button class="btn" onclick="togglePinChat()"><i class="fas fa-thumbtack"></i> ' + (chat && chat.pinned ? 'Unpin' : 'Pin') + ' Chat</button>';
+    html += '<button class="btn" onclick="showWallpaperPicker()"><i class="fas fa-palette"></i> Chat Wallpaper</button>';
+    html += '<button class="btn" onclick="archiveChat()"><i class="fas fa-archive"></i> Archive Chat</button>';
+    html += '<button class="btn" onclick="clearChatHistory()"><i class="fas fa-eraser"></i> Clear Chat History</button>';
+    html += '<button class="btn danger" onclick="deleteChat()"><i class="fas fa-trash"></i> Delete Chat</button>';
     html += '</div>';
     showModal(html);
+}
+
+function showGroupInfo() {
+    if (!activeChat) return;
+    
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (!chat || !chat.isGroup) return;
+    
+    var users = Storage.get('users') || [];
+    var isAdmin = chat.admin === currentUser.id;
+    
+    var html = '<div class="group-info"><h3>' + escapeHtml(chat.groupName || 'Group') + '</h3>';
+    html += '<p>' + chat.participants.length + ' members</p>';
+    html += '<div class="group-members-list">';
+    
+    chat.participants.forEach(function(userId) {
+        var user = users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+        
+        var avatar = user.avatar ? '<img src="' + user.avatar + '">' : user.name.charAt(0).toUpperCase();
+        var isGroupAdmin = chat.admin === userId;
+        
+        html += '<div class="group-member">';
+        html += '<div class="member-avatar">' + avatar + '</div>';
+        html += '<div class="member-info">';
+        html += '<span class="member-name">' + escapeHtml(user.name);
+        if (isGroupAdmin) html += ' <span class="admin-badge">Admin</span>';
+        html += '</span>';
+        html += '<span class="member-username">@' + escapeHtml(user.username) + '</span>';
+        html += '</div>';
+        
+        // Kick button (only admin can kick, can't kick yourself or other admins)
+        if (isAdmin && userId !== currentUser.id && !isGroupAdmin) {
+            html += '<button class="btn btn-small danger" onclick="kickMember(\'' + userId + '\')">Kick</button>';
+        }
+        
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    html += '<button class="btn" onclick="closeModal()">Close</button>';
+    html += '</div>';
+    showModal(html);
+}
+
+function kickMember(userId) {
+    if (!activeChat) return;
+    
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    
+    var chat = chats[chatIndex];
+    if (!chat.isGroup || chat.admin !== currentUser.id) {
+        showToast('Only admin can kick members', 'error');
+        return;
+    }
+    
+    // Remove member from participants
+    chat.participants = chat.participants.filter(function(id) { return id !== userId; });
+    chats[chatIndex] = chat;
+    Storage.set('chats', chats);
+    
+    // Sync to Firebase
+    if (typeof syncChat === 'function') {
+        syncChat(chat);
+    }
+    
+    closeModal();
+    showToast('Member removed from group', 'success');
+    
+    // Show updated group info
+    showGroupInfo();
 }
 
 function toggleMuteChat() {
@@ -2068,12 +2149,14 @@ function createGroup() {
     var newChat = {
         id: generateId(),
         participants: participants,
+        admin: currentUser.id, // Creator is admin
         createdAt: new Date().toISOString(),
         pinned: false,
         muted: false,
         archived: false,
         isGroup: true,
-        groupName: name
+        groupName: name,
+        wallpaper: 'none'
     };
     chats.push(newChat);
     Storage.set('chats', chats);
@@ -2139,10 +2222,27 @@ function handleAvatarUpload(event) {
 // Settings Functions
 // ==========================================
 function showWallpaperPicker() {
-    var wallpapers = ['none', '#f5f5f5', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec'];
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var wallpapers = [
+        'none',
+        '#f5f5f5', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec', '#f3e5f5',
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
+    ];
+    
     var html = '<div class="wallpaper-picker"><h3>Chat Wallpaper</h3><div class="wallpaper-options">';
     wallpapers.forEach(function(w) {
-        html += '<div class="wallpaper-option" style="background:' + w + '" onclick="setWallpaper(\'' + w + '\')"></div>';
+        html += '<div class="wallpaper-option" style="background:' + w + '" onclick="setWallpaper(\'' + w.replace(/'/g, "\\'") + '\')"></div>';
     });
     html += '</div></div>';
     showModal(html);
@@ -2150,17 +2250,19 @@ function showWallpaperPicker() {
 
 function setWallpaper(color) {
     document.getElementById('chat-wallpaper').style.background = color;
-    var settings = Storage.get('settings') || {};
-    settings.wallpaper = color;
-    Storage.set('settings', settings);
     
-    // Also save to current chat if active
+    // Save to current chat if active
     if (activeChat) {
         var chats = Storage.get('chats') || [];
         var chat = chats.find(function(c) { return c.id === activeChat.id; });
         if (chat) {
             chat.wallpaper = color;
             Storage.set('chats', chats);
+            
+            // Sync to Firebase
+            if (typeof syncChat === 'function') {
+                syncChat(chat);
+            }
         }
     }
     
