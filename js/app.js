@@ -3969,6 +3969,24 @@ async function initVideoCall() {
     }
     
     try {
+        // Check if Stream SDK is loaded
+        if (typeof StreamVideoClient === 'undefined') {
+            // Try to load dynamically
+            await new Promise(function(resolve, reject) {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@stream-io/video-client@1.6.0/dist/browser/client.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Check again after loading
+        if (typeof StreamVideoClient === 'undefined') {
+            showToast('Stream SDK not loaded. Please refresh.', 'error');
+            return;
+        }
+        
         // Initialize Stream client
         if (!streamClient) {
             streamClient = new StreamVideoClient({
