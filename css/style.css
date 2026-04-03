@@ -1222,12 +1222,6 @@ body {
     color: var(--text-muted);
 }
 
-.message-gif {
-    max-width: 250px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-}
-
 .message-voice {
     display: flex;
     align-items: center;
@@ -2700,14 +2694,16 @@ body {
 
 /* GIF in Messages */
 .message-gif {
-    margin-bottom: 4px;
+    margin: 0;
+    padding: 0;
 }
 
 .message-gif .gif-image {
-    max-width: 200px;
-    max-height: 150px;
+    max-width: 100%;
+    max-height: 200px;
     border-radius: 8px;
     cursor: pointer;
+    display: block;
 }
 
 .message-gif .gif-image:hover {
