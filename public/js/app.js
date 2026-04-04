@@ -2176,6 +2176,12 @@ function confirmDeleteUser(userId) {
     users = users.filter(function(u) { return u.id !== userId; });
     Storage.set('users', users);
     
+    // Remove user from Firebase
+    if (firebaseDb) {
+        firebaseDb.ref('users/' + userId).remove();
+        firebaseDb.ref('online/' + userId).remove();
+    }
+    
     // Remove user's messages
     var messages = Storage.get('messages') || [];
     messages = messages.filter(function(m) { return m.senderId !== userId; });
