@@ -408,9 +408,22 @@ let currentReplyTo = null;
 function login(email, password) {
     const users = Storage.get('users') || [];
     const hashedPassword = hashPassword(password);
+    
+    // Debug: Check what's happening
+    console.log('Login attempt:', email);
+    console.log('Password hash:', hashedPassword);
+    console.log('Available users:', users.map(u => ({ email: u.email, hasPassword: !!u.password })));
+    
     const user = users.find(function(u) { return u.email === email && u.password === hashedPassword; });
     
-    if (!user) return { success: false, message: 'Invalid email or password' };
+    if (!user) {
+        // Check if email exists but password is wrong
+        const emailExists = users.find(function(u) { return u.email === email; });
+        if (emailExists) {
+            console.log('Email found but password mismatch. Expected:', emailExists.password, 'Got:', hashedPassword);
+        }
+        return { success: false, message: 'Invalid email or password' };
+    }
     if (user.status === 'banned') return { success: false, message: 'Your account has been banned' };
     
     currentUser = user;
