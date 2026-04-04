@@ -9,8 +9,13 @@ const io = new Server(server, {
     cors: { origin: '*' }
 });
 
-// Serve static files
+// Serve static files from public folder
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve index.html for root path
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Store online users
 let onlineUsers = {};
