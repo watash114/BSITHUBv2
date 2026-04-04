@@ -4,16 +4,35 @@ let currentUserId = null;
 
 function initSocket(userId) {
     currentUserId = userId;
+    console.log('initSocket called with userId:', userId);
+    
+    // Check if io is available
+    if (typeof io === 'undefined') {
+        console.error('Socket.IO not loaded!');
+        return;
+    }
+    
+    console.log('Socket.IO available, connecting...');
     
     // Connect to Socket.IO server
     socket = io();
     
+    // Log connection events
+    socket.on('connect', () => {
+        console.log('Socket.IO connected!');
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+    });
+    
     // Join with user ID
     socket.emit('join', userId);
+    console.log('Join event sent with userId:', userId);
     
     // Listen for online users updates
     socket.on('online-users', (onlineUserIds) => {
-        console.log('Online users:', onlineUserIds);
+        console.log('Online users received:', onlineUserIds);
         window.onlineUsers = onlineUserIds;
         
         // Update UI
