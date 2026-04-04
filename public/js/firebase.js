@@ -223,7 +223,8 @@ function syncUserToFirebase(user) {
             id: user.id,
             name: user.name,
             username: user.username,
-            avatar: user.avatar || null
+            avatar: user.avatar || null,
+            cover: user.cover || null
         };
         firebaseDb.ref('users/' + user.id).set(userData);
         console.log('User synced to Firebase:', user.username);

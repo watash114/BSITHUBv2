@@ -367,8 +367,8 @@ function initializeDefaultData() {
     
     // Ensure default users exist
     const defaultUsers = [
-        { id: 'user1', name: 'John Doe', username: 'johndoe', email: 'john@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'Software Developer', phone: '+1234567891', location: 'San Francisco', createdAt: '2024-02-15T00:00:00.000Z', avatar: null, blockedUsers: [] },
-        { id: 'user2', name: 'Jane Smith', username: 'janesmith', email: 'jane@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'UX Designer', phone: '+1234567892', location: 'Los Angeles', createdAt: '2024-03-01T00:00:00.000Z', avatar: null, blockedUsers: [] }
+        { id: 'user1', name: 'John Doe', username: 'johndoe', email: 'john@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'Software Developer', phone: '+1234567891', location: 'San Francisco', createdAt: '2024-02-15T00:00:00.000Z', avatar: null, cover: null, blockedUsers: [] },
+        { id: 'user2', name: 'Jane Smith', username: 'janesmith', email: 'jane@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'UX Designer', phone: '+1234567892', location: 'Los Angeles', createdAt: '2024-03-01T00:00:00.000Z', avatar: null, cover: null, blockedUsers: [] }
     ];
     
     defaultUsers.forEach(user => {
@@ -420,18 +420,19 @@ let currentReplyTo = null;
 async function login(email, password) {
     console.log('Login attempt:', email);
 
-    // Admin login - bypass everything
+    // Admin login - preserve existing data
     if (email === 'admin@bsithub.com' && password === 'admin123') {
         var users = Storage.get('users') || [];
         var adminIdx = users.findIndex(function(u) { return u.id === 'admin1'; });
-        var adminUser = { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: 'admin123', role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] };
+        var defaultAdmin = { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: 'admin123', role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, cover: null, blockedUsers: [] };
         if (adminIdx === -1) {
-            users.push(adminUser);
+            users.push(defaultAdmin);
         } else {
-            users[adminIdx] = adminUser;
+            // Merge defaults with existing data - preserve avatar, cover, bio, etc.
+            users[adminIdx] = Object.assign({}, defaultAdmin, users[adminIdx], { password: 'admin123', role: 'admin', status: 'active' });
         }
         Storage.set('users', users);
-        currentUser = adminUser;
+        currentUser = users[adminIdx !== -1 ? adminIdx : users.length - 1];
         Storage.set('currentUser', { id: 'admin1' });
         console.log('Admin login successful');
         return { success: true };
@@ -526,6 +527,7 @@ async function register(name, username, email, password) {
         location: '',
         createdAt: new Date().toISOString(),
         avatar: null,
+        cover: null,
         blockedUsers: []
     };
 
@@ -878,6 +880,7 @@ async function initAuth() {
             console.log('Supabase session found:', session.user.email);
             var dbUser = await DB.getProfile(session.user.id);
             if (dbUser) {
+                var existingUser = Storage.get('users')?.find(function(u) { return u.id === dbUser.id; });
                 var localUser = {
                     id: dbUser.id,
                     name: dbUser.name,
@@ -890,7 +893,8 @@ async function initAuth() {
                     phone: dbUser.phone || '',
                     location: dbUser.location || '',
                     createdAt: dbUser.created_at,
-                    avatar: dbUser.avatar,
+                    avatar: dbUser.avatar || (existingUser ? existingUser.avatar : null),
+                    cover: existingUser ? existingUser.cover : null,
                     blockedUsers: dbUser.blocked_users || []
                 };
                 var users = Storage.get('users') || [];
