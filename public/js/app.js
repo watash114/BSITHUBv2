@@ -448,33 +448,8 @@ function socialLogin(provider) {
     auth.signOut().catch(function() {});
     
     setTimeout(function() {
-        auth.signInWithPopup(providerObj)
-            .then(function(result) {
-                window.socialLoginInProgress = false;
-                var user = result.user;
-                console.log('Social login success:', user.displayName);
-                
-                // Check if user exists in our system
-                var users = Storage.get('users') || [];
-                var existingUser = users.find(function(u) { return u.email === user.email; });
-                
-                if (existingUser) {
-                    currentUser = existingUser;
-                    Storage.set('currentUser', { id: existingUser.id });
-                    showToast('Welcome back, ' + user.displayName + '!', 'success');
-                    showApp();
-                } else {
-                    var newUser = {
-                        id: generateId(),
-                        name: user.displayName || 'User',
-                        username: user.email ? user.email.split('@')[0] : 'user' + Date.now(),
-                        email: user.email,
-                        password: null,
-                        role: 'user',
-                        status: 'active',
-                        bio: '',
-                        phone: user.phoneNumber || '',
-                        location: '',
+        auth.signInWithRedirect(providerObj);
+    }, 500);
                         createdAt: new Date().toISOString(),
                         avatar: user.photoURL,
                         blockedUsers: [],
@@ -5026,6 +5001,58 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modal').onclick = function(e) {
         if (e.target.id === 'modal') closeModal();
     };
+    
+    // Handle social login redirect
+    if (typeof auth !== 'undefined' && auth.getRedirectResult) {
+        auth.getRedirectResult().then(function(result) {
+            if (result && result.user) {
+                var user = result.user;
+                console.log('Social login success:', user.displayName);
+                
+                // Check if user exists in our system
+                var users = Storage.get('users') || [];
+                var existingUser = users.find(function(u) { return u.email === user.email; });
+                
+                if (existingUser) {
+                    currentUser = existingUser;
+                    Storage.set('currentUser', { id: existingUser.id });
+                    showToast('Welcome back, ' + user.displayName + '!', 'success');
+                    showApp();
+                } else {
+                    var newUser = {
+                        id: generateId(),
+                        name: user.displayName || 'User',
+                        username: user.email ? user.email.split('@')[0] : 'user' + Date.now(),
+                        email: user.email,
+                        password: null,
+                        role: 'user',
+                        status: 'active',
+                        bio: '',
+                        phone: user.phoneNumber || '',
+                        location: '',
+                        createdAt: new Date().toISOString(),
+                        avatar: user.photoURL,
+                        blockedUsers: [],
+                        socialProvider: 'google'
+                    };
+                    
+                    users.push(newUser);
+                    Storage.set('users', users);
+                    currentUser = newUser;
+                    Storage.set('currentUser', { id: newUser.id });
+                    
+                    if (typeof syncUserToFirebase === 'function') {
+                        syncUserToFirebase(newUser);
+                    }
+                    
+                    showToast('Welcome to BSITHUB, ' + user.displayName + '!', 'success');
+                    showApp();
+                }
+            }
+        }).catch(function(error) {
+            console.log('No redirect result or error:', error);
+        });
+    }
     
     // Initialize
     initAuth();
