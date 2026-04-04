@@ -1831,12 +1831,17 @@ function loadProfile() {
     document.getElementById('edit-phone').value = currentUser.phone || '';
     document.getElementById('edit-location').value = currentUser.location || '';
     
+    // Update new profile fields
+    document.getElementById('profile-email').textContent = currentUser.email || '-';
+    document.getElementById('profile-phone').textContent = currentUser.phone || '-';
+    document.getElementById('profile-location').textContent = currentUser.location || '-';
+    
     // Display avatar if exists
     var profileAvatar = document.getElementById('profile-avatar');
     if (currentUser.avatar) {
-        profileAvatar.innerHTML = '<img src="' + currentUser.avatar + '" alt="Avatar">';
+        profileAvatar.innerHTML = '<img src="' + currentUser.avatar + '" alt="Avatar"><button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn"><i class="fas fa-camera"></i></button><input type="file" id="avatar-input" style="display: none;" accept="image/*">';
     } else {
-        profileAvatar.innerHTML = '<i class="fas fa-user"></i>';
+        profileAvatar.innerHTML = '<i class="fas fa-user"></i><button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn"><i class="fas fa-camera"></i></button><input type="file" id="avatar-input" style="display: none;" accept="image/*">';
     }
     
     var chats = Storage.get('chats') || [];
@@ -1844,6 +1849,23 @@ function loadProfile() {
     document.getElementById('profile-chats').textContent = myChats.length;
     document.getElementById('profile-friends').textContent = (Storage.get('users') || []).length - 1;
     document.getElementById('profile-joined').textContent = formatDate(currentUser.createdAt);
+    
+    // Update messages count
+    var messages = Storage.get('messages') || [];
+    var myMessages = messages.filter(function(m) { return m.senderId === currentUser.id; });
+    document.getElementById('profile-messages').textContent = myMessages.length;
+    
+    // Update last seen
+    var now = new Date();
+    document.getElementById('profile-last-seen').textContent = 'Last seen just now';
+}
+
+function closeEditProfile() {
+    document.getElementById('profile-edit-form').style.display = 'none';
+}
+
+function changePassword() {
+    showToast('Change password feature coming soon!', 'info');
 }
 
 function updateProfile(data) {
@@ -4942,6 +4964,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Change Avatar
     document.getElementById('change-avatar-btn').onclick = changeAvatar;
     document.getElementById('avatar-input').addEventListener('change', handleAvatarUpload);
+    
+    // Edit Profile
+    document.getElementById('edit-profile-btn').onclick = function() {
+        document.getElementById('profile-edit-form').style.display = 'block';
+    };
     
     // Chat Wallpaper
     document.getElementById('chat-wallpaper-btn').onclick = showWallpaperPicker;

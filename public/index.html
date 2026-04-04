@@ -433,64 +433,136 @@
                     </div>
                     <div class="profile-container">
                         <div class="profile-card">
-                            <div class="profile-banner"></div>
-                            <div class="profile-avatar-container">
-                                <div class="profile-avatar" id="profile-avatar">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn">
-                                    <i class="fas fa-camera"></i>
+                            <div class="profile-cover">
+                                <div class="profile-cover-gradient"></div>
+                                <button class="btn-icon edit-cover" title="Change Cover">
+                                    <i class="fas fa-camera"></i> Edit Cover
                                 </button>
-                                <input type="file" id="avatar-input" style="display: none;" accept="image/*">
                             </div>
-                            <div class="profile-info">
-                                <h2 id="profile-name">User Name</h2>
-                                <p class="profile-username" id="profile-username">@username</p>
-                                <p class="profile-bio" id="profile-bio">No bio yet</p>
-                                <div class="profile-stats">
-                                    <div class="stat">
-                                        <span class="stat-value" id="profile-chats">0</span>
-                                        <span class="stat-label">Chats</span>
-                                    </div>
-                                    <div class="stat">
-                                        <span class="stat-value" id="profile-friends">0</span>
-                                        <span class="stat-label">Friends</span>
-                                    </div>
-                                    <div class="stat">
-                                        <span class="stat-value" id="profile-joined">-</span>
-                                        <span class="stat-label">Joined</span>
+                            <div class="profile-avatar-section">
+                                <div class="profile-avatar-large" id="profile-avatar">
+                                    <i class="fas fa-user"></i>
+                                    <button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                    <input type="file" id="avatar-input" style="display: none;" accept="image/*">
+                                </div>
+                                <div class="profile-header-info">
+                                    <h2 class="profile-display-name" id="profile-name">User Name</h2>
+                                    <p class="profile-display-username" id="profile-username">@username</p>
+                                    <p class="profile-bio-text" id="profile-bio">No bio yet</p>
+                                    <div class="profile-badges">
+                                        <span class="badge badge-admin"><i class="fas fa-shield-alt"></i> Admin</span>
+                                        <span class="badge badge-verified"><i class="fas fa-check-circle"></i> Verified</span>
+                                        <span class="badge badge-active"><i class="fas fa-circle"></i> Active</span>
                                     </div>
                                 </div>
+                            </div>
+                            
+                            <div class="profile-stats-row">
+                                <div class="profile-stat-card">
+                                    <div class="stat-icon"><i class="fas fa-comments"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-number" id="profile-chats">0</span>
+                                        <span class="stat-title">Chats</span>
+                                    </div>
+                                </div>
+                                <div class="profile-stat-card">
+                                    <div class="stat-icon"><i class="fas fa-user-friends"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-number" id="profile-friends">0</span>
+                                        <span class="stat-title">Friends</span>
+                                    </div>
+                                </div>
+                                <div class="profile-stat-card">
+                                    <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-number" id="profile-joined">-</span>
+                                        <span class="stat-title">Joined</span>
+                                    </div>
+                                </div>
+                                <div class="profile-stat-card">
+                                    <div class="stat-icon"><i class="fas fa-envelope"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-number" id="profile-messages">0</span>
+                                        <span class="stat-title">Messages</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="profile-details-grid">
+                                <div class="detail-item">
+                                    <i class="fas fa-envelope"></i>
+                                    <span id="profile-email">-</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-phone"></i>
+                                    <span id="profile-phone">-</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span id="profile-location">-</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span id="profile-last-seen">Last seen just now</span>
+                                </div>
+                            </div>
+
+                            <div class="profile-actions">
+                                <button class="btn btn-primary btn-edit-profile" id="edit-profile-btn">
+                                    <i class="fas fa-pencil-alt"></i> Edit Profile
+                                </button>
+                                <button class="btn btn-secondary" onclick="changePassword()">
+                                    <i class="fas fa-key"></i> Change Password
+                                </button>
                             </div>
                         </div>
-                        <div class="profile-edit-card">
-                            <h3>Edit Profile</h3>
+
+                        <div class="profile-edit-card" id="profile-edit-form" style="display: none;">
+                            <div class="edit-header">
+                                <h3><i class="fas fa-pencil-alt"></i> Edit Profile</h3>
+                                <button class="btn-icon" onclick="closeEditProfile()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                             <form id="profile-form">
-                                <div class="form-group">
-                                    <label for="edit-name">Full Name</label>
-                                    <input type="text" id="edit-name" placeholder="Your full name">
-                                </div>
-                                <div class="form-group">
-                                    <label for="edit-username">Username</label>
-                                    <input type="text" id="edit-username" placeholder="Your username">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="edit-name">Full Name</label>
+                                        <input type="text" id="edit-name" placeholder="Your full name" class="form-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-username">Username</label>
+                                        <input type="text" id="edit-username" placeholder="Your username" class="form-input">
+                                    </div>
                                 </div>
                                 <div class="form-group">
                                     <label for="edit-email">Email</label>
-                                    <input type="email" id="edit-email" placeholder="Your email">
+                                    <input type="email" id="edit-email" placeholder="Your email" class="form-input">
                                 </div>
                                 <div class="form-group">
                                     <label for="edit-bio">Bio</label>
-                                    <textarea id="edit-bio" placeholder="Tell us about yourself" rows="3"></textarea>
+                                    <textarea id="edit-bio" placeholder="Tell us about yourself" rows="3" class="form-input"></textarea>
                                 </div>
-                                <div class="form-group">
-                                    <label for="edit-phone">Phone</label>
-                                    <input type="tel" id="edit-phone" placeholder="Your phone number">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="edit-phone">Phone</label>
+                                        <input type="tel" id="edit-phone" placeholder="Your phone number" class="form-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-location">Location</label>
+                                        <input type="text" id="edit-location" placeholder="Your location" class="form-input">
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label for="edit-location">Location</label>
-                                    <input type="text" id="edit-location" placeholder="Your location">
+                                <div class="form-actions">
+                                    <button type="button" class="btn btn-secondary" onclick="closeEditProfile()">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Save Changes
+                                    </button>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Save Changes</button>
                             </form>
                         </div>
                     </div>
