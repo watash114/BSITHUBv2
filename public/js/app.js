@@ -6578,43 +6578,85 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     // Stories
     // ==========================================
+    var STORY_BG_COLORS = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #2b5876 0%, #4e4376 100%)',
+        'linear-gradient(135deg, #0c3483 0%, #a2b6df 50%, #6b8cce 100%)'
+    ];
+    var selectedStoryBg = STORY_BG_COLORS[0];
+
     window.showAddStory = function() {
-        var html = '<div class="add-story"><h3>Add Story</h3>';
-        html += '<div class="story-options">';
-        html += '<button class="btn btn-primary" onclick="addTextStory()"><i class="fas fa-font"></i> Text Story</button>';
-        html += '<button class="btn btn-primary" onclick="addImageStory()"><i class="fas fa-image"></i> Image Story</button>';
+        var html = '<div class="story-creator">';
+        html += '<h3>Create Story</h3>';
+        html += '<div class="story-creator-options">';
+        html += '<div class="story-option-card" onclick="addImageStory()">';
+        html += '<div class="story-option-icon image-icon"><i class="fas fa-image"></i></div>';
+        html += '<div class="story-option-info"><strong>Photo</strong><span>Share a photo from your gallery</span></div>';
+        html += '<i class="fas fa-chevron-right story-option-arrow"></i>';
+        html += '</div>';
+        html += '<div class="story-option-card" onclick="addTextStory()">';
+        html += '<div class="story-option-icon text-icon"><i class="fas fa-font"></i></div>';
+        html += '<div class="story-option-info"><strong>Text</strong><span>Share what\'s on your mind</span></div>';
+        html += '<i class="fas fa-chevron-right story-option-arrow"></i>';
+        html += '</div>';
         html += '</div></div>';
         showModal(html);
     };
-    
+
     window.addTextStory = function() {
-        var html = '<div class="text-story-input"><h3>Text Story</h3>';
-        html += '<textarea id="story-text" placeholder="What\'s on your mind?" class="form-input" rows="4"></textarea>';
-        html += '<button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="publishTextStory()">Post Story</button>';
+        selectedStoryBg = STORY_BG_COLORS[Math.floor(Math.random() * STORY_BG_COLORS.length)];
+        var html = '<div class="text-story-creator">';
+        html += '<div class="text-story-preview" id="story-bg-preview" style="background:' + selectedStoryBg + ';">';
+        html += '<textarea id="story-text" placeholder="Type something..." maxlength="200" rows="3"></textarea>';
+        html += '</div>';
+        html += '<div class="story-bg-picker">';
+        STORY_BG_COLORS.forEach(function(bg, i) {
+            html += '<button class="bg-swatch' + (i === 0 ? ' active' : '') + '" style="background:' + bg + ';" data-bg="' + bg + '" onclick="pickStoryBg(this)"></button>';
+        });
+        html += '</div>';
+        html += '<button class="btn btn-primary btn-share-story" onclick="publishTextStory()"><i class="fas fa-paper-plane"></i> Share Story</button>';
         html += '</div>';
         showModal(html);
+        var ta = document.getElementById('story-text');
+        if (ta) ta.focus();
     };
-    
+
+    window.pickStoryBg = function(el) {
+        document.querySelectorAll('.bg-swatch').forEach(function(s) { s.classList.remove('active'); });
+        el.classList.add('active');
+        selectedStoryBg = el.dataset.bg;
+        var preview = document.getElementById('story-bg-preview');
+        if (preview) preview.style.background = selectedStoryBg;
+    };
+
     window.publishTextStory = function() {
         var text = document.getElementById('story-text').value.trim();
-        if (!text) return;
-        
+        if (!text) { showToast('Write something first', 'error'); return; }
+
         var stories = Storage.get('stories') || [];
         stories.unshift({
             id: generateId(),
             userId: currentUser.id,
             type: 'text',
             content: text,
+            bg: selectedStoryBg,
             timestamp: new Date().toISOString(),
             views: []
         });
         Storage.set('stories', stories);
-        
+
         closeModal();
         showToast('Story posted!', 'success');
         if (typeof renderStories === 'function') renderStories();
     };
-    
+
     window.addImageStory = function() {
         var input = document.createElement('input');
         input.type = 'file';
@@ -6622,73 +6664,98 @@ document.addEventListener('DOMContentLoaded', function() {
         input.onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
-            
+            if (file.size > 10 * 1024 * 1024) { showToast('Image too large. Max 10MB.', 'error'); return; }
+
             var reader = new FileReader();
             reader.onload = function(event) {
-                var stories = Storage.get('stories') || [];
-                stories.unshift({
-                    id: generateId(),
-                    userId: currentUser.id,
-                    type: 'image',
-                    content: event.target.result,
-                    timestamp: new Date().toISOString(),
-                    views: []
-                });
-                Storage.set('stories', stories);
-                showToast('Story posted!', 'success');
-                if (typeof renderStories === 'function') renderStories();
+                var imgData = event.target.result;
+                // Show preview
+                var html = '<div class="image-story-creator">';
+                html += '<div class="image-story-preview"><img src="' + imgData + '" alt="Preview"></div>';
+                html += '<button class="btn btn-primary btn-share-story" onclick="publishImageStory(\'' + imgData.replace(/'/g, "\\'") + '\')"><i class="fas fa-paper-plane"></i> Share Story</button>';
+                html += '</div>';
+                showModal(html);
             };
             reader.readAsDataURL(file);
         };
         input.click();
     };
-    
+
+    window.publishImageStory = function(imgData) {
+        var stories = Storage.get('stories') || [];
+        stories.unshift({
+            id: generateId(),
+            userId: currentUser.id,
+            type: 'image',
+            content: imgData,
+            timestamp: new Date().toISOString(),
+            views: []
+        });
+        Storage.set('stories', stories);
+        closeModal();
+        showToast('Story posted!', 'success');
+        if (typeof renderStories === 'function') renderStories();
+    };
+
     window.viewStory = function(storyId) {
         var stories = Storage.get('stories') || [];
         var story = stories.find(function(s) { return s.id === storyId; });
         if (!story) return;
-        
+
         var users = Storage.get('users') || [];
         var user = users.find(function(u) { return u.id === story.userId; });
-        
+        var avatarSrc = (user && user.avatar) ? user.avatar : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%236366f1" width="100" height="100" rx="50"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">' + (user ? user.name.charAt(0) : '?') + '</text></svg>';
+
+        var bgStyle = story.type === 'text' ? 'background:' + (story.bg || STORY_BG_COLORS[0]) + ';' : '';
+        var isOwner = currentUser && story.userId === currentUser.id;
+
         var html = '<div class="story-viewer">';
         html += '<div class="story-progress"><div class="story-progress-bar"><div class="story-progress-fill" id="story-progress-fill"></div></div></div>';
         html += '<div class="story-header">';
-        html += '<img class="story-avatar" src="' + (user && user.avatar ? user.avatar : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%236366f1" width="100" height="100" rx="50"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">' + (user ? user.name.charAt(0) : '?') + '</text></svg>') + '">';
-        html += '<div class="story-user-info"><div class="story-username">' + (user ? user.name : 'Unknown') + '</div><div class="story-time">' + formatTimeAgo(story.timestamp) + '</div></div>';
+        html += '<img class="story-avatar" src="' + avatarSrc + '">';
+        html += '<div class="story-user-info"><div class="story-username">' + (user ? escapeHtml(user.name) : 'Unknown') + '</div><div class="story-time">' + getTimeAgo(story.timestamp) + '</div></div>';
+        if (isOwner) html += '<button class="story-delete" onclick="deleteStory(\'' + story.id + '\')"><i class="fas fa-trash"></i></button>';
         html += '<button class="story-close" onclick="closeStoryViewer()"><i class="fas fa-times"></i></button>';
         html += '</div>';
-        html += '<div class="story-content">';
+        html += '<div class="story-content" style="' + bgStyle + '">';
         if (story.type === 'text') {
             html += '<div class="story-text">' + escapeHtml(story.content) + '</div>';
         } else {
             html += '<img src="' + story.content + '">';
         }
         html += '</div></div>';
-        
+
         document.body.insertAdjacentHTML('beforeend', html);
-        
-        // Animate progress
+
         var fill = document.getElementById('story-progress-fill');
         if (fill) {
-            fill.style.width = '100%';
-            fill.style.transition = 'width 5s linear';
+            requestAnimationFrame(function() {
+                fill.style.transition = 'width 5s linear';
+                fill.style.width = '100%';
+            });
         }
-        
-        // Auto close after 5 seconds
+
         setTimeout(function() { closeStoryViewer(); }, 5000);
-        
-        // Mark as viewed
+
         if (currentUser && !story.views.includes(currentUser.id)) {
             story.views.push(currentUser.id);
             Storage.set('stories', stories);
             if (typeof renderStories === 'function') renderStories();
         }
     };
-    
+
+    window.deleteStory = function(storyId) {
+        var stories = Storage.get('stories') || [];
+        stories = stories.filter(function(s) { return s.id !== storyId; });
+        Storage.set('stories', stories);
+        closeStoryViewer();
+        showToast('Story deleted', 'info');
+        if (typeof renderStories === 'function') renderStories();
+    };
+
     window.closeStoryViewer = function() {
-        var viewer = document.querySelector('.story-viewer');
-        if (viewer) viewer.remove();
+        var viewers = document.querySelectorAll('.story-viewer');
+        viewers.forEach(function(v) { v.remove(); });
     };
     
     // ==========================================
