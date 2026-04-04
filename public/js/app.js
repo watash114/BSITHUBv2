@@ -450,21 +450,6 @@ function socialLogin(provider) {
     setTimeout(function() {
         auth.signInWithRedirect(providerObj);
     }, 500);
-                        createdAt: new Date().toISOString(),
-                        avatar: user.photoURL,
-                        blockedUsers: [],
-                        socialProvider: provider
-                    };
-                    
-                    console.log('Creating new user from Google:', newUser);
-                    
-                    users.push(newUser);
-                    Storage.set('users', users);
-                    currentUser = newUser;
-                    Storage.set('currentUser', { id: newUser.id });
-                    
-                    if (typeof syncUserToFirebase === 'function') {
-                        syncUserToFirebase(newUser);
                     }
                     
                     showToast('Welcome to BSITHUB, ' + user.displayName + '!', 'success');
