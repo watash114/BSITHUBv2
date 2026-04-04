@@ -241,6 +241,10 @@
                         <i class="fas fa-star"></i>
                         <span>Starred</span>
                     </a>
+                    <a href="#" class="nav-item" data-section="feed">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Postings</span>
+                    </a>
                     <a href="#" class="nav-item" data-section="profile">
                         <i class="fas fa-user"></i>
                         <span>Profile</span>
@@ -426,6 +430,56 @@
                     </div>
                 </section>
 
+                <!-- Postings Section -->
+                <section id="feed-section" class="content-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-clipboard-list"></i> Postings</h2>
+                    </div>
+                    <div class="feed-container">
+                        <!-- Post Composer -->
+                        <div class="post-composer">
+                            <div class="composer-header">
+                                <div class="composer-avatar" id="composer-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="composer-input-wrapper" id="composer-trigger">
+                                    <span class="composer-placeholder">What's on your mind?</span>
+                                </div>
+                            </div>
+                            <div class="composer-expanded" id="composer-expanded" style="display: none;">
+                                <textarea id="post-content" placeholder="What's on your mind?" rows="3"></textarea>
+                                <div class="composer-image-preview" id="composer-image-preview" style="display: none;">
+                                    <img id="composer-preview-img" src="" alt="Preview">
+                                    <button class="btn-icon remove-image" id="remove-composer-image"><i class="fas fa-times"></i></button>
+                                </div>
+                                <div class="composer-actions">
+                                    <div class="composer-tools">
+                                        <button class="btn-icon" title="Photo" id="post-image-btn">
+                                            <i class="fas fa-image"></i>
+                                        </button>
+                                        <input type="file" id="post-image-input" accept="image/*" style="display: none;">
+                                    </div>
+                                    <button class="btn btn-primary" id="post-submit-btn" disabled>
+                                        <i class="fas fa-paper-plane"></i> Post
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Feed -->
+                        <div class="feed-list" id="feed-list"></div>
+                        <div class="feed-loading" id="feed-loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <span>Loading posts...</span>
+                        </div>
+                        <div class="feed-empty" id="feed-empty" style="display: none;">
+                            <i class="fas fa-newspaper"></i>
+                            <h3>No postings yet</h3>
+                            <p>Be the first to share something with everyone!</p>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Profile Section -->
                 <section id="profile-section" class="content-section">
                     <div class="section-header">
@@ -461,35 +515,11 @@
                                 </div>
                             </div>
                             
-                            <div class="profile-stats-row">
-                                <div class="profile-stat-card">
-                                    <div class="stat-icon"><i class="fas fa-comments"></i></div>
-                                    <div class="stat-info">
-                                        <span class="stat-number" id="profile-chats">0</span>
-                                        <span class="stat-title">Chats</span>
-                                    </div>
-                                </div>
-                                <div class="profile-stat-card">
-                                    <div class="stat-icon"><i class="fas fa-user-friends"></i></div>
-                                    <div class="stat-info">
-                                        <span class="stat-number" id="profile-friends">0</span>
-                                        <span class="stat-title">Friends</span>
-                                    </div>
-                                </div>
-                                <div class="profile-stat-card">
-                                    <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
-                                    <div class="stat-info">
-                                        <span class="stat-number" id="profile-joined">-</span>
-                                        <span class="stat-title">Joined</span>
-                                    </div>
-                                </div>
-                                <div class="profile-stat-card">
-                                    <div class="stat-icon"><i class="fas fa-envelope"></i></div>
-                                    <div class="stat-info">
-                                        <span class="stat-number" id="profile-messages">0</span>
-                                        <span class="stat-title">Messages</span>
-                                    </div>
-                                </div>
+                            <div class="profile-stats-minimal">
+                                <span class="mini-stat"><i class="fas fa-comments"></i> <b id="profile-chats">0</b> Chats</span>
+                                <span class="mini-stat"><i class="fas fa-user-friends"></i> <b id="profile-friends">0</b> Friends</span>
+                                <span class="mini-stat"><i class="fas fa-calendar-alt"></i> <b id="profile-joined">-</b></span>
+                                <span class="mini-stat"><i class="fas fa-envelope"></i> <b id="profile-messages">0</b> Messages</span>
                             </div>
 
                             <div class="profile-details-grid">
@@ -558,7 +588,7 @@
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button type="button" class="btn btn-secondary" onclick="closeEditProfile()">
+                                    <button type="button" class="btn btn-outline" onclick="closeEditProfile()">
                                         <i class="fas fa-times"></i> Cancel
                                     </button>
                                     <button type="submit" class="btn btn-primary">
@@ -882,6 +912,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/db.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="https://meet.jit.si/external_api.js"></script>
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>

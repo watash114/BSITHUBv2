@@ -192,6 +192,15 @@ function formatDate(date) {
     var now = new Date();
     var diff = now - d;
     var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    var months = Math.floor(days / 30);
+    var years = Math.floor(days / 365);
+    
+    // Full date format
+    var fullDate = d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
     
     if (days === 0) {
         return 'Today';
@@ -202,12 +211,10 @@ function formatDate(date) {
     } else if (days < 30) {
         var weeks = Math.floor(days / 7);
         return weeks + ' week' + (weeks > 1 ? 's' : '') + ' ago';
+    } else if (days < 365) {
+        return fullDate + ' (' + months + ' month' + (months > 1 ? 's' : '') + ' ago)';
     } else {
-        return d.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        return fullDate + ' (' + years + ' year' + (years > 1 ? 's' : '') + ' ago)';
     }
 }
 
@@ -346,12 +353,17 @@ function closeModal() {
 function initializeDefaultData() {
     const users = Storage.get('users') || [];
     
-    // Ensure admin user always exists
-    const adminExists = users.some(u => u.id === 'admin1');
-    if (!adminExists) {
-        users.push({ id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: hashPassword('admin123'), role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] });
-        Storage.set('users', users);
+    // Ensure admin user always exists with correct password
+    const adminIndex = users.findIndex(u => u.id === 'admin1');
+    const adminData = { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: hashPassword('admin123'), role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] };
+    if (adminIndex === -1) {
+        users.push(adminData);
+    } else {
+        users[adminIndex].password = adminData.password;
+        users[adminIndex].role = 'admin';
+        users[adminIndex].status = 'active';
     }
+    Storage.set('users', users);
     
     // Ensure default users exist
     const defaultUsers = [
@@ -405,19 +417,49 @@ let currentReplyTo = null;
 // ==========================================
 // Authentication
 // ==========================================
-function login(email, password) {
+async function login(email, password) {
     const users = Storage.get('users') || [];
     const hashedPassword = hashPassword(password);
     
-    // Debug: Check what's happening
     console.log('Login attempt:', email);
-    console.log('Password hash:', hashedPassword);
-    console.log('Available users:', users.map(u => ({ email: u.email, hasPassword: !!u.password })));
+
+    // Try Supabase database first
+    if (DB.isReady()) {
+        console.log('Attempting Supabase login...');
+        var dbResult = await DB.signIn(email, password);
+        if (dbResult.success && dbResult.user) {
+            console.log('Supabase login successful');
+            var dbUser = dbResult.user;
+            var localUser = {
+                id: dbUser.id,
+                name: dbUser.name,
+                username: dbUser.username,
+                email: dbUser.email,
+                password: 'supabase_auth',
+                role: dbUser.role || 'user',
+                status: dbUser.status || 'active',
+                bio: dbUser.bio || '',
+                phone: dbUser.phone || '',
+                location: dbUser.location || '',
+                createdAt: dbUser.created_at,
+                avatar: dbUser.avatar,
+                blockedUsers: dbUser.blocked_users || []
+            };
+            var existingIndex = users.findIndex(function(u) { return u.id === localUser.id; });
+            if (existingIndex !== -1) users[existingIndex] = localUser; else users.push(localUser);
+            Storage.set('users', users);
+            currentUser = localUser;
+            Storage.set('currentUser', { id: localUser.id });
+            addLog('info', 'User ' + localUser.username + ' logged in (database)');
+            return { success: true };
+        }
+        console.log('Supabase login failed:', dbResult.message);
+    }
     
+    // Fallback to localStorage
     const user = users.find(function(u) { return u.email === email && u.password === hashedPassword; });
     
     if (!user) {
-        // Check if email exists but password is wrong
         const emailExists = users.find(function(u) { return u.email === email; });
         if (emailExists) {
             console.log('Email found but password mismatch. Expected:', emailExists.password, 'Got:', hashedPassword);
@@ -486,7 +528,7 @@ function socialLogin(provider) {
     }, 500);
 }
 
-function register(name, username, email, password) {
+async function register(name, username, email, password) {
     const users = Storage.get('users') || [];
     if (users.find(function(u) { return u.email === email; })) return { success: false, message: 'Email already registered' };
     if (users.find(function(u) { return u.username === username; })) return { success: false, message: 'Username already taken' };
@@ -507,6 +549,15 @@ function register(name, username, email, password) {
         avatar: null,
         blockedUsers: []
     };
+
+    // Also save to Supabase database
+    if (DB.isReady()) {
+        var dbResult = await DB.signUp(email, password, { name: name, username: username });
+        if (dbResult.success && dbResult.user) {
+            window.pendingUser.id = dbResult.user.id;
+            window.pendingUser.dbSynced = true;
+        }
+    }
     
     // Generate verification code
     window.verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -624,11 +675,12 @@ function cancelVerification() {
     });
 }
 
-function logout() {
+async function logout() {
     setUserOffline();
     if (realtimeInterval) {
         clearInterval(realtimeInterval);
     }
+    await DB.signOut();
     currentUser = null;
     Storage.remove('currentUser');
     showAuthPage();
@@ -839,7 +891,42 @@ function showApp() {
     }
 }
 
-function initAuth() {
+async function initAuth() {
+    // Check Supabase session first
+    if (DB.isReady()) {
+        var session = await DB.getSession();
+        if (session && session.user) {
+            console.log('Supabase session found:', session.user.email);
+            var dbUser = await DB.getProfile(session.user.id);
+            if (dbUser) {
+                var localUser = {
+                    id: dbUser.id,
+                    name: dbUser.name,
+                    username: dbUser.username,
+                    email: dbUser.email,
+                    password: 'supabase_auth',
+                    role: dbUser.role || 'user',
+                    status: dbUser.status || 'active',
+                    bio: dbUser.bio || '',
+                    phone: dbUser.phone || '',
+                    location: dbUser.location || '',
+                    createdAt: dbUser.created_at,
+                    avatar: dbUser.avatar,
+                    blockedUsers: dbUser.blocked_users || []
+                };
+                var users = Storage.get('users') || [];
+                var idx = users.findIndex(function(u) { return u.id === localUser.id; });
+                if (idx !== -1) users[idx] = localUser; else users.push(localUser);
+                Storage.set('users', users);
+                currentUser = localUser;
+                Storage.set('currentUser', { id: localUser.id });
+                showApp();
+                return;
+            }
+        }
+    }
+
+    // Fallback to localStorage
     const savedUser = Storage.get('currentUser');
     if (savedUser) {
         const users = Storage.get('users') || [];
@@ -884,9 +971,15 @@ function initializeApp() {
     
     // Listen for all users being added (global sync)
     if (firebaseDb) {
+        // Load deleted users list first
+        var deletedUsers = {};
+        firebaseDb.ref('deletedUsers').once('value', function(snap) {
+            deletedUsers = snap.val() || {};
+        });
+        
         firebaseDb.ref('users').on('child_added', function(snap) {
             var user = snap.val();
-            if (user && user.id !== currentUser.id) {
+            if (user && user.id !== currentUser.id && !deletedUsers[user.id]) {
                 var users = Storage.get('users') || [];
                 if (!users.find(function(u) { return u.id === user.id; })) {
                     users.push(user);
@@ -944,6 +1037,7 @@ function initNavigation() {
             if (section === 'chats') loadChats();
             if (section === 'profile') loadProfile();
             if (section === 'admin') loadAdminData();
+            if (section === 'feed') { if (typeof initFeed === 'function') initFeed(); }
         };
     });
 }
@@ -1350,10 +1444,33 @@ function renderMessages(chatId) {
     updateUnreadBadge();
     
     var html = '';
+    var lastDate = null;
+    
     chatMessages.forEach(function(msg) {
         var isSent = msg.senderId === currentUser.id;
-        html += '<div class="message ' + (isSent ? 'sent' : 'received') + '" data-message-id="' + msg.id + '">';
+        
+        // Add date separator
+        var dateStr = formatDateSeparator(msg.timestamp);
+        if (dateStr !== lastDate) {
+            html += '<div class="date-separator"><span>' + dateStr + '</span></div>';
+            lastDate = dateStr;
+        }
+        
+        html += '<div class="message ' + (isSent ? 'sent' : 'received') + (msg.pinned ? ' pinned' : '') + '" data-message-id="' + msg.id + '">';
         html += '<div class="message-bubble">';
+        
+        // Show pinned badge
+        if (msg.pinned) {
+            html += '<div class="pinned-badge"><i class="fas fa-thumbtack"></i> Pinned</div>';
+        }
+        
+        // Show reply quote if replying to a message
+        if (msg.replyTo) {
+            html += '<div class="message-reply-quote" onclick="scrollToMessage(\'' + msg.replyTo.id + '\')">';
+            html += '<span class="reply-quote-sender">' + escapeHtml(msg.replyTo.senderName || 'Unknown') + '</span>';
+            html += '<span class="reply-quote-text">' + escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 80) + (msg.replyTo.text.length > 80 ? '...' : '') : '') + '</span>';
+            html += '</div>';
+        }
         
         // Check for GIF or large emoji
         if (msg.gifUrl) {
@@ -1436,8 +1553,10 @@ function renderMessages(chatId) {
         
         // Action buttons
         html += '<div class="message-actions">';
+        html += '<button class="message-action-btn" onclick="replyToMessage(\'' + msg.id + '\')" title="Reply"><i class="fas fa-reply"></i></button>';
         html += '<button class="message-action-btn" onclick="showReactionPicker(\'' + msg.id + '\')" title="React">😀</button>';
         html += '<button class="message-action-btn" onclick="forwardMessage(\'' + msg.id + '\')" title="Forward"><i class="fas fa-share"></i></button>';
+        html += '<button class="message-action-btn ' + (msg.pinned ? 'pin-message-btn' : '') + '" onclick="pinMessage(\'' + msg.id + '\')" title="' + (msg.pinned ? 'Unpin' : 'Pin') + '"><i class="fas fa-thumbtack"></i></button>';
         if (canEdit) {
             html += '<button class="message-action-btn" onclick="editMessage(\'' + msg.id + '\')" title="Edit"><i class="fas fa-edit"></i></button>';
         }
@@ -1455,6 +1574,17 @@ function renderMessages(chatId) {
 
 function viewImage(src) {
     showModal('<div class="image-viewer"><img src="' + src + '" style="max-width:100%;max-height:80vh;"></div>');
+}
+
+function scrollToMessage(messageId) {
+    var msgEl = document.querySelector('[data-message-id="' + messageId + '"]');
+    if (msgEl) {
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        msgEl.classList.add('highlight-message');
+        setTimeout(function() {
+            msgEl.classList.remove('highlight-message');
+        }, 2000);
+    }
 }
 
 function getFileIcon(fileName) {
@@ -1483,7 +1613,7 @@ function getFileIcon(fileName) {
 }
 
 function showReactionPicker(messageId) {
-    var reactions = ['❤️', '👍', '😂', '😮', '😢', '😡'];
+    var reactions = ['❤️', '👍', '👎', '😂', '😮', '😢', '😡', '🎉', '🔥', '💯', '🤔', '👏', '🙏', '💪', '✨', '😎'];
     var html = '<div class="reaction-picker">';
     reactions.forEach(function(emoji) {
         html += '<button class="reaction-option" onclick="addReaction(\'' + messageId + '\', \'' + emoji + '\')">' + emoji + '</button>';
@@ -1579,6 +1709,34 @@ function clearReplyPreview() {
     currentReplyTo = null;
     var preview = document.getElementById('reply-preview');
     if (preview) preview.style.display = 'none';
+}
+
+function replyToMessage(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message) return;
+    
+    var users = Storage.get('users') || [];
+    var sender = users.find(function(u) { return u.id === message.senderId; });
+    
+    currentReplyTo = {
+        id: message.id,
+        senderId: message.senderId,
+        senderName: sender ? sender.name : 'Unknown',
+        text: message.text || (message.gifUrl ? '[GIF]' : message.fileData ? '[File]' : message.audioData ? '[Voice]' : '')
+    };
+    
+    // Show reply preview
+    var preview = document.getElementById('reply-preview');
+    var replyTo = document.getElementById('reply-to');
+    var replyText = document.getElementById('reply-text');
+    
+    replyTo.textContent = currentReplyTo.senderName;
+    replyText.textContent = currentReplyTo.text.substring(0, 100) + (currentReplyTo.text.length > 100 ? '...' : '');
+    preview.style.display = 'flex';
+    
+    // Focus input
+    document.getElementById('chat-input').focus();
 }
 
 function editMessage(messageId) {
@@ -1881,6 +2039,8 @@ function loadProfile() {
 
 function closeEditProfile() {
     document.getElementById('profile-edit-form').style.display = 'none';
+    document.getElementById('profile-card').style.display = 'block';
+    document.querySelector('.profile-container').classList.remove('editing');
 }
 
 function changePassword() {
@@ -2251,10 +2411,11 @@ function confirmDeleteUser(userId) {
     users = users.filter(function(u) { return u.id !== userId; });
     Storage.set('users', users);
     
-    // Remove user from Firebase
+    // Remove user from Firebase and mark as deleted
     if (firebaseDb) {
         firebaseDb.ref('users/' + userId).remove();
         firebaseDb.ref('online/' + userId).remove();
+        firebaseDb.ref('deletedUsers/' + userId).set(true);
     }
     
     // Remove user's messages
@@ -3173,6 +3334,52 @@ function sendFileMessage(file, fileData) {
     showToast('File sent!', 'success');
 }
 
+function sendFile(fileData, fileName, fileType) {
+    if (!activeChat) return;
+    
+    var messages = Storage.get('messages') || [];
+    var newMessage = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: fileType.startsWith('image/') ? '📷 Photo' : '📎 ' + fileName,
+        fileData: fileData,
+        fileName: fileName,
+        fileType: fileType,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: currentReplyTo,
+        forwarded: false
+    };
+    
+    // Save to local storage
+    messages.push(newMessage);
+    Storage.set('messages', messages);
+    
+    // Clear reply preview
+    clearReplyPreview();
+    
+    // Update UI
+    renderMessages(activeChat.id);
+    loadChats();
+    
+    // Send to Firebase
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(newMessage).then(function() {
+            newMessage.status = 'delivered';
+            Storage.set('messages', messages);
+            renderMessages(activeChat.id);
+        });
+    }
+    
+    showToast('File sent!', 'success');
+}
+
 function sendGif(gifUrl) {
     var messages = Storage.get('messages') || [];
     var newMessage = {
@@ -3729,9 +3936,18 @@ function showChangePassword() {
 }
 
 function changePassword() {
-    var current = document.getElementById('current-password').value;
-    var newPass = document.getElementById('new-password').value;
-    var confirm = document.getElementById('confirm-new-password').value;
+    var currentEl = document.getElementById('current-password');
+    var newPassEl = document.getElementById('new-password');
+    var confirmEl = document.getElementById('confirm-new-password');
+    
+    if (!currentEl || !newPassEl || !confirmEl) {
+        showToast('Please try again', 'error');
+        return;
+    }
+    
+    var current = currentEl.value;
+    var newPass = newPassEl.value;
+    var confirm = confirmEl.value;
     
     if (hashPassword(current) !== currentUser.password) {
         showToast('Current password incorrect', 'error');
@@ -4840,7 +5056,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Login form
-    document.getElementById('login-form').onsubmit = function(e) {
+    document.getElementById('login-form').onsubmit = async function(e) {
         e.preventDefault();
         e.stopPropagation();
         console.log('Login form submitted');
@@ -4856,8 +5072,17 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.removeItem('rememberedEmail');
         }
         
-        var result = login(email, password);
+        // Show loading state
+        var submitBtn = this.querySelector('button[type="submit"]');
+        var originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+        submitBtn.disabled = true;
+        
+        var result = await login(email, password);
         console.log('Login result:', result);
+        
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
         
         if (result.success) {
             showToast('Welcome back!', 'success');
@@ -4883,7 +5108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Register form
-    document.getElementById('register-form').onsubmit = function(e) {
+    document.getElementById('register-form').onsubmit = async function(e) {
         e.preventDefault();
         var name = document.getElementById('register-name').value;
         var username = document.getElementById('register-username').value;
@@ -4901,11 +5126,20 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('register-error').style.display = 'block';
             return;
         }
-        
-        var result = register(name, username, email, password);
+
+        // Show loading state
+        var submitBtn = this.querySelector('button[type="submit"]');
+        var originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        submitBtn.disabled = true;
+
+        var result = await register(name, username, email, password);
+
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+
         if (result.success) {
             if (result.requiresVerification) {
-                // Show verification modal
                 showToast('Verification code sent!', 'info');
             } else {
                 showToast('Account created!', 'success');
@@ -4960,19 +5194,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('file-input').onchange = function(e) {
         var file = e.target.files[0];
-        if (file) {
-            if (file.type.startsWith('image/')) {
-                // For images, use FileReader to get base64
-                var reader = new FileReader();
-                reader.onload = function(event) {
-                    var imageData = event.target.result;
-                    sendMessage('[Image] ' + imageData);
-                };
-                reader.readAsDataURL(file);
-            } else {
-                // For other files, just send the filename
-                sendMessage('[File] ' + file.name);
+        if (file && activeChat) {
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                showToast('File too large (max 10MB)', 'error');
+                return;
             }
+            
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var fileData = event.target.result;
+                sendFile(fileData, file.name, file.type);
+            };
+            reader.readAsDataURL(file);
         }
         this.value = ''; // Reset
     };
@@ -5023,6 +5256,9 @@ document.addEventListener('DOMContentLoaded', function() {
             phone: document.getElementById('edit-phone').value,
             location: document.getElementById('edit-location').value
         });
+        document.getElementById('profile-edit-form').style.display = 'none';
+        document.getElementById('profile-card').style.display = 'block';
+        document.querySelector('.profile-container').classList.remove('editing');
     };
     
     // Logout
@@ -5088,7 +5324,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Edit Profile
     document.getElementById('edit-profile-btn').onclick = function() {
+        document.getElementById('profile-card').style.display = 'none';
         document.getElementById('profile-edit-form').style.display = 'block';
+        document.querySelector('.profile-container').classList.add('editing');
     };
     
     // Change Cover
@@ -5202,4 +5440,1996 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Service Worker registration failed:', error);
             });
     }
+    
+    // ==========================================
+    // Enhanced Features - Auto Logout
+    // ==========================================
+    var autoLogoutTimer = null;
+    var autoLogoutWarningShown = false;
+    var AUTO_LOGOUT_TIME = 15 * 60 * 1000; // 15 minutes
+    var AUTO_LOGOUT_WARNING = 14 * 60 * 1000; // 14 minutes (1 min warning)
+    
+    function resetAutoLogoutTimer() {
+        if (!currentUser) return;
+        
+        clearTimeout(autoLogoutTimer);
+        autoLogoutWarningShown = false;
+        
+        // Remove warning if exists
+        var warning = document.querySelector('.auto-logout-warning');
+        if (warning) warning.remove();
+        
+        autoLogoutTimer = setTimeout(function() {
+            showAutoLogoutWarning();
+        }, AUTO_LOGOUT_WARNING);
+    }
+    
+    function showAutoLogoutWarning() {
+        if (autoLogoutWarningShown) return;
+        autoLogoutWarningShown = true;
+        
+        var warning = document.createElement('div');
+        warning.className = 'auto-logout-warning';
+        warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>You will be logged out in 1 minute due to inactivity</span> <button onclick="resetAutoLogoutTimer()">Stay Active</button>';
+        document.body.appendChild(warning);
+        
+        // Auto logout after 1 more minute
+        setTimeout(function() {
+            if (autoLogoutWarningShown) {
+                logout();
+            }
+        }, 60000);
+    }
+    
+    // Track user activity
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(function(event) {
+        document.addEventListener(event, function() {
+            if (currentUser) resetAutoLogoutTimer();
+        }, { passive: true });
+    });
+    
+    // ==========================================
+    // Enhanced Features - Unread Badge
+    // ==========================================
+    function updateChatUnreadBadge(chatId, count) {
+        var chatItem = document.querySelector('[data-chat-id="' + chatId + '"]');
+        if (!chatItem) return;
+        
+        var badge = chatItem.querySelector('.chat-unread-badge');
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'chat-unread-badge';
+                chatItem.appendChild(badge);
+            }
+            badge.textContent = count > 99 ? '99+' : count;
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+    
+    // ==========================================
+    // Enhanced Features - Pin Message
+    // ==========================================
+    window.pinMessage = function(messageId) {
+        var messages = Storage.get('messages') || [];
+        var msgIndex = messages.findIndex(function(m) { return m.id === messageId; });
+        
+        if (msgIndex !== -1) {
+            messages[msgIndex].pinned = !messages[msgIndex].pinned;
+            Storage.set('messages', messages);
+            
+            if (typeof sendMsgToFirebase === 'function') {
+                sendMsgToFirebase(messages[msgIndex]);
+            }
+            
+            if (activeChat) {
+                renderMessages(activeChat.id);
+            }
+            
+            showToast(messages[msgIndex].pinned ? 'Message pinned' : 'Message unpinned', 'success');
+        }
+    };
+    
+    window.showPinnedMessages = function() {
+        if (!activeChat) return;
+        
+        var messages = Storage.get('messages') || [];
+        var pinned = messages.filter(function(m) { return m.chatId === activeChat.id && m.pinned; });
+        
+        if (pinned.length === 0) {
+            showToast('No pinned messages', 'info');
+            return;
+        }
+        
+        var html = '<div class="pinned-messages-list"><h3><i class="fas fa-thumbtack"></i> Pinned Messages</h3>';
+        pinned.forEach(function(msg) {
+            html += '<div class="pinned-msg-item" onclick="scrollToMessage(\'' + msg.id + '\')">';
+            html += '<p>' + escapeHtml(msg.text || '[Media]') + '</p>';
+            html += '<small>' + formatTime(msg.timestamp) + '</small>';
+            html += '</div>';
+        });
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Enhanced Features - Mute Chat
+    // ==========================================
+    window.toggleMuteChat = function() {
+        if (!activeChat) return;
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        
+        if (chatIndex !== -1) {
+            chats[chatIndex].muted = !chats[chatIndex].muted;
+            Storage.set('chats', chats);
+            activeChat = chats[chatIndex];
+            
+            showToast(chats[chatIndex].muted ? 'Chat muted' : 'Chat unmuted', 'success');
+            loadChats();
+        }
+    };
+    
+    // ==========================================
+    // Enhanced Features - Chat Themes
+    // ==========================================
+    var chatThemes = ['default', 'ocean', 'sunset', 'forest', 'rose', 'midnight', 'lavender', 'gold'];
+    
+    window.showChatThemePicker = function() {
+        if (!activeChat) return;
+        
+        var currentTheme = activeChat.theme || 'default';
+        var html = '<div class="chat-theme-picker"><h3>Chat Theme</h3><div class="chat-themes">';
+        
+        chatThemes.forEach(function(theme) {
+            html += '<div class="chat-theme-option theme-' + theme + (theme === currentTheme ? ' active' : '') + '" onclick="setChatTheme(\'' + theme + '\')"></div>';
+        });
+        
+        html += '</div></div>';
+        showModal(html);
+    };
+    
+    window.setChatTheme = function(theme) {
+        if (!activeChat) return;
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        
+        if (chatIndex !== -1) {
+            chats[chatIndex].theme = theme;
+            Storage.set('chats', chats);
+            activeChat = chats[chatIndex];
+            
+            // Apply theme to wallpaper
+            var wallpaper = document.getElementById('chat-wallpaper');
+            wallpaper.className = 'chat-wallpaper';
+            if (theme !== 'default') {
+                wallpaper.classList.add('theme-' + theme);
+            }
+            
+            closeModal();
+            showToast('Theme updated', 'success');
+        }
+    };
+    
+    // ==========================================
+    // Enhanced Features - Export Chat
+    // ==========================================
+    window.showExportOptions = function() {
+        if (!activeChat) return;
+        
+        var html = '<div class="export-options">';
+        html += '<h3>Export Chat</h3>';
+        html += '<div class="export-option" onclick="exportChatAsText()"><i class="fas fa-file-alt"></i><div class="export-option-info"><div class="export-option-title">Plain Text</div><div class="export-option-desc">Export as .txt file</div></div></div>';
+        html += '<div class="export-option" onclick="exportChatAsJSON()"><i class="fas fa-file-code"></i><div class="export-option-info"><div class="export-option-title">JSON</div><div class="export-option-desc">Export as .json file (includes all data)</div></div></div>';
+        html += '<div class="export-option" onclick="exportChatAsHTML()"><i class="fas fa-file-export"></i><div class="export-option-info"><div class="export-option-title">HTML</div><div class="export-option-desc">Export as .html file (viewable in browser)</div></div></div>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.exportChatAsText = function() {
+        var messages = Storage.get('messages') || [];
+        var chatMessages = messages.filter(function(m) { return m.chatId === activeChat.id; });
+        var users = Storage.get('users') || [];
+        
+        var text = 'Chat Export - ' + (activeChat.name || 'Direct Chat') + '\n';
+        text += 'Exported: ' + new Date().toLocaleString() + '\n\n';
+        
+        chatMessages.forEach(function(msg) {
+            var sender = users.find(function(u) { return u.id === msg.senderId; });
+            text += '[' + formatTime(msg.timestamp) + '] ' + (sender ? sender.name : 'Unknown') + ': ' + (msg.text || '[Media]') + '\n';
+        });
+        
+        downloadFile(activeChat.name + '.txt', text, 'text/plain');
+        closeModal();
+        showToast('Chat exported as text', 'success');
+    };
+    
+    window.exportChatAsJSON = function() {
+        var messages = Storage.get('messages') || [];
+        var chatMessages = messages.filter(function(m) { return m.chatId === activeChat.id; });
+        
+        var data = {
+            chat: activeChat,
+            messages: chatMessages,
+            exportedAt: new Date().toISOString()
+        };
+        
+        downloadFile(activeChat.name + '.json', JSON.stringify(data, null, 2), 'application/json');
+        closeModal();
+        showToast('Chat exported as JSON', 'success');
+    };
+    
+    window.exportChatAsHTML = function() {
+        var messages = Storage.get('messages') || [];
+        var chatMessages = messages.filter(function(m) { return m.chatId === activeChat.id; });
+        var users = Storage.get('users') || [];
+        
+        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + (activeChat.name || 'Chat') + '</title>';
+        html += '<style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}.message{margin:10px 0;padding:10px;border-radius:8px}.sent{background:#6366f1;color:white;margin-left:auto;max-width:70%}.received{background:#f1f5f9;max-width:70%}.time{font-size:11px;opacity:0.7}</style></head>';
+        html += '<body><h1>' + (activeChat.name || 'Chat') + '</h1><p>Exported: ' + new Date().toLocaleString() + '</p>';
+        
+        chatMessages.forEach(function(msg) {
+            var sender = users.find(function(u) { return u.id === msg.senderId; });
+            var isSent = msg.senderId === currentUser.id;
+            html += '<div class="message ' + (isSent ? 'sent' : 'received') + '"><strong>' + (sender ? sender.name : 'Unknown') + ':</strong> ' + (msg.text || '[Media]') + '<div class="time">' + formatTime(msg.timestamp) + '</div></div>';
+        });
+        
+        html += '</body></html>';
+        downloadFile(activeChat.name + '.html', html, 'text/html');
+        closeModal();
+        showToast('Chat exported as HTML', 'success');
+    };
+    
+    function downloadFile(filename, content, type) {
+        var blob = new Blob([content], { type: type });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    // ==========================================
+    // Enhanced Features - Clear Chat
+    // ==========================================
+    window.confirmClearChat = function() {
+        if (!activeChat) return;
+        
+        var html = '<div class="clear-chat-confirm">';
+        html += '<i class="fas fa-trash-alt"></i>';
+        html += '<h3>Clear Chat?</h3>';
+        html += '<p>This will delete all messages in this chat. This action cannot be undone.</p>';
+        html += '<div class="modal-buttons">';
+        html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+        html += '<button class="btn btn-danger" onclick="clearChat()">Clear Chat</button>';
+        html += '</div></div>';
+        showModal(html);
+    };
+    
+    window.clearChat = function() {
+        if (!activeChat) return;
+        
+        var messages = Storage.get('messages') || [];
+        messages = messages.filter(function(m) { return m.chatId !== activeChat.id; });
+        Storage.set('messages', messages);
+        
+        // Sync to Firebase
+        if (firebaseDb) {
+            firebaseDb.ref('chats/' + activeChat.id + '/messages').remove();
+        }
+        
+        closeModal();
+        renderMessages(activeChat.id);
+        showToast('Chat cleared', 'success');
+    };
+    
+    // ==========================================
+    // Enhanced Features - Long Press for Quick Reactions
+    // ==========================================
+    var longPressTimer = null;
+    
+    document.addEventListener('mousedown', function(e) {
+        var msg = e.target.closest('.message');
+        if (!msg) return;
+        
+        longPressTimer = setTimeout(function() {
+            showQuickReactions(msg, e);
+        }, 500);
+    });
+    
+    document.addEventListener('mouseup', function() {
+        clearTimeout(longPressTimer);
+    });
+    
+    document.addEventListener('mouseleave', function() {
+        clearTimeout(longPressTimer);
+    });
+    
+    document.addEventListener('touchstart', function(e) {
+        var msg = e.target.closest('.message');
+        if (!msg) return;
+        
+        longPressTimer = setTimeout(function() {
+            showQuickReactions(msg, e.touches[0]);
+        }, 500);
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function() {
+        clearTimeout(longPressTimer);
+    });
+    
+    function showQuickReactions(msgEl, event) {
+        // Remove existing quick reactions
+        var existing = document.querySelector('.quick-reactions');
+        if (existing) existing.remove();
+        
+        var messageId = msgEl.dataset.messageId;
+        var quickEmojis = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+        
+        var html = '<div class="quick-reactions">';
+        quickEmojis.forEach(function(emoji) {
+            html += '<span class="quick-reaction" onclick="addReaction(\'' + messageId + '\', \'' + emoji + '\'); this.parentElement.remove();">' + emoji + '</span>';
+        });
+        html += '</div>';
+        
+        msgEl.querySelector('.message-bubble').insertAdjacentHTML('beforeend', html);
+        
+        // Play haptic feedback if available
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+    }
+    
+    // ==========================================
+    // Enhanced Features - Double Tap to Like
+    // ==========================================
+    var lastTapTime = 0;
+    var lastTapTarget = null;
+    
+    document.addEventListener('touchend', function(e) {
+        var msg = e.target.closest('.message');
+        if (!msg) return;
+        
+        var now = Date.now();
+        if (now - lastTapTime < 300 && lastTapTarget === msg) {
+            // Double tap detected
+            addReaction(msg.dataset.messageId, '❤️');
+            lastTapTime = 0;
+            lastTapTarget = null;
+        } else {
+            lastTapTime = now;
+            lastTapTarget = msg;
+        }
+    });
+    
+    // ==========================================
+    // Enhanced Features - Session Management
+    // ==========================================
+    window.showSessionManagement = function() {
+        var sessionId = Storage.get('sessionId') || generateId();
+        if (!Storage.get('sessionId')) {
+            Storage.set('sessionId', sessionId);
+        }
+        
+        var html = '<div class="session-list">';
+        html += '<h3>Active Sessions</h3>';
+        
+        // Current session
+        html += '<div class="session-item current">';
+        html += '<div class="session-icon"><i class="fas fa-desktop"></i></div>';
+        html += '<div class="session-info"><div class="session-device">This Device</div><div class="session-details">' + navigator.userAgent.substring(0, 50) + '...</div></div>';
+        html += '<span class="session-current-badge">Current</span>';
+        html += '</div>';
+        
+        // Add revoke all button
+        html += '<button class="btn btn-danger" onclick="revokeAllSessions()" style="margin-top: 16px; width: 100%;">Sign Out All Other Devices</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.revokeAllSessions = function() {
+        showToast('All other sessions signed out', 'success');
+        closeModal();
+    };
+    
+    // ==========================================
+    // Message Features - Copy, Spoiler, Self-Destruct, Translate
+    // ==========================================
+    
+    window.copyMessageText = function(messageId) {
+        var messages = Storage.get('messages') || [];
+        var msg = messages.find(function(m) { return m.id === messageId; });
+        if (!msg || !msg.text) return;
+        
+        navigator.clipboard.writeText(msg.text).then(function() {
+            var notif = document.createElement('div');
+            notif.className = 'copy-notification';
+            notif.textContent = 'Message copied!';
+            document.body.appendChild(notif);
+            setTimeout(function() { notif.remove(); }, 2000);
+        });
+    };
+    
+    window.toggleSpoiler = function(el) {
+        el.classList.toggle('revealed');
+    };
+    
+    window.translateMessage = function(messageId, targetLang) {
+        targetLang = targetLang || 'en';
+        var messages = Storage.get('messages') || [];
+        var msg = messages.find(function(m) { return m.id === messageId; });
+        if (!msg || !msg.text) return;
+        
+        // Simple mock translation (in production, use a translation API)
+        var translations = {
+            'es': '¡Hola! ¿Cómo estás?',
+            'fr': 'Bonjour! Comment allez-vous?',
+            'de': 'Hallo! Wie geht es Ihnen?',
+            'ja': 'こんにちは！お元気ですか？'
+        };
+        
+        var translated = translations[targetLang] || msg.text;
+        
+        var msgEl = document.querySelector('[data-message-id="' + messageId + '"]');
+        if (msgEl) {
+            var existing = msgEl.querySelector('.translated-text');
+            if (existing) {
+                existing.remove();
+            } else {
+                var transEl = document.createElement('div');
+                transEl.className = 'translated-text';
+                transEl.textContent = '🌐 ' + translated;
+                msgEl.querySelector('.message-text').appendChild(transEl);
+            }
+        }
+    };
+    
+    // ==========================================
+    // Chat Folders
+    // ==========================================
+    var chatFolders = [
+        { id: 'all', name: 'All', icon: 'inbox' },
+        { id: 'personal', name: 'Personal', icon: 'user' },
+        { id: 'work', name: 'Work', icon: 'briefcase' },
+        { id: 'groups', name: 'Groups', icon: 'users' },
+        { id: 'archived', name: 'Archived', icon: 'archive' }
+    ];
+    
+    var currentFolder = 'all';
+    
+    window.renderChatFolders = function() {
+        var container = document.querySelector('.chat-folders');
+        if (!container) return;
+        
+        var html = '';
+        chatFolders.forEach(function(folder) {
+            var count = getChatCountByFolder(folder.id);
+            html += '<button class="chat-folder' + (currentFolder === folder.id ? ' active' : '') + '" onclick="selectFolder(\'' + folder.id + '\')">';
+            html += '<i class="fas fa-' + folder.icon + '"></i> ' + folder.name;
+            if (count > 0) {
+                html += '<span class="folder-count">' + count + '</span>';
+            }
+            html += '</button>';
+        });
+        container.innerHTML = html;
+    };
+    
+    window.selectFolder = function(folderId) {
+        currentFolder = folderId;
+        renderChatFolders();
+        loadChats();
+    };
+    
+    function getChatCountByFolder(folderId) {
+        var chats = Storage.get('chats') || [];
+        if (folderId === 'all') return chats.filter(function(c) { return !c.archived; }).length;
+        if (folderId === 'archived') return chats.filter(function(c) { return c.archived; }).length;
+        if (folderId === 'groups') return chats.filter(function(c) { return c.type === 'group' && !c.archived; }).length;
+        return chats.filter(function(c) { return c.folder === folderId && !c.archived; }).length;
+    }
+    
+    // ==========================================
+    // Chat Backup/Restore
+    // ==========================================
+    window.backupChats = function() {
+        var data = {
+            version: APP_VERSION,
+            timestamp: new Date().toISOString(),
+            users: Storage.get('users') || [],
+            chats: Storage.get('chats') || [],
+            messages: Storage.get('messages') || [],
+            settings: {
+                theme: document.body.getAttribute('data-theme'),
+                currentUser: currentUser
+            }
+        };
+        
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'bsithub-backup-' + new Date().toISOString().slice(0,10) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Backup created successfully', 'success');
+    };
+    
+    window.restoreChats = function(event) {
+        var file = event.target.files[0];
+        if (!file) return;
+        
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var data = JSON.parse(e.target.result);
+                if (data.users) Storage.set('users', data.users);
+                if (data.chats) Storage.set('chats', data.chats);
+                if (data.messages) Storage.set('messages', data.messages);
+                
+                showToast('Backup restored! Refreshing...', 'success');
+                setTimeout(function() { location.reload(); }, 1500);
+            } catch (err) {
+                showToast('Invalid backup file', 'error');
+            }
+        };
+        reader.readAsText(file);
+    };
+    
+    // ==========================================
+    // Priority/Pinned Chats
+    // ==========================================
+    window.togglePinChat = function(chatId) {
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+        
+        if (chatIndex !== -1) {
+            chats[chatIndex].pinned = !chats[chatIndex].pinned;
+            Storage.set('chats', chats);
+            loadChats();
+            showToast(chats[chatIndex].pinned ? 'Chat pinned' : 'Chat unpinned', 'success');
+        }
+    };
+    
+    // ==========================================
+    // Slow Mode
+    // ==========================================
+    window.setSlowMode = function(seconds) {
+        if (!activeChat) return;
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        
+        if (chatIndex !== -1) {
+            chats[chatIndex].slowMode = seconds;
+            Storage.set('chats', chats);
+            activeChat = chats[chatIndex];
+            showToast(seconds > 0 ? 'Slow mode: ' + seconds + 's between messages' : 'Slow mode disabled', 'success');
+            closeModal();
+        }
+    };
+    
+    window.showSlowModeOptions = function() {
+        if (!activeChat) return;
+        
+        var html = '<div class="slow-mode-options"><h3>Slow Mode</h3>';
+        html += '<p>Limit how often members can send messages</p>';
+        html += '<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">';
+        html += '<button class="btn ' + (!activeChat.slowMode ? 'btn-primary' : '') + '" onclick="setSlowMode(0)">Off</button>';
+        html += '<button class="btn ' + (activeChat.slowMode === 10 ? 'btn-primary' : '') + '" onclick="setSlowMode(10)">10 seconds</button>';
+        html += '<button class="btn ' + (activeChat.slowMode === 30 ? 'btn-primary' : '') + '" onclick="setSlowMode(30)">30 seconds</button>';
+        html += '<button class="btn ' + (activeChat.slowMode === 60 ? 'btn-primary' : '') + '" onclick="setSlowMode(60)">1 minute</button>';
+        html += '<button class="btn ' + (activeChat.slowMode === 300 ? 'btn-primary' : '') + '" onclick="setSlowMode(300)">5 minutes</button>';
+        html += '</div></div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Read-Only Mode
+    // ==========================================
+    window.toggleReadOnly = function() {
+        if (!activeChat) return;
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        
+        if (chatIndex !== -1) {
+            chats[chatIndex].readOnly = !chats[chatIndex].readOnly;
+            Storage.set('chats', chats);
+            activeChat = chats[chatIndex];
+            showToast(chats[chatIndex].readOnly ? 'Chat set to read-only' : 'Chat unlocked', 'success');
+        }
+    };
+    
+    // ==========================================
+    // Custom Status
+    // ==========================================
+    var statusOptions = [
+        { emoji: '🟢', text: 'Online', color: '#22c55e' },
+        { emoji: '🟡', text: 'Away', color: '#f59e0b' },
+        { emoji: '🔴', text: 'Busy', color: '#ef4444' },
+        { emoji: '💤', text: 'Sleeping', color: '#8b5cf6' },
+        { emoji: '🎮', text: 'Gaming', color: '#3b82f6' },
+        { emoji: '📚', text: 'Studying', color: '#10b981' },
+        { emoji: '💼', text: 'Working', color: '#6366f1' },
+        { emoji: '🎵', text: 'Listening to music', color: '#ec4899' }
+    ];
+    
+    window.showCustomStatusPicker = function() {
+        var currentStatus = Storage.get('customStatus') || statusOptions[0];
+        
+        var html = '<div class="status-picker"><h3>Set Status</h3>';
+        html += '<div class="status-options">';
+        
+        statusOptions.forEach(function(status, i) {
+            html += '<div class="status-option' + (currentStatus.text === status.text ? ' selected' : '') + '" onclick="setCustomStatus(' + i + ')">';
+            html += status.emoji + ' ' + status.text;
+            html += '</div>';
+        });
+        
+        html += '</div>';
+        html += '<div style="margin-top: 16px;">';
+        html += '<input type="text" id="custom-status-text" placeholder="Or type a custom status..." class="form-input" value="' + (currentStatus.customText || '') + '">';
+        html += '<button class="btn btn-primary" style="margin-top: 8px; width: 100%;" onclick="setCustomStatusText()">Save Custom Status</button>';
+        html += '</div></div>';
+        showModal(html);
+    };
+    
+    window.setCustomStatus = function(index) {
+        var status = statusOptions[index];
+        Storage.set('customStatus', status);
+        updateStatusDisplay();
+        closeModal();
+        showToast('Status updated to ' + status.text, 'success');
+    };
+    
+    window.setCustomStatusText = function() {
+        var text = document.getElementById('custom-status-text').value.trim();
+        if (!text) return;
+        
+        var status = { emoji: '💬', text: text, customText: text };
+        Storage.set('customStatus', status);
+        updateStatusDisplay();
+        closeModal();
+        showToast('Custom status set', 'success');
+    };
+    
+    function updateStatusDisplay() {
+        var status = Storage.get('customStatus') || statusOptions[0];
+        var el = document.querySelector('.custom-status');
+        if (el) {
+            el.innerHTML = '<span class="status-emoji">' + status.emoji + '</span> ' + status.text;
+        }
+    }
+    
+    // ==========================================
+    // User Notes
+    // ==========================================
+    window.showUserNotes = function(userId) {
+        var notes = Storage.get('userNotes') || {};
+        var note = notes[userId] || '';
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === userId; });
+        
+        var html = '<div class="user-notes"><h3>Notes about ' + (user ? user.name : 'User') + '</h3>';
+        html += '<textarea id="user-note-input" placeholder="Add private notes about this user...">' + note + '</textarea>';
+        html += '<button class="btn btn-primary" style="margin-top: 12px; width: 100%;" onclick="saveUserNotes(\'' + userId + '\')">Save Notes</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.saveUserNotes = function(userId) {
+        var note = document.getElementById('user-note-input').value;
+        var notes = Storage.get('userNotes') || {};
+        notes[userId] = note;
+        Storage.set('userNotes', notes);
+        closeModal();
+        showToast('Notes saved', 'success');
+    };
+    
+    // ==========================================
+    // Custom Nicknames
+    // ==========================================
+    window.showNicknameEditor = function(userId) {
+        var nicknames = Storage.get('nicknames') || {};
+        var nickname = nicknames[userId] || '';
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === userId; });
+        
+        var html = '<div class="nickname-editor"><h3>Set Nickname</h3>';
+        html += '<p>Original name: ' + (user ? user.name : 'Unknown') + '</p>';
+        html += '<input type="text" id="nickname-input" placeholder="Enter nickname..." class="form-input" value="' + nickname + '">';
+        html += '<button class="btn btn-primary" style="margin-top: 12px; width: 100%;" onclick="saveNickname(\'' + userId + '\')">Save</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.saveNickname = function(userId) {
+        var nickname = document.getElementById('nickname-input').value.trim();
+        var nicknames = Storage.get('nicknames') || {};
+        if (nickname) {
+            nicknames[userId] = nickname;
+        } else {
+            delete nicknames[userId];
+        }
+        Storage.set('nicknames', nicknames);
+        closeModal();
+        loadChats();
+        showToast('Nickname updated', 'success');
+    };
+    
+    window.getDisplayName = function(userId) {
+        var nicknames = Storage.get('nicknames') || {};
+        if (nicknames[userId]) return nicknames[userId];
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === userId; });
+        return user ? user.name : 'Unknown';
+    };
+    
+    // ==========================================
+    // Activity Log
+    // ==========================================
+    window.showActivityLog = function() {
+        var logs = Storage.get('activityLog') || [];
+        
+        var html = '<div class="activity-log"><h3>Activity Log</h3>';
+        
+        if (logs.length === 0) {
+            html += '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No activity yet</p>';
+        } else {
+            logs.slice(0, 50).forEach(function(log) {
+                html += '<div class="activity-item">';
+                html += '<div class="activity-icon"><i class="fas fa-' + getActivityIcon(log.action) + '"></i></div>';
+                html += '<div class="activity-info">';
+                html += '<div class="activity-action">' + log.description + '</div>';
+                html += '<div class="activity-time">' + formatTimeAgo(log.timestamp) + '</div>';
+                html += '</div></div>';
+            });
+        }
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    function getActivityIcon(action) {
+        var icons = {
+            'login': 'sign-in-alt',
+            'logout': 'sign-out-alt',
+            'message': 'comment',
+            'chat': 'comments',
+            'profile': 'user',
+            'settings': 'cog'
+        };
+        return icons[action] || 'circle';
+    }
+    
+    function formatTimeAgo(timestamp) {
+        var diff = Date.now() - new Date(timestamp).getTime();
+        var mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return mins + ' min ago';
+        var hours = Math.floor(mins / 60);
+        if (hours < 24) return hours + ' hours ago';
+        var days = Math.floor(hours / 24);
+        return days + ' days ago';
+    }
+    
+    window.logActivity = function(action, description) {
+        var logs = Storage.get('activityLog') || [];
+        logs.unshift({
+            action: action,
+            description: description,
+            timestamp: new Date().toISOString()
+        });
+        if (logs.length > 100) logs = logs.slice(0, 100);
+        Storage.set('activityLog', logs);
+    };
+    
+    // ==========================================
+    // Quick Replies / Templates
+    // ==========================================
+    var quickReplies = [
+        '👋 Hi there!',
+        '👍 Sounds good!',
+        '😊 Thanks!',
+        '🙏 Sorry, can\'t talk now',
+        '📞 Call me later',
+        '🎉 Congratulations!',
+        '💪 Let\'s do this!',
+        '🤔 Let me think about it'
+    ];
+    
+    window.renderQuickReplies = function() {
+        var container = document.querySelector('.quick-replies');
+        if (!container) return;
+        
+        var html = '';
+        quickReplies.forEach(function(reply) {
+            html += '<button class="quick-reply-btn" onclick="sendQuickReply(\'' + escapeHtml(reply) + '\')">' + reply + '</button>';
+        });
+        container.innerHTML = html;
+    };
+    
+    window.sendQuickReply = function(text) {
+        if (!activeChat) return;
+        document.getElementById('chat-input').value = text;
+        document.getElementById('chat-input').focus();
+    };
+    
+    // ==========================================
+    // Font Size Control
+    // ==========================================
+    var fontSizes = [12, 13, 14, 15, 16, 18, 20];
+    var currentFontSizeIndex = 2; // Default 14px
+    
+    window.changeFontSize = function(direction) {
+        currentFontSizeIndex = Math.max(0, Math.min(fontSizes.length - 1, currentFontSizeIndex + direction));
+        var size = fontSizes[currentFontSizeIndex];
+        document.documentElement.style.setProperty('--message-font-size', size + 'px');
+        Storage.set('fontSize', size);
+        updateFontSizeDisplay();
+    };
+    
+    function updateFontSizeDisplay() {
+        var display = document.querySelector('.font-size-display');
+        if (display) {
+            display.textContent = fontSizes[currentFontSizeIndex] + 'px';
+        }
+    }
+    
+    // ==========================================
+    // Compact Mode Toggle
+    // ==========================================
+    window.toggleCompactMode = function() {
+        var messagesContainer = document.querySelector('.chat-messages');
+        if (messagesContainer) {
+            messagesContainer.classList.toggle('compact-mode');
+            Storage.set('compactMode', messagesContainer.classList.contains('compact-mode'));
+            showToast(messagesContainer.classList.contains('compact-mode') ? 'Compact mode on' : 'Compact mode off', 'success');
+        }
+    };
+    
+    // ==========================================
+    // Polls
+    // ==========================================
+    window.showCreatePoll = function() {
+        if (!activeChat) return;
+        
+        var html = '<div class="create-poll"><h3>Create Poll</h3>';
+        html += '<input type="text" id="poll-question" placeholder="Ask a question..." class="form-input">';
+        html += '<div id="poll-options">';
+        html += '<input type="text" class="poll-option-input form-input" placeholder="Option 1">';
+        html += '<input type="text" class="poll-option-input form-input" placeholder="Option 2">';
+        html += '</div>';
+        html += '<button class="btn btn-secondary" onclick="addPollOption()" style="margin: 8px 0;"><i class="fas fa-plus"></i> Add Option</button>';
+        html += '<button class="btn btn-primary" onclick="createPoll()" style="width: 100%;">Create Poll</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.addPollOption = function() {
+        var container = document.getElementById('poll-options');
+        var count = container.querySelectorAll('input').length + 1;
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'poll-option-input form-input';
+        input.placeholder = 'Option ' + count;
+        container.appendChild(input);
+    };
+    
+    window.createPoll = function() {
+        var question = document.getElementById('poll-question').value.trim();
+        var optionInputs = document.querySelectorAll('.poll-option-input');
+        var options = [];
+        
+        optionInputs.forEach(function(input) {
+            if (input.value.trim()) {
+                options.push({ text: input.value.trim(), votes: 0, voters: [] });
+            }
+        });
+        
+        if (!question || options.length < 2) {
+            showToast('Please enter a question and at least 2 options', 'error');
+            return;
+        }
+        
+        var poll = {
+            id: generateId(),
+            chatId: activeChat.id,
+            senderId: currentUser.id,
+            question: question,
+            options: options,
+            totalVotes: 0,
+            timestamp: new Date().toISOString()
+        };
+        
+        var messages = Storage.get('messages') || [];
+        messages.push({
+            id: generateId(),
+            chatId: activeChat.id,
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            text: '📊 Poll: ' + question,
+            poll: poll,
+            timestamp: new Date().toISOString(),
+            read: false,
+            status: 'sent',
+            reactions: {},
+            edited: false,
+            starred: false,
+            replyTo: null,
+            forwarded: false
+        });
+        Storage.set('messages', messages);
+        
+        closeModal();
+        renderMessages(activeChat.id);
+        showToast('Poll created', 'success');
+    };
+    
+    window.votePoll = function(pollId, optionIndex) {
+        var messages = Storage.get('messages') || [];
+        var msg = messages.find(function(m) { return m.poll && m.poll.id === pollId; });
+        
+        if (msg && msg.poll) {
+            var poll = msg.poll;
+            if (poll.options[optionIndex].voters.includes(currentUser.id)) {
+                // Unvote
+                poll.options[optionIndex].votes--;
+                poll.options[optionIndex].voters = poll.options[optionIndex].voters.filter(function(v) { return v !== currentUser.id; });
+                poll.totalVotes--;
+            } else {
+                // Remove previous vote
+                poll.options.forEach(function(opt, i) {
+                    if (opt.voters.includes(currentUser.id)) {
+                        opt.votes--;
+                        opt.voters = opt.voters.filter(function(v) { return v !== currentUser.id; });
+                        poll.totalVotes--;
+                    }
+                });
+                // Add new vote
+                poll.options[optionIndex].votes++;
+                poll.options[optionIndex].voters.push(currentUser.id);
+                poll.totalVotes++;
+            }
+            
+            Storage.set('messages', messages);
+            renderMessages(activeChat.id);
+        }
+    };
+    
+    // ==========================================
+    // Location Sharing
+    // ==========================================
+    window.shareLocation = function() {
+        if (!navigator.geolocation) {
+            showToast('Geolocation not supported', 'error');
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var location = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                name: 'Shared Location'
+            };
+            
+            var messages = Storage.get('messages') || [];
+            messages.push({
+                id: generateId(),
+                chatId: activeChat.id,
+                senderId: currentUser.id,
+                senderName: currentUser.name,
+                text: '📍 Location shared',
+                location: location,
+                timestamp: new Date().toISOString(),
+                read: false,
+                status: 'sent',
+                reactions: {},
+                edited: false,
+                starred: false,
+                replyTo: null,
+                forwarded: false
+            });
+            Storage.set('messages', messages);
+            
+            renderMessages(activeChat.id);
+            showToast('Location shared', 'success');
+        }, function() {
+            showToast('Could not get location', 'error');
+        });
+    };
+    
+    window.openLocation = function(lat, lng) {
+        window.open('https://www.google.com/maps?q=' + lat + ',' + lng, '_blank');
+    };
+    
+    // ==========================================
+    // Contact Sharing
+    // ==========================================
+    window.showShareContact = function() {
+        if (!activeChat) return;
+        
+        var users = Storage.get('users') || [];
+        var html = '<div class="share-contact"><h3>Share Contact</h3>';
+        
+        users.forEach(function(user) {
+            if (user.id !== currentUser.id) {
+                var avatar = user.avatar ? '<img src="' + user.avatar + '">' : (user.name || '?').charAt(0).toUpperCase();
+                html += '<div class="contact-card" onclick="shareContact(\'' + user.id + '\')">';
+                html += '<div class="contact-avatar">' + avatar + '</div>';
+                html += '<div class="contact-info"><h4>' + escapeHtml(user.name) + '</h4><p>' + escapeHtml(user.email) + '</p></div>';
+                html += '<button class="contact-add-btn">Share</button>';
+                html += '</div>';
+            }
+        });
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.shareContact = function(userId) {
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+        
+        var messages = Storage.get('messages') || [];
+        messages.push({
+            id: generateId(),
+            chatId: activeChat.id,
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            text: '👤 Contact shared',
+            contact: { id: user.id, name: user.name, email: user.email, avatar: user.avatar },
+            timestamp: new Date().toISOString(),
+            read: false,
+            status: 'sent',
+            reactions: {},
+            edited: false,
+            starred: false,
+            replyTo: null,
+            forwarded: false
+        });
+        Storage.set('messages', messages);
+        
+        closeModal();
+        renderMessages(activeChat.id);
+        showToast('Contact shared', 'success');
+    };
+    
+    window.addSharedContact = function(userId) {
+        showToast('Contact added to your list', 'success');
+    };
+    
+    // ==========================================
+    // Games (Tic-Tac-Toe)
+    // ==========================================
+    window.showGame = function() {
+        if (!activeChat) return;
+        
+        var html = '<div class="game-container"><h3 class="game-title">Tic-Tac-Toe</h3>';
+        html += '<div class="game-grid" id="game-grid">';
+        for (var i = 0; i < 9; i++) {
+            html += '<button class="game-cell" onclick="makeMove(' + i + ')"></button>';
+        }
+        html += '</div>';
+        html += '<div class="game-status" id="game-status">Your turn (X)</div>';
+        html += '<button class="btn btn-secondary" onclick="resetGame()" style="margin-top: 12px;">New Game</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    var gameState = Array(9).fill('');
+    var currentPlayer = 'X';
+    
+    window.makeMove = function(index) {
+        if (gameState[index] !== '') return;
+        
+        gameState[index] = currentPlayer;
+        var cells = document.querySelectorAll('.game-cell');
+        cells[index].textContent = currentPlayer;
+        cells[index].classList.add(currentPlayer.toLowerCase());
+        
+        if (checkWinner()) {
+            document.getElementById('game-status').textContent = currentPlayer + ' wins!';
+            return;
+        }
+        
+        if (gameState.every(function(cell) { return cell !== ''; })) {
+            document.getElementById('game-status').textContent = 'Draw!';
+            return;
+        }
+        
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        document.getElementById('game-status').textContent = 'Turn: ' + currentPlayer;
+    };
+    
+    function checkWinner() {
+        var lines = [
+            [0,1,2], [3,4,5], [6,7,8],
+            [0,3,6], [1,4,7], [2,5,8],
+            [0,4,8], [2,4,6]
+        ];
+        return lines.some(function(line) {
+            return gameState[line[0]] !== '' &&
+                   gameState[line[0]] === gameState[line[1]] &&
+                   gameState[line[1]] === gameState[line[2]];
+        });
+    }
+    
+    window.resetGame = function() {
+        gameState = Array(9).fill('');
+        currentPlayer = 'X';
+        document.querySelectorAll('.game-cell').forEach(function(cell) {
+            cell.textContent = '';
+            cell.classList.remove('x', 'o');
+        });
+        document.getElementById('game-status').textContent = 'Your turn (X)';
+    };
+    
+    // ==========================================
+    // Stories
+    // ==========================================
+    window.showAddStory = function() {
+        var html = '<div class="add-story"><h3>Add Story</h3>';
+        html += '<div class="story-options">';
+        html += '<button class="btn btn-primary" onclick="addTextStory()"><i class="fas fa-font"></i> Text Story</button>';
+        html += '<button class="btn btn-primary" onclick="addImageStory()"><i class="fas fa-image"></i> Image Story</button>';
+        html += '</div></div>';
+        showModal(html);
+    };
+    
+    window.addTextStory = function() {
+        var html = '<div class="text-story-input"><h3>Text Story</h3>';
+        html += '<textarea id="story-text" placeholder="What\'s on your mind?" class="form-input" rows="4"></textarea>';
+        html += '<button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="publishTextStory()">Post Story</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.publishTextStory = function() {
+        var text = document.getElementById('story-text').value.trim();
+        if (!text) return;
+        
+        var stories = Storage.get('stories') || [];
+        stories.unshift({
+            id: generateId(),
+            userId: currentUser.id,
+            type: 'text',
+            content: text,
+            timestamp: new Date().toISOString(),
+            views: []
+        });
+        Storage.set('stories', stories);
+        
+        closeModal();
+        showToast('Story posted!', 'success');
+    };
+    
+    window.addImageStory = function() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var stories = Storage.get('stories') || [];
+                stories.unshift({
+                    id: generateId(),
+                    userId: currentUser.id,
+                    type: 'image',
+                    content: event.target.result,
+                    timestamp: new Date().toISOString(),
+                    views: []
+                });
+                Storage.set('stories', stories);
+                showToast('Story posted!', 'success');
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    };
+    
+    window.viewStory = function(storyId) {
+        var stories = Storage.get('stories') || [];
+        var story = stories.find(function(s) { return s.id === storyId; });
+        if (!story) return;
+        
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === story.userId; });
+        
+        var html = '<div class="story-viewer">';
+        html += '<div class="story-progress"><div class="story-progress-bar"><div class="story-progress-fill" id="story-progress-fill"></div></div></div>';
+        html += '<div class="story-header">';
+        html += '<img class="story-avatar" src="' + (user && user.avatar ? user.avatar : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%236366f1" width="100" height="100" rx="50"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">' + (user ? user.name.charAt(0) : '?') + '</text></svg>') + '">';
+        html += '<div class="story-user-info"><div class="story-username">' + (user ? user.name : 'Unknown') + '</div><div class="story-time">' + formatTimeAgo(story.timestamp) + '</div></div>';
+        html += '<button class="story-close" onclick="closeStoryViewer()"><i class="fas fa-times"></i></button>';
+        html += '</div>';
+        html += '<div class="story-content">';
+        if (story.type === 'text') {
+            html += '<div class="story-text">' + escapeHtml(story.content) + '</div>';
+        } else {
+            html += '<img src="' + story.content + '">';
+        }
+        html += '</div></div>';
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+        
+        // Animate progress
+        var fill = document.getElementById('story-progress-fill');
+        if (fill) {
+            fill.style.width = '100%';
+            fill.style.transition = 'width 5s linear';
+        }
+        
+        // Auto close after 5 seconds
+        setTimeout(function() { closeStoryViewer(); }, 5000);
+        
+        // Mark as viewed
+        if (!story.views.includes(currentUser.id)) {
+            story.views.push(currentUser.id);
+            Storage.set('stories', stories);
+        }
+    };
+    
+    window.closeStoryViewer = function() {
+        var viewer = document.querySelector('.story-viewer');
+        if (viewer) viewer.remove();
+    };
+    
+    // ==========================================
+    // User Analytics
+    // ==========================================
+    window.showUserAnalytics = function() {
+        var messages = Storage.get('messages') || [];
+        var myMessages = messages.filter(function(m) { return m.senderId === currentUser.id; });
+        var chats = Storage.get('chats') || [];
+        var users = Storage.get('users') || [];
+        
+        // Calculate stats
+        var totalMessages = myMessages.length;
+        var totalChats = chats.filter(function(c) { return c.participants.includes(currentUser.id); }).length;
+        var totalFriends = users.length - 1;
+        
+        // Messages per day (last 7 days)
+        var dailyData = [];
+        for (var i = 6; i >= 0; i--) {
+            var date = new Date();
+            date.setDate(date.getDate() - i);
+            var dayStr = date.toISOString().slice(0, 10);
+            var dayMessages = myMessages.filter(function(m) { return m.timestamp.slice(0, 10) === dayStr; }).length;
+            dailyData.push({ label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()], value: dayMessages });
+        }
+        
+        var maxDaily = Math.max.apply(null, dailyData.map(function(d) { return d.value; })) || 1;
+        
+        var html = '<div class="user-analytics"><h3>Your Analytics</h3>';
+        html += '<div class="analytics-grid">';
+        html += '<div class="analytics-card"><div class="analytics-value">' + totalMessages + '</div><div class="analytics-label">Messages Sent</div></div>';
+        html += '<div class="analytics-card"><div class="analytics-value">' + totalChats + '</div><div class="analytics-label">Active Chats</div></div>';
+        html += '<div class="analytics-card"><div class="analytics-value">' + totalFriends + '</div><div class="analytics-label">Friends</div></div>';
+        html += '<div class="analytics-card"><div class="analytics-value">' + (Storage.get('stories') || []).filter(function(s) { return s.userId === currentUser.id; }).length + '</div><div class="analytics-label">Stories</div></div>';
+        html += '<div class="analytics-chart">';
+        dailyData.forEach(function(d) {
+            html += '<div class="chart-bar" style="height: ' + ((d.value / maxDaily) * 100) + '%" data-label="' + d.label + '"></div>';
+        });
+        html += '</div>';
+        html += '</div></div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Bulk Actions
+    // ==========================================
+    var bulkMode = false;
+    var selectedMessages = [];
+    
+    window.toggleBulkMode = function() {
+        bulkMode = !bulkMode;
+        selectedMessages = [];
+        
+        if (bulkMode) {
+            showToast('Bulk select mode on - tap messages to select', 'info');
+        } else {
+            showToast('Bulk select mode off', 'info');
+        }
+        
+        renderMessages(activeChat ? activeChat.id : null);
+    };
+    
+    window.toggleMessageSelection = function(messageId) {
+        if (!bulkMode) return;
+        
+        var index = selectedMessages.indexOf(messageId);
+        if (index === -1) {
+            selectedMessages.push(messageId);
+        } else {
+            selectedMessages.splice(index, 1);
+        }
+        
+        var msgEl = document.querySelector('[data-message-id="' + messageId + '"]');
+        if (msgEl) {
+            msgEl.classList.toggle('selected', selectedMessages.includes(messageId));
+        }
+        
+        updateBulkActionsBar();
+    };
+    
+    function updateBulkActionsBar() {
+        var existing = document.querySelector('.bulk-actions-bar');
+        if (existing) existing.remove();
+        
+        if (selectedMessages.length > 0) {
+            var html = '<div class="bulk-actions-bar">';
+            html += '<span class="bulk-count">' + selectedMessages.length + ' selected</span>';
+            html += '<div class="bulk-buttons">';
+            html += '<button class="bulk-btn" onclick="bulkForward()"><i class="fas fa-share"></i> Forward</button>';
+            html += '<button class="bulk-btn" onclick="bulkStar()"><i class="fas fa-star"></i> Star</button>';
+            html += '<button class="bulk-btn danger" onclick="bulkDelete()"><i class="fas fa-trash"></i> Delete</button>';
+            html += '</div></div>';
+            
+            document.querySelector('.chat-input-area').insertAdjacentHTML('beforebegin', html);
+        }
+    }
+    
+    window.bulkDelete = function() {
+        if (selectedMessages.length === 0) return;
+        
+        var messages = Storage.get('messages') || [];
+        messages = messages.filter(function(m) { return !selectedMessages.includes(m.id); });
+        Storage.set('messages', messages);
+        
+        showToast(selectedMessages.length + ' messages deleted', 'success');
+        selectedMessages = [];
+        bulkMode = false;
+        updateBulkActionsBar();
+        renderMessages(activeChat.id);
+    };
+    
+    window.bulkForward = function() {
+        showToast('Select a chat to forward to', 'info');
+    };
+    
+    window.bulkStar = function() {
+        var messages = Storage.get('messages') || [];
+        selectedMessages.forEach(function(id) {
+            var msg = messages.find(function(m) { return m.id === id; });
+            if (msg) msg.starred = true;
+        });
+        Storage.set('messages', messages);
+        showToast(selectedMessages.length + ' messages starred', 'success');
+        selectedMessages = [];
+        renderMessages(activeChat.id);
+    };
+    
+    // ==========================================
+    // Moderation Queue
+    // ==========================================
+    window.showModerationQueue = function() {
+        var reports = Storage.get('reports') || [];
+        
+        var html = '<div class="mod-queue"><h3><i class="fas fa-shield-alt"></i> Moderation Queue</h3>';
+        
+        if (reports.length === 0) {
+            html += '<p style="text-align: center; color: var(--text-muted); padding: 40px;">No reports to review</p>';
+        } else {
+            reports.forEach(function(report) {
+                html += '<div class="mod-item' + (report.resolved ? ' resolved' : '') + '">';
+                html += '<div class="mod-header"><span class="mod-reason">' + report.reason + '</span><span class="mod-date">' + formatTimeAgo(report.timestamp) + '</span></div>';
+                html += '<div class="mod-message">' + escapeHtml(report.messageText || 'No message') + '</div>';
+                if (!report.resolved) {
+                    html += '<div class="mod-actions">';
+                    html += '<button class="btn btn-small" onclick="dismissReport(\'' + report.id + '\')">Dismiss</button>';
+                    html += '<button class="btn btn-small btn-danger" onclick="actionReport(\'' + report.id + '\')">Take Action</button>';
+                    html += '</div>';
+                } else {
+                    html += '<span style="color: var(--secondary); font-size: 12px;">✓ Resolved</span>';
+                }
+                html += '</div>';
+            });
+        }
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.dismissReport = function(reportId) {
+        var reports = Storage.get('reports') || [];
+        var report = reports.find(function(r) { return r.id === reportId; });
+        if (report) {
+            report.resolved = true;
+            Storage.set('reports', reports);
+            showModerationQueue();
+            showToast('Report dismissed', 'success');
+        }
+    };
+    
+    window.actionReport = function(reportId) {
+        var reports = Storage.get('reports') || [];
+        var report = reports.find(function(r) { return r.id === reportId; });
+        if (report) {
+            report.resolved = true;
+            Storage.set('reports', reports);
+            showModerationQueue();
+            showToast('Action taken on report', 'success');
+        }
+    };
+    
+    window.reportMessage = function(messageId) {
+        var messages = Storage.get('messages') || [];
+        var msg = messages.find(function(m) { return m.id === messageId; });
+        
+        var reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Scam', 'Other'];
+        var html = '<div class="report-modal"><h3>Report Message</h3>';
+        reasons.forEach(function(reason) {
+            html += '<button class="btn" style="width: 100%; margin-bottom: 8px;" onclick="submitReport(\'' + messageId + '\', \'' + reason + '\')">' + reason + '</button>';
+        });
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.submitReport = function(messageId, reason) {
+        var reports = Storage.get('reports') || [];
+        reports.push({
+            id: generateId(),
+            messageId: messageId,
+            messageText: (Storage.get('messages') || []).find(function(m) { return m.id === messageId; })?.text || '',
+            reason: reason,
+            reporterId: currentUser.id,
+            timestamp: new Date().toISOString(),
+            resolved: false
+        });
+        Storage.set('reports', reports);
+        closeModal();
+        showToast('Report submitted', 'success');
+    };
+    
+    // ==========================================
+    // Global Announcement
+    // ==========================================
+    window.sendAnnouncement = function() {
+        var html = '<div class="announcement-modal"><h3>Send Announcement</h3>';
+        html += '<textarea id="announcement-text" placeholder="Write your announcement..." class="form-input" rows="4"></textarea>';
+        html += '<button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="broadcastAnnouncement()">Send to All Users</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.broadcastAnnouncement = function() {
+        var text = document.getElementById('announcement-text').value.trim();
+        if (!text) return;
+        
+        Storage.set('announcement', { text: text, timestamp: new Date().toISOString() });
+        closeModal();
+        showToast('Announcement sent to all users', 'success');
+    };
+    
+    // Check for announcements on load
+    function checkAnnouncement() {
+        var announcement = Storage.get('announcement');
+        if (announcement && announcement.timestamp) {
+            var annTime = new Date(announcement.timestamp).getTime();
+            var now = Date.now();
+            // Show if less than 24 hours old
+            if (now - annTime < 24 * 60 * 60 * 1000) {
+                showAnnouncementBanner(announcement.text);
+            }
+        }
+    }
+    
+    function showAnnouncementBanner(text) {
+        if (document.querySelector('.announcement-banner')) return;
+        
+        var html = '<div class="announcement-banner">';
+        html += '<i class="fas fa-bullhorn announcement-icon"></i>';
+        html += '<span class="announcement-text">' + escapeHtml(text) + '</span>';
+        html += '<button class="announcement-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+        html += '</div>';
+        
+        document.querySelector('.chat-header').insertAdjacentHTML('afterbegin', html);
+    }
+    
+    // ==========================================
+    // Notification Sound Picker
+    // ==========================================
+    var notificationSounds = [
+        { id: 'default', name: 'Default', icon: 'bell' },
+        { id: 'chime', name: 'Chime', icon: 'music' },
+        { id: 'pop', name: 'Pop', icon: 'circle' },
+        { id: 'ding', name: 'Ding', icon: 'bell-concierge' },
+        { id: 'none', name: 'None', icon: 'volume-mute' }
+    ];
+    
+    window.showNotificationSoundPicker = function() {
+        var current = Storage.get('notificationSound') || 'default';
+        
+        var html = '<div class="sound-picker"><h3>Notification Sound</h3>';
+        notificationSounds.forEach(function(sound) {
+            html += '<div class="sound-option' + (current === sound.id ? ' selected' : '') + '" onclick="setNotificationSound(\'' + sound.id + '\')">';
+            html += '<i class="fas fa-' + sound.icon + '"></i>';
+            html += '<span>' + sound.name + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.setNotificationSound = function(soundId) {
+        Storage.set('notificationSound', soundId);
+        
+        // Play test sound
+        if (soundId !== 'none') {
+            playTestSound(soundId);
+        }
+        
+        showToast('Notification sound updated', 'success');
+        setTimeout(function() { closeModal(); }, 500);
+    };
+    
+    function playTestSound(soundId) {
+        try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            var sounds = {
+                'default': { freq: 800, type: 'sine' },
+                'chime': { freq: 1200, type: 'sine' },
+                'pop': { freq: 600, type: 'square' },
+                'ding': { freq: 1000, type: 'triangle' }
+            };
+            
+            var s = sounds[soundId] || sounds['default'];
+            osc.type = s.type;
+            osc.frequency.setValueAtTime(s.freq, ctx.currentTime);
+            
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.2);
+        } catch(e) {}
+    }
+    
+    // ==========================================
+    // Initialize Enhanced Features
+    // ==========================================
+    function initEnhancedFeatures() {
+        // Render chat folders
+        renderChatFolders();
+        
+        // Render quick replies
+        renderQuickReplies();
+        
+        // Apply saved font size
+        var savedSize = Storage.get('fontSize');
+        if (savedSize) {
+            document.documentElement.style.setProperty('--message-font-size', savedSize + 'px');
+            currentFontSizeIndex = fontSizes.indexOf(savedSize);
+            if (currentFontSizeIndex === -1) currentFontSizeIndex = 2;
+        }
+        
+        // Apply compact mode
+        if (Storage.get('compactMode')) {
+            var mc = document.querySelector('.chat-messages');
+            if (mc) mc.classList.add('compact-mode');
+        }
+        
+        // Update status display
+        updateStatusDisplay();
+        
+        // Check announcements
+        checkAnnouncement();
+        
+        // Initialize auto-logout timer
+        if (currentUser) resetAutoLogoutTimer();
+    }
+    
+    // Run initialization after a short delay
+    setTimeout(initEnhancedFeatures, 1000);
+    
+    // ==========================================
+    // Update Message Actions with Pin
+    // ==========================================
+    var originalRenderMessages = renderMessages;
+    
+    // Enhanced action buttons are already added in the main renderMessages function
+    // Just need to ensure pin button is included in message actions
+    
+    // ==========================================
+    // Feed / Postings
+    // ==========================================
+    var feedPostImageData = null;
+    var currentCommentsPostId = null;
+
+    function initFeed() {
+        var composerTrigger = document.getElementById('composer-trigger');
+        var composerExpanded = document.getElementById('composer-expanded');
+        var postContent = document.getElementById('post-content');
+        var postSubmitBtn = document.getElementById('post-submit-btn');
+        var postImageBtn = document.getElementById('post-image-btn');
+        var postImageInput = document.getElementById('post-image-input');
+        var removeImageBtn = document.getElementById('remove-composer-image');
+
+        if (!composerTrigger) return;
+
+        composerTrigger.onclick = function() {
+            composerTrigger.style.display = 'none';
+            composerExpanded.style.display = 'block';
+            postContent.focus();
+            updateComposerAvatar();
+        };
+
+        postContent.onblur = function() {
+            setTimeout(function() {
+                if (!postContent.value.trim() && !feedPostImageData) {
+                    composerExpanded.style.display = 'none';
+                    composerTrigger.style.display = 'flex';
+                }
+            }, 200);
+        };
+
+        postContent.oninput = function() {
+            postSubmitBtn.disabled = !postContent.value.trim() && !feedPostImageData;
+        };
+
+        postImageBtn.onclick = function() { postImageInput.click(); };
+
+        postImageInput.onchange = function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                feedPostImageData = ev.target.result;
+                document.getElementById('composer-preview-img').src = feedPostImageData;
+                document.getElementById('composer-image-preview').style.display = 'block';
+                postSubmitBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+            postImageInput.value = '';
+        };
+
+        removeImageBtn.onclick = function() {
+            feedPostImageData = null;
+            document.getElementById('composer-image-preview').style.display = 'none';
+            postSubmitBtn.disabled = !postContent.value.trim();
+        };
+
+        postSubmitBtn.onclick = function() {
+            var content = postContent.value.trim();
+            if (!content && !feedPostImageData) return;
+            createPost(content, feedPostImageData);
+        };
+
+        loadFeed();
+    }
+
+    function updateComposerAvatar() {
+        var avatar = document.getElementById('composer-avatar');
+        if (!avatar || !currentUser) return;
+        if (currentUser.avatar) {
+            avatar.innerHTML = '<img src="' + escapeHtml(currentUser.avatar) + '" alt="Avatar">';
+        } else {
+            avatar.innerHTML = '<i class="fas fa-user"></i>';
+        }
+    }
+
+    function createPost(content, imageData) {
+        if (!currentUser) return;
+        var post = {
+            id: generateId(),
+            userId: currentUser.id,
+            userName: currentUser.name || currentUser.username,
+            userAvatar: currentUser.avatar || null,
+            content: content || '',
+            imageUrl: imageData || null,
+            visibility: 'public',
+            likes: {},
+            comments: [],
+            createdAt: new Date().toISOString()
+        };
+        var posts = Storage.get('posts') || [];
+        posts.unshift(post);
+        Storage.set('posts', posts);
+        if (DB.isReady()) { DB.createPost(post); }
+        document.getElementById('post-content').value = '';
+        feedPostImageData = null;
+        document.getElementById('composer-image-preview').style.display = 'none';
+        document.getElementById('composer-expanded').style.display = 'none';
+        document.getElementById('composer-trigger').style.display = 'flex';
+        document.getElementById('post-submit-btn').disabled = true;
+        renderFeed();
+        if (firebaseDb) { firebaseDb.ref('posts/' + post.id).set(post); }
+        showToast('Posting published!', 'success');
+    }
+
+    function loadFeed() {
+        renderFeed();
+        if (DB.isReady()) {
+            DB.getPosts(50, 0).then(function(dbPosts) {
+                if (dbPosts && dbPosts.length > 0) {
+                    var mapped = dbPosts.map(function(p) {
+                        return { id: p.id, userId: p.user_id, userName: p.user_name, userAvatar: p.user_avatar, content: p.content, imageUrl: p.image_url, visibility: p.visibility, likes: {}, comments: [], createdAt: p.created_at };
+                    });
+                    var localPosts = Storage.get('posts') || [];
+                    var merged = mergePosts(localPosts, mapped);
+                    Storage.set('posts', merged);
+                    renderFeed();
+                }
+            });
+        }
+        if (firebaseDb) {
+            firebaseDb.ref('posts').orderByChild('createdAt').limitToLast(50).on('value', function(snapshot) {
+                var fbPosts = [];
+                snapshot.forEach(function(child) { var p = child.val(); if (p) fbPosts.push(p); });
+                fbPosts.reverse();
+                var localPosts = Storage.get('posts') || [];
+                var merged = mergePosts(localPosts, fbPosts);
+                Storage.set('posts', merged);
+                renderFeed();
+            });
+        }
+    }
+
+    function mergePosts(local, remote) {
+        var map = {};
+        local.forEach(function(p) { map[p.id] = p; });
+        remote.forEach(function(p) { if (!map[p.id]) map[p.id] = p; });
+        var result = Object.values(map);
+        result.sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+        return result;
+    }
+
+    function renderFeed() {
+        var feedList = document.getElementById('feed-list');
+        var feedEmpty = document.getElementById('feed-empty');
+        var feedLoading = document.getElementById('feed-loading');
+        if (!feedList) return;
+        var posts = Storage.get('posts') || [];
+        feedLoading.style.display = 'none';
+        if (posts.length === 0) {
+            feedList.innerHTML = '';
+            feedEmpty.style.display = 'block';
+            return;
+        }
+        feedEmpty.style.display = 'none';
+        var html = '';
+        posts.forEach(function(post) { html += renderPostCard(post); });
+        feedList.innerHTML = html;
+        bindPostEvents();
+    }
+
+    function renderPostCard(post) {
+        var isOwner = currentUser && post.userId === currentUser.id;
+        var timeAgo = getTimeAgo(post.createdAt);
+        var likeCount = post.likes ? Object.keys(post.likes).length : 0;
+        var commentCount = post.comments ? post.comments.length : 0;
+        var isLiked = currentUser && post.likes && post.likes[currentUser.id];
+        var avatarHtml;
+        if (post.userAvatar) {
+            avatarHtml = '<div class="post-avatar"><img src="' + escapeHtml(post.userAvatar) + '" alt="Avatar"></div>';
+        } else {
+            var initial = (post.userName || 'U').charAt(0).toUpperCase();
+            avatarHtml = '<div class="post-avatar">' + initial + '</div>';
+        }
+        var html = '<div class="post-card" data-post-id="' + post.id + '">';
+        html += '<div class="post-header">';
+        html += avatarHtml;
+        html += '<div class="post-user-info">';
+        html += '<div class="post-user-name">' + escapeHtml(post.userName || 'User') + '</div>';
+        html += '<div class="post-meta">' + timeAgo + '</div>';
+        html += '</div>';
+        if (isOwner) {
+            html += '<div style="position:relative;">';
+            html += '<button class="post-menu-btn" data-post-id="' + post.id + '"><i class="fas fa-ellipsis-h"></i></button>';
+            html += '<div class="post-context-menu" id="menu-' + post.id + '" style="display:none;">';
+            html += '<button class="delete-post-btn" data-post-id="' + post.id + '"><i class="fas fa-trash"></i> Delete Post</button>';
+            html += '</div></div>';
+        }
+        html += '</div>';
+        html += '<div class="post-body">';
+        if (post.content) html += '<div class="post-text">' + escapeHtml(post.content) + '</div>';
+        if (post.imageUrl) html += '<div class="post-image"><img src="' + post.imageUrl + '" alt="Post image"></div>';
+        html += '</div>';
+        if (likeCount > 0 || commentCount > 0) {
+            html += '<div class="post-stats">';
+            html += '<div class="post-stats-left">';
+            if (likeCount > 0) html += '<div class="reaction-icons"><span style="background:#6366f1;color:#fff;">👍</span></div> ' + likeCount;
+            html += '</div>';
+            if (commentCount > 0) html += '<div class="post-stats-right" data-toggle-comments="' + post.id + '">' + commentCount + ' comment' + (commentCount !== 1 ? 's' : '') + '</div>';
+            html += '</div>';
+        }
+        html += '<div class="post-actions-bar">';
+        html += '<button class="post-action-btn like-btn' + (isLiked ? ' liked' : '') + '" data-post-id="' + post.id + '"><i class="fas fa-thumbs-up"></i> ' + (isLiked ? 'Liked' : 'Like') + '</button>';
+        html += '<button class="post-action-btn comment-btn" data-post-id="' + post.id + '"><i class="fas fa-comment"></i> Comment</button>';
+        html += '</div>';
+        html += '<div class="post-comments-section" id="comments-' + post.id + '" style="display:none;">';
+        var commentAvatarHtml;
+        if (currentUser && currentUser.avatar) {
+            commentAvatarHtml = '<div class="comment-avatar"><img src="' + escapeHtml(currentUser.avatar) + '" alt=""></div>';
+        } else {
+            commentAvatarHtml = '<div class="comment-avatar"><i class="fas fa-user" style="font-size:12px;"></i></div>';
+        }
+        html += '<div class="comment-input-row">';
+        html += commentAvatarHtml;
+        html += '<div class="comment-input-wrapper">';
+        html += '<input type="text" class="comment-text-input" data-post-id="' + post.id + '" placeholder="Write a comment...">';
+        html += '<button class="comment-submit-btn" data-post-id="' + post.id + '"><i class="fas fa-paper-plane"></i></button>';
+        html += '</div></div>';
+        html += '<div class="comments-list" id="comments-list-' + post.id + '">';
+        if (post.comments && post.comments.length > 0) {
+            var visibleComments = post.comments.slice(-3);
+            if (post.comments.length > 3) html += '<button class="view-more-comments" data-post-id="' + post.id + '">View ' + (post.comments.length - 3) + ' more comments</button>';
+            visibleComments.forEach(function(c) { html += renderComment(c); });
+        }
+        html += '</div></div></div>';
+        return html;
+    }
+
+    function renderComment(comment) {
+        var cAvatarHtml;
+        if (comment.userAvatar) {
+            cAvatarHtml = '<div class="comment-avatar"><img src="' + escapeHtml(comment.userAvatar) + '" alt=""></div>';
+        } else {
+            var initial = (comment.userName || 'U').charAt(0).toUpperCase();
+            cAvatarHtml = '<div class="comment-avatar">' + initial + '</div>';
+        }
+        var html = '<div class="comment-item">';
+        html += cAvatarHtml;
+        html += '<div><div class="comment-bubble">';
+        html += '<div class="comment-author">' + escapeHtml(comment.userName || 'User') + '</div>';
+        html += '<div class="comment-text">' + escapeHtml(comment.content) + '</div>';
+        html += '</div><div class="comment-time">' + getTimeAgo(comment.createdAt) + '</div></div></div>';
+        return html;
+    }
+
+    function bindPostEvents() {
+        document.querySelectorAll('.like-btn').forEach(function(btn) {
+            btn.onclick = function() { toggleLike(this.dataset.postId); };
+        });
+        document.querySelectorAll('.comment-btn').forEach(function(btn) {
+            btn.onclick = function() {
+                var section = document.getElementById('comments-' + this.dataset.postId);
+                if (section) {
+                    var isVisible = section.style.display !== 'none';
+                    section.style.display = isVisible ? 'none' : 'block';
+                    if (!isVisible) { var input = section.querySelector('.comment-text-input'); if (input) input.focus(); }
+                }
+            };
+        });
+        document.querySelectorAll('[data-toggle-comments]').forEach(function(el) {
+            el.onclick = function() {
+                var section = document.getElementById('comments-' + this.dataset.toggleComments);
+                if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            };
+        });
+        document.querySelectorAll('.comment-text-input').forEach(function(input) {
+            var postId = input.dataset.postId;
+            var submitBtn = document.querySelector('.comment-submit-btn[data-post-id="' + postId + '"]');
+            input.oninput = function() { if (submitBtn) submitBtn.classList.toggle('active', !!input.value.trim()); };
+            input.onkeydown = function(e) {
+                if (e.key === 'Enter' && input.value.trim()) {
+                    submitComment(postId, input.value.trim());
+                    input.value = '';
+                    if (submitBtn) submitBtn.classList.remove('active');
+                }
+            };
+            if (submitBtn) {
+                submitBtn.onclick = function() {
+                    if (input.value.trim()) {
+                        submitComment(postId, input.value.trim());
+                        input.value = '';
+                        submitBtn.classList.remove('active');
+                    }
+                };
+            }
+        });
+        document.querySelectorAll('.post-menu-btn').forEach(function(btn) {
+            btn.onclick = function(e) {
+                e.stopPropagation();
+                var postId = this.dataset.postId;
+                document.querySelectorAll('.post-context-menu').forEach(function(m) { if (m.id !== 'menu-' + postId) m.style.display = 'none'; });
+                var menu = document.getElementById('menu-' + postId);
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            };
+        });
+        document.querySelectorAll('.delete-post-btn').forEach(function(btn) {
+            btn.onclick = function() { deletePost(this.dataset.postId); };
+        });
+        document.querySelectorAll('.view-more-comments').forEach(function(btn) {
+            btn.onclick = function() { showAllComments(this.dataset.postId); };
+        });
+        document.addEventListener('click', function closeMenus(e) {
+            if (!e.target.closest('.post-menu-btn') && !e.target.closest('.post-context-menu')) {
+                document.querySelectorAll('.post-context-menu').forEach(function(m) { m.style.display = 'none'; });
+            }
+        });
+    }
+
+    function toggleLike(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !currentUser) return;
+        if (!post.likes) post.likes = {};
+        if (post.likes[currentUser.id]) { delete post.likes[currentUser.id]; }
+        else { post.likes[currentUser.id] = { userId: currentUser.id, userName: currentUser.name || currentUser.username, timestamp: new Date().toISOString() }; }
+        Storage.set('posts', posts);
+        renderFeed();
+        if (DB.isReady()) { DB.toggleLike(postId, currentUser.id); }
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/likes').set(post.likes); }
+    }
+
+    function submitComment(postId, content) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !currentUser) return;
+        if (!post.comments) post.comments = [];
+        var comment = { id: generateId(), userId: currentUser.id, userName: currentUser.name || currentUser.username, userAvatar: currentUser.avatar || null, content: content, createdAt: new Date().toISOString() };
+        post.comments.push(comment);
+        Storage.set('posts', posts);
+        currentCommentsPostId = postId;
+        renderFeed();
+        var section = document.getElementById('comments-' + postId);
+        if (section) section.style.display = 'block';
+        if (DB.isReady()) { DB.addComment(postId, comment.userId, comment.userName, comment.userAvatar, comment.content); }
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/comments').set(post.comments); }
+    }
+
+    function showAllComments(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !post.comments) return;
+        var list = document.getElementById('comments-list-' + postId);
+        if (!list) return;
+        var html = '';
+        post.comments.forEach(function(c) { html += renderComment(c); });
+        list.innerHTML = html;
+    }
+
+    function deletePost(postId) {
+        if (!confirm('Delete this post?')) return;
+        var posts = Storage.get('posts') || [];
+        posts = posts.filter(function(p) { return p.id !== postId; });
+        Storage.set('posts', posts);
+        renderFeed();
+        if (DB.isReady() && currentUser) { DB.deletePost(postId, currentUser.id); }
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId).remove(); }
+        showToast('Posting deleted', 'info');
+    }
+
+    function getTimeAgo(dateStr) {
+        var now = new Date();
+        var date = new Date(dateStr);
+        var diffMs = now - date;
+        var diffSec = Math.floor(diffMs / 1000);
+        var diffMin = Math.floor(diffSec / 60);
+        var diffHr = Math.floor(diffMin / 60);
+        var diffDay = Math.floor(diffHr / 24);
+        if (diffSec < 60) return 'Just now';
+        if (diffMin < 60) return diffMin + 'm ago';
+        if (diffHr < 24) return diffHr + 'h ago';
+        if (diffDay < 7) return diffDay + 'd ago';
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // Init feed when nav is clicked
+    var feedNav = document.querySelector('.nav-item[data-section="feed"]');
+    if (feedNav) {
+        feedNav.addEventListener('click', function() { setTimeout(initFeed, 100); });
+    }
+    if (currentUser) { setTimeout(initFeed, 1500); }
 });
