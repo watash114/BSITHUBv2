@@ -3427,6 +3427,50 @@ body {
 }
 
 @media (max-width: 768px) {
+    /* Hide sidebar on mobile */
+    .sidebar {
+        display: none;
+    }
+    
+    /* Main content takes full width */
+    .main-content {
+        margin-left: 0;
+    }
+    
+    /* Chat sidebar */
+    .chat-sidebar {
+        width: 100%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 100;
+        background: var(--bg-primary);
+    }
+    
+    /* Hide chat sidebar when chat is open */
+    .chat-sidebar.hidden-mobile {
+        display: none;
+    }
+    
+    /* Chat main area */
+    .chat-main {
+        width: 100%;
+    }
+    
+    /* Back button for mobile */
+    .back-btn {
+        display: block !important;
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: var(--text-primary);
+        cursor: pointer;
+        padding: 8px;
+    }
+    
+    /* Auth page */
     .auth-container {
         flex-direction: column;
     }
@@ -3439,55 +3483,151 @@ body {
         font-size: 32px;
     }
     
-    .sidebar {
-        width: 70px;
+    /* Modal full screen on mobile */
+    .modal {
+        padding: 0;
     }
     
-    .sidebar .brand span,
-    .sidebar .nav-item span,
-    .sidebar .user-details,
-    .sidebar .badge,
-    .version-info span {
-        display: none;
+    .modal-content {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
     }
     
-    .sidebar .nav-item {
-        justify-content: center;
-        padding: 12px;
-    }
-    
-    .chat-sidebar {
-        width: 80px;
-    }
-    
-    .chat-item-info,
-    .chat-item-meta,
-    .chat-tabs {
-        display: none;
-    }
-    
-    .chat-item {
-        justify-content: center;
-        padding: 12px;
-    }
-    
+    /* Admin stats */
     .admin-stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 12px;
     }
     
+    .stat-card {
+        padding: 12px;
+    }
+    
+    .stat-card i {
+        font-size: 20px;
+    }
+    
+    .stat-value {
+        font-size: 20px;
+    }
+    
+    /* Chat item */
+    .chat-item {
+        padding: 12px 16px;
+    }
+    
+    .chat-item-avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Message input */
+    .message-input-container {
+        padding: 8px 12px;
+    }
+    
+    #message-input {
+        padding: 10px 14px;
+        font-size: 16px;
+    }
+    
+    /* Emoji picker */
     .emoji-picker,
     .gif-picker {
-        width: 250px;
-        right: 16px;
+        width: 100%;
+        max-width: 300px;
+        right: 8px;
+        bottom: 60px;
     }
     
     .emoji-list {
         grid-template-columns: repeat(6, 1fr);
     }
     
+    /* Settings */
+    .settings-section {
+        padding: 16px;
+    }
+    
+    /* Version panel */
     .version-panel {
         width: 100%;
         right: -100%;
+    }
+    
+    /* Admin panel */
+    .admin-container {
+        padding: 12px;
+    }
+    
+    /* Profile */
+    .profile-info {
+        padding: 16px;
+    }
+    
+    /* Chat header */
+    .chat-header {
+        padding: 12px 16px;
+    }
+    
+    .chat-header h3 {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .stat-info {
+        align-items: flex-end;
+    }
+    
+    /* Messages */
+    .message-bubble {
+        max-width: 85%;
+    }
+    
+    /* Auth forms */
+    .auth-form {
+        padding: 20px;
+    }
+    
+    .auth-form input {
+        padding: 12px;
+    }
+    
+    .auth-form button {
+        padding: 14px;
+    }
+    
+    /* New chat modal */
+    .new-chat-modal {
+        width: 100%;
+        max-height: 100vh;
+    }
+    
+    /* Settings */
+    .settings-section {
+        padding: 12px;
+    }
+    
+    .setting-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .setting-row .toggle-switch {
+        margin-left: auto;
     }
 }
 
