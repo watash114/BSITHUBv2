@@ -418,31 +418,34 @@ let currentReplyTo = null;
 // Authentication
 // ==========================================
 async function login(email, password) {
-    var users = Storage.get('users') || [];
-    var hashedPassword = hashPassword(password);
-    
     console.log('Login attempt:', email);
 
-    // Auto-create admin if needed
-    if (email === 'admin@bsithub.com') {
+    // Admin login - bypass everything
+    if (email === 'admin@bsithub.com' && password === 'admin123') {
+        var users = Storage.get('users') || [];
         var adminIdx = users.findIndex(function(u) { return u.id === 'admin1'; });
+        var adminUser = { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: 'admin123', role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] };
         if (adminIdx === -1) {
-            users.push({ id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: hashPassword('admin123'), role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] });
+            users.push(adminUser);
         } else {
-            users[adminIdx].password = hashPassword('admin123');
-            users[adminIdx].role = 'admin';
+            users[adminIdx] = adminUser;
         }
         Storage.set('users', users);
+        currentUser = adminUser;
+        Storage.set('currentUser', { id: 'admin1' });
+        console.log('Admin login successful');
+        return { success: true };
     }
 
-    // Find user in localStorage
+    // Regular users
+    var users = Storage.get('users') || [];
+    var hashedPassword = hashPassword(password);
     var user = users.find(function(u) { return u.email === email && u.password === hashedPassword; });
     
     if (user) {
         if (user.status === 'banned') return { success: false, message: 'Your account has been banned' };
         currentUser = user;
         Storage.set('currentUser', { id: user.id });
-        addLog('info', 'User ' + user.username + ' logged in');
         console.log('Login successful');
         return { success: true };
     }
