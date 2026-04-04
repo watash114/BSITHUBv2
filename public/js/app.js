@@ -423,55 +423,57 @@ async function login(email, password) {
     
     console.log('Login attempt:', email);
 
-    // Try Supabase database first
-    if (DB.isReady()) {
-        console.log('Attempting Supabase login...');
-        var dbResult = await DB.signIn(email, password);
-        if (dbResult.success && dbResult.user) {
-            console.log('Supabase login successful');
-            var dbUser = dbResult.user;
-            var localUser = {
-                id: dbUser.id,
-                name: dbUser.name,
-                username: dbUser.username,
-                email: dbUser.email,
-                password: 'supabase_auth',
-                role: dbUser.role || 'user',
-                status: dbUser.status || 'active',
-                bio: dbUser.bio || '',
-                phone: dbUser.phone || '',
-                location: dbUser.location || '',
-                createdAt: dbUser.created_at,
-                avatar: dbUser.avatar,
-                blockedUsers: dbUser.blocked_users || []
-            };
-            var existingIndex = users.findIndex(function(u) { return u.id === localUser.id; });
-            if (existingIndex !== -1) users[existingIndex] = localUser; else users.push(localUser);
-            Storage.set('users', users);
-            currentUser = localUser;
-            Storage.set('currentUser', { id: localUser.id });
-            addLog('info', 'User ' + localUser.username + ' logged in (database)');
-            return { success: true };
-        }
-        console.log('Supabase login failed:', dbResult.message);
-    }
-    
-    // Fallback to localStorage
+    // Try localStorage first (always works, including admin)
     const user = users.find(function(u) { return u.email === email && u.password === hashedPassword; });
     
-    if (!user) {
-        const emailExists = users.find(function(u) { return u.email === email; });
-        if (emailExists) {
-            console.log('Email found but password mismatch. Expected:', emailExists.password, 'Got:', hashedPassword);
-        }
-        return { success: false, message: 'Invalid email or password' };
+    if (user) {
+        if (user.status === 'banned') return { success: false, message: 'Your account has been banned' };
+        currentUser = user;
+        Storage.set('currentUser', { id: user.id });
+        addLog('info', 'User ' + user.username + ' logged in');
+        console.log('localStorage login successful');
+        return { success: true };
     }
-    if (user.status === 'banned') return { success: false, message: 'Your account has been banned' };
-    
-    currentUser = user;
-    Storage.set('currentUser', { id: user.id });
-    addLog('info', 'User ' + user.username + ' logged in');
-    return { success: true };
+
+    // Fallback: try Supabase database
+    if (DB.isReady()) {
+        try {
+            console.log('Trying Supabase login...');
+            var dbResult = await DB.signIn(email, password);
+            if (dbResult.success && dbResult.user) {
+                console.log('Supabase login successful');
+                var dbUser = dbResult.user;
+                var localUser = {
+                    id: dbUser.id,
+                    name: dbUser.name,
+                    username: dbUser.username,
+                    email: dbUser.email,
+                    password: 'supabase_auth',
+                    role: dbUser.role || 'user',
+                    status: dbUser.status || 'active',
+                    bio: dbUser.bio || '',
+                    phone: dbUser.phone || '',
+                    location: dbUser.location || '',
+                    createdAt: dbUser.created_at,
+                    avatar: dbUser.avatar,
+                    blockedUsers: dbUser.blocked_users || []
+                };
+                var existingIndex = users.findIndex(function(u) { return u.id === localUser.id; });
+                if (existingIndex !== -1) users[existingIndex] = localUser; else users.push(localUser);
+                Storage.set('users', users);
+                currentUser = localUser;
+                Storage.set('currentUser', { id: localUser.id });
+                addLog('info', 'User ' + localUser.username + ' logged in (database)');
+                return { success: true };
+            }
+            console.log('Supabase login failed:', dbResult.message);
+            return { success: false, message: dbResult.message || 'Invalid email or password' };
+        } catch (err) {
+            console.log('Supabase error, login failed:', err.message);
+        }
+    }
+
+    return { success: false, message: 'Invalid email or password' };
 }
 
 function socialLogin(provider) {
