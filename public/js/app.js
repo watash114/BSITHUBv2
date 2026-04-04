@@ -344,13 +344,28 @@ function closeModal() {
 // Initialize Default Data
 // ==========================================
 function initializeDefaultData() {
-    if (!Storage.get('users')) {
-        Storage.set('users', [
-            { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: hashPassword('admin123'), role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] },
-            { id: 'user1', name: 'John Doe', username: 'johndoe', email: 'john@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'Software Developer', phone: '+1234567891', location: 'San Francisco', createdAt: '2024-02-15T00:00:00.000Z', avatar: null, blockedUsers: [] },
-            { id: 'user2', name: 'Jane Smith', username: 'janesmith', email: 'jane@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'UX Designer', phone: '+1234567892', location: 'Los Angeles', createdAt: '2024-03-01T00:00:00.000Z', avatar: null, blockedUsers: [] }
-        ]);
+    const users = Storage.get('users') || [];
+    
+    // Ensure admin user always exists
+    const adminExists = users.some(u => u.id === 'admin1');
+    if (!adminExists) {
+        users.push({ id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: hashPassword('admin123'), role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] });
+        Storage.set('users', users);
     }
+    
+    // Ensure default users exist
+    const defaultUsers = [
+        { id: 'user1', name: 'John Doe', username: 'johndoe', email: 'john@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'Software Developer', phone: '+1234567891', location: 'San Francisco', createdAt: '2024-02-15T00:00:00.000Z', avatar: null, blockedUsers: [] },
+        { id: 'user2', name: 'Jane Smith', username: 'janesmith', email: 'jane@example.com', password: hashPassword('password123'), role: 'user', status: 'active', bio: 'UX Designer', phone: '+1234567892', location: 'Los Angeles', createdAt: '2024-03-01T00:00:00.000Z', avatar: null, blockedUsers: [] }
+    ];
+    
+    defaultUsers.forEach(user => {
+        if (!users.some(u => u.id === user.id)) {
+            users.push(user);
+        }
+    });
+    Storage.set('users', users);
+    
     if (!Storage.get('chats')) {
         Storage.set('chats', [
             { id: 'chat1', participants: ['user1', 'user2'], createdAt: '2024-03-01T00:00:00.000Z', pinned: false, muted: false, archived: false, isGroup: false }
@@ -370,6 +385,12 @@ function initializeDefaultData() {
     }
     if (!Storage.get('starredMessages')) {
         Storage.set('starredMessages', []);
+    }
+    
+    // Sync admin user to Firebase
+    const adminUser = users.find(u => u.id === 'admin1');
+    if (adminUser && typeof syncUserToFirebase === 'function') {
+        syncUserToFirebase(adminUser);
     }
 }
 
