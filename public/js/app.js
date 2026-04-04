@@ -423,22 +423,19 @@ async function login(email, password) {
     
     console.log('Login attempt:', email);
 
-    // Auto-create admin if logging in as admin
-    if (email === 'admin@bsithub.com' && !users.find(function(u) { return u.id === 'admin1'; })) {
-        users.push({ id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: hashPassword('admin123'), role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] });
-        Storage.set('users', users);
-        console.log('Admin account auto-created');
-    }
-
-    // Always ensure admin password is correct
-    var adminIdx = users.findIndex(function(u) { return u.id === 'admin1'; });
-    if (adminIdx !== -1) {
-        users[adminIdx].password = hashPassword('admin123');
-        users[adminIdx].role = 'admin';
+    // Auto-create admin if needed
+    if (email === 'admin@bsithub.com') {
+        var adminIdx = users.findIndex(function(u) { return u.id === 'admin1'; });
+        if (adminIdx === -1) {
+            users.push({ id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: hashPassword('admin123'), role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, blockedUsers: [] });
+        } else {
+            users[adminIdx].password = hashPassword('admin123');
+            users[adminIdx].role = 'admin';
+        }
         Storage.set('users', users);
     }
 
-    // Try localStorage first
+    // Find user in localStorage
     var user = users.find(function(u) { return u.email === email && u.password === hashedPassword; });
     
     if (user) {
@@ -448,33 +445,6 @@ async function login(email, password) {
         addLog('info', 'User ' + user.username + ' logged in');
         console.log('Login successful');
         return { success: true };
-    }
-
-    // Fallback: try Supabase
-    if (DB.isReady()) {
-        try {
-            console.log('Trying Supabase login...');
-            var dbResult = await DB.signIn(email, password);
-            if (dbResult.success && dbResult.user) {
-                console.log('Supabase login successful');
-                var dbUser = dbResult.user;
-                users = Storage.get('users') || [];
-                var localUser = {
-                    id: dbUser.id, name: dbUser.name, username: dbUser.username, email: dbUser.email,
-                    password: 'supabase_auth', role: dbUser.role || 'user', status: dbUser.status || 'active',
-                    bio: dbUser.bio || '', phone: dbUser.phone || '', location: dbUser.location || '',
-                    createdAt: dbUser.created_at, avatar: dbUser.avatar, blockedUsers: dbUser.blocked_users || []
-                };
-                var idx = users.findIndex(function(u) { return u.id === localUser.id; });
-                if (idx !== -1) users[idx] = localUser; else users.push(localUser);
-                Storage.set('users', users);
-                currentUser = localUser;
-                Storage.set('currentUser', { id: localUser.id });
-                return { success: true };
-            }
-        } catch (err) {
-            console.log('Supabase error:', err.message);
-        }
     }
 
     return { success: false, message: 'Invalid email or password' };
