@@ -6612,6 +6612,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         closeModal();
         showToast('Story posted!', 'success');
+        if (typeof renderStories === 'function') renderStories();
     };
     
     window.addImageStory = function() {
@@ -6635,6 +6636,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 Storage.set('stories', stories);
                 showToast('Story posted!', 'success');
+                if (typeof renderStories === 'function') renderStories();
             };
             reader.readAsDataURL(file);
         };
@@ -6677,9 +6679,10 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() { closeStoryViewer(); }, 5000);
         
         // Mark as viewed
-        if (!story.views.includes(currentUser.id)) {
+        if (currentUser && !story.views.includes(currentUser.id)) {
             story.views.push(currentUser.id);
             Storage.set('stories', stories);
+            if (typeof renderStories === 'function') renderStories();
         }
     };
     
@@ -7103,7 +7106,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         composerTrigger.onclick = openComposer;
-        if (storyAdd) storyAdd.onclick = openComposer;
+        if (storyAdd) storyAdd.onclick = showAddStory;
         if (emptyCreatePost) emptyCreatePost.onclick = openComposer;
         if (composerActionPhoto) composerActionPhoto.onclick = function() { openComposer(); postImageInput.click(); };
         if (composerActionFeeling) composerActionFeeling.onclick = function() { openComposer(); document.getElementById('composer-feeling-bar').style.display = 'flex'; };
@@ -7247,7 +7250,62 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        renderStories();
         loadFeed();
+    }
+
+    function renderStories() {
+        var bar = document.getElementById('stories-bar');
+        if (!bar) return;
+
+        // Clean expired stories (older than 24h)
+        var stories = Storage.get('stories') || [];
+        var now = Date.now();
+        stories = stories.filter(function(s) { return now - new Date(s.timestamp).getTime() < 24 * 60 * 60 * 1000; });
+        Storage.set('stories', stories);
+
+        // Get unique users who have active stories
+        var storyUsers = {};
+        stories.forEach(function(s) {
+            if (!storyUsers[s.userId]) storyUsers[s.userId] = { userId: s.userId, stories: [], hasUnviewed: false };
+            storyUsers[s.userId].stories.push(s);
+            if (currentUser && !s.views.includes(currentUser.id)) {
+                storyUsers[s.userId].hasUnviewed = true;
+            }
+        });
+
+        var users = Storage.get('users') || [];
+        var html = '';
+
+        // Current user's "add story" button (or view own story)
+        var myStoryData = currentUser ? storyUsers[currentUser.id] : null;
+        if (myStoryData) {
+            var myAvatar = currentUser.avatar ? '<img src="' + escapeHtml(currentUser.avatar) + '" alt="">' : '<i class="fas fa-user"></i>';
+            html += '<div class="story-item has-story' + (myStoryData.hasUnviewed ? ' unviewed' : '') + '" onclick="viewStory(\'' + myStoryData.stories[myStoryData.stories.length - 1].id + '\')">';
+            html += '<div class="story-ring"><div class="story-thumb">' + myAvatar + '</div></div>';
+            html += '<span>Your Story</span>';
+            html += '</div>';
+        } else {
+            html += '<div class="story-add" id="story-add" onclick="showAddStory()">';
+            html += '<div class="story-add-icon"><i class="fas fa-plus"></i></div>';
+            html += '<span>Your Story</span>';
+            html += '</div>';
+        }
+
+        // Other users' stories
+        Object.keys(storyUsers).forEach(function(uid) {
+            if (uid === (currentUser ? currentUser.id : '')) return;
+            var data = storyUsers[uid];
+            var user = users.find(function(u) { return u.id === uid; });
+            if (!user) return;
+            var avatar = user.avatar ? '<img src="' + escapeHtml(user.avatar) + '" alt="">' : '<span class="story-initial">' + user.name.charAt(0).toUpperCase() + '</span>';
+            html += '<div class="story-item' + (data.hasUnviewed ? ' unviewed' : ' viewed') + '" onclick="viewStory(\'' + data.stories[data.stories.length - 1].id + '\')">';
+            html += '<div class="story-ring"><div class="story-thumb">' + avatar + '</div></div>';
+            html += '<span>' + escapeHtml(user.name.split(' ')[0]) + '</span>';
+            html += '</div>';
+        });
+
+        bar.innerHTML = html;
     }
 
     function showReactionsPopup(btnEl, postId) {
