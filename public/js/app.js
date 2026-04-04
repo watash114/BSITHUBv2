@@ -450,62 +450,6 @@ function socialLogin(provider) {
     setTimeout(function() {
         auth.signInWithRedirect(providerObj);
     }, 500);
-                    }
-                    
-                    showToast('Welcome to BSITHUB, ' + user.displayName + '!', 'success');
-                    showApp();
-                }
-            })
-            .catch(function(error) {
-                window.socialLoginInProgress = false;
-                console.error('Social login error:', error);
-                
-                if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-                    // User closed popup - don't show error
-                } else if (error.code === 'auth/configuration-not-found' || 
-                           error.code === 'auth/unauthorized-domain' || 
-                           error.code === 'auth/operation-not-allowed') {
-                    // Show setup instructions based on provider
-                    var providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-                    var setupHtml = '<div class="setup-instructions">';
-                    setupHtml += '<h3>Enable ' + providerName + ' Login</h3>';
-                    setupHtml += '<p>Click the links below:</p>';
-                    setupHtml += '<div class="setup-steps">';
-                    setupHtml += '<a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank" class="setup-link"><i class="fas fa-cog"></i> Step 1: Enable ' + providerName + ' Provider</a>';
-                    setupHtml += '<a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/settings" target="_blank" class="setup-link"><i class="fas fa-globe"></i> Step 2: Add Domain (bsithub.vercel.app)</a>';
-                    setupHtml += '</div>';
-                    
-                    if (provider === 'facebook') {
-                        setupHtml += '<p class="setup-note"><strong>Facebook Setup:</strong></p>';
-                        setupHtml += '<ol style="text-align:left; margin: 10px 0;">';
-                        setupHtml += '<li>Go to <a href="https://developers.facebook.com/apps" target="_blank">Facebook Developers</a></li>';
-                        setupHtml += '<li>Click your app → Settings → Basic</li>';
-                        setupHtml += '<li>Copy <strong>App ID</strong> and <strong>App Secret</strong></li>';
-                        setupHtml += '<li>Go to <a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank">Firebase Console</a></li>';
-                        setupHtml += '<li>Enable Facebook → Paste App ID and App Secret → Save</li>';
-                        setupHtml += '</ol>';
-                    } else if (provider === 'github') {
-                        setupHtml += '<p class="setup-note"><strong>GitHub Setup:</strong></p>';
-                        setupHtml += '<ol style="text-align:left; margin: 10px 0;">';
-                        setupHtml += '<li>Go to <a href="https://github.com/settings/developers" target="_blank">GitHub Developers</a></li>';
-                        setupHtml += '<li>Create OAuth App with callback: <code>https://bsithub-1974a.firebaseapp.com/__/auth/handler</code></li>';
-                        setupHtml += '<li>Copy <strong>Client ID</strong> and <strong>Client Secret</strong></li>';
-                        setupHtml += '<li>Go to <a href="https://console.firebase.google.com/project/bsithub-1974a/authentication/providers" target="_blank">Firebase Console</a></li>';
-                        setupHtml += '<li>Enable GitHub → Paste Client ID and Client Secret → Save</li>';
-                        setupHtml += '</ol>';
-                    }
-                    
-                    setupHtml += '<p class="setup-note">After completing steps, click Done and try again.</p>';
-                    setupHtml += '<button class="btn btn-primary" onclick="closeModal()">Done</button>';
-                    setupHtml += '</div>';
-                    showModal(setupHtml);
-                } else if (error.code === 'auth/account-exists-with-different-credential') {
-                    showToast('Account already exists with different login method', 'error');
-                } else {
-                    showToast('Login failed: ' + error.message, 'error');
-                }
-            });
-    }, 500);
 }
 
 function register(name, username, email, password) {
