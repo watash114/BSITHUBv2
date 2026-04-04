@@ -3809,7 +3809,7 @@ function showNewChat() {
             html += '<div class="new-chat-avatar">' + avatar + '</div>';
             html += '<div class="new-chat-info">';
             html += '<span class="new-chat-name">' + (user.name || user.email || 'Unknown User') + '</span>';
-            html += '<span class="new-chat-username">@' + (user.username || user.email ? user.email.split('@')[0] : 'unknown') + '</span>';
+            html += '<span class="new-chat-username">@' + (user.username || (user.email ? user.email.split('@')[0] : 'unknown')) + '</span>';
             html += '</div>';
             html += '<i class="fas fa-chevron-right"></i>';
             html += '</div>';
