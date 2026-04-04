@@ -433,11 +433,13 @@
                     </div>
                     <div class="profile-container">
                         <div class="profile-card">
-                            <div class="profile-cover">
+                            <div class="profile-cover" id="profile-cover">
                                 <div class="profile-cover-gradient"></div>
-                                <button class="btn-icon edit-cover" title="Change Cover">
-                                    <i class="fas fa-camera"></i> Edit Cover
+                                <button class="edit-cover-btn" title="Change Cover" id="change-cover-btn">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Edit Cover</span>
                                 </button>
+                                <input type="file" id="cover-input" style="display: none;" accept="image/*">
                             </div>
                             <div class="profile-avatar-section">
                                 <div class="profile-avatar-large" id="profile-avatar">

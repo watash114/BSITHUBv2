@@ -1836,6 +1836,11 @@ function loadProfile() {
     document.getElementById('profile-phone').textContent = currentUser.phone || '-';
     document.getElementById('profile-location').textContent = currentUser.location || '-';
     
+    // Load cover photo
+    if (currentUser.cover) {
+        updateProfileCover(currentUser.cover);
+    }
+    
     // Display avatar if exists
     var profileAvatar = document.getElementById('profile-avatar');
     if (currentUser.avatar) {
@@ -3545,6 +3550,75 @@ function handleAvatarUpload(event) {
     reader.readAsDataURL(file);
 }
 
+// Cover Upload Functions
+function handleCoverUpload(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
+        return;
+    }
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image too large. Max 5MB allowed.', 'error');
+        return;
+    }
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var coverData = e.target.result;
+        
+        // Save cover to user data
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === currentUser.id; });
+        if (userIndex !== -1) {
+            users[userIndex].cover = coverData;
+            Storage.set('users', users);
+            currentUser.cover = coverData;
+            
+            // Update profile cover display
+            updateProfileCover(coverData);
+            
+            // Sync to Firebase
+            if (typeof syncUserToFirebase === 'function') {
+                syncUserToFirebase(currentUser);
+            }
+            
+            showToast('Cover photo updated!', 'success');
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function updateProfileCover(coverData) {
+    var coverElement = document.getElementById('profile-cover');
+    if (coverElement && coverData) {
+        // Remove existing image if any
+        var existingImg = coverElement.querySelector('.profile-cover-image');
+        if (existingImg) {
+            existingImg.remove();
+        }
+        
+        // Create new image element
+        var img = document.createElement('img');
+        img.src = coverData;
+        img.className = 'profile-cover-image';
+        img.alt = 'Cover Photo';
+        
+        // Insert at beginning of cover element
+        coverElement.insertBefore(img, coverElement.firstChild);
+    }
+}
+
+function loadSavedCover() {
+    var coverData = Storage.get('users')?.find(function(u) { return u.id === currentUser?.id; })?.cover;
+    if (coverData) {
+        updateProfileCover(coverData);
+    }
+}
+
 // ==========================================
 // Settings Functions
 // ==========================================
@@ -4969,6 +5043,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('edit-profile-btn').onclick = function() {
         document.getElementById('profile-edit-form').style.display = 'block';
     };
+    
+    // Change Cover
+    document.getElementById('change-cover-btn').onclick = function() {
+        document.getElementById('cover-input').click();
+    };
+    document.getElementById('cover-input').addEventListener('change', handleCoverUpload);
+    
+    // Load saved cover
+    loadSavedCover();
     
     // Chat Wallpaper
     document.getElementById('chat-wallpaper-btn').onclick = showWallpaperPicker;
