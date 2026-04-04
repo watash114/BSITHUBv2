@@ -7456,6 +7456,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.delete-post-btn').forEach(function(btn) {
             btn.onclick = function() { deletePost(this.dataset.postId); };
         });
+        document.querySelectorAll('.edit-post-btn').forEach(function(btn) {
+            btn.onclick = function() { editPost(this.dataset.postId); };
+        });
         document.querySelectorAll('.view-more-comments').forEach(function(btn) {
             btn.onclick = function() { showAllComments(this.dataset.postId); };
         });
@@ -7553,6 +7556,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (section) section.style.display = 'block';
 
         if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/comments').set(post.comments); }
+    }
+
+    function editPost(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !currentUser || post.userId !== currentUser.id) return;
+
+        // Close context menu
+        document.querySelectorAll('.post-context-menu').forEach(function(m) { m.style.display = 'none'; });
+
+        var newContent = prompt('Edit your post:', post.content);
+        if (newContent === null) return; // cancelled
+
+        post.content = newContent;
+        Storage.set('posts', posts);
+        renderFeed();
+
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/content').set(post.content); }
+        if (DB.isReady()) { DB.updatePost(postId, { content: newContent }); }
+        showToast('Post updated!', 'success');
     }
 
     function deletePost(postId) {

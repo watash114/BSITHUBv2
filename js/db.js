@@ -197,6 +197,22 @@ const DB = {
         }
     },
 
+    async updatePost(postId, updates) {
+        if (!this.isReady()) return { success: false };
+
+        try {
+            updates.updated_at = new Date().toISOString();
+            const { error } = await this.client()
+                .from('posts')
+                .update(updates)
+                .eq('id', postId);
+
+            return { success: !error };
+        } catch {
+            return { success: false };
+        }
+    },
+
     async deletePost(postId, userId) {
         if (!this.isReady()) return { success: false };
 
