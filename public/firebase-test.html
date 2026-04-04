@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Test</title>
+</head>
+<body>
+    <h1>Firebase Connection Test</h1>
+    <button onclick="testFirebase()">Test Connection</button>
+    <button onclick="testWrite()">Write Test Message</button>
+    <button onclick="testRead()">Read Messages</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyDqCLKvwD3j9z_EQCzHrtcGXOpYgXPm3yw",
+            authDomain: "bsithub-1974a.firebaseapp.com",
+            databaseURL: "https://bsithub-1974a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "bsithub-1974a",
+            storageBucket: "bsithub-1974a.firebasestorage.app",
+            messagingSenderId: "790480652401",
+            appId: "1:790480652401:web:38e18646da4869c3da73d0"
+        };
+
+        function testFirebase() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                document.getElementById('result').innerHTML = 'Firebase initialized successfully!';
+            } catch(e) {
+                document.getElementById('result').innerHTML = 'Error: ' + e.message;
+            }
+        }
+
+        function testWrite() {
+            var db = firebase.database();
+            db.ref('test/message').set({
+                text: 'Hello World',
+                timestamp: new Date().toISOString()
+            }).then(function() {
+                document.getElementById('result').innerHTML = 'Message written successfully!';
+            }).catch(function(err) {
+                document.getElementById('result').innerHTML = 'Write error: ' + err.message;
+            });
+        }
+
+        function testRead() {
+            var db = firebase.database();
+            db.ref('test/message').once('value').then(function(snapshot) {
+                document.getElementById('result').innerHTML = 'Read: ' + JSON.stringify(snapshot.val());
+            }).catch(function(err) {
+                document.getElementById('result').innerHTML = 'Read error: ' + err.message;
+            });
+        }
+    </script>
+</body>
+</html>
