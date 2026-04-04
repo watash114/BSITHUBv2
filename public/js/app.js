@@ -1844,10 +1844,24 @@ function loadProfile() {
     // Display avatar if exists
     var profileAvatar = document.getElementById('profile-avatar');
     if (currentUser.avatar) {
-        profileAvatar.innerHTML = '<img src="' + currentUser.avatar + '" alt="Avatar"><button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn"><i class="fas fa-camera"></i></button><input type="file" id="avatar-input" style="display: none;" accept="image/*">';
+        profileAvatar.innerHTML = '<img src="' + currentUser.avatar + '" alt="Avatar">' +
+            '<button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn">' +
+            '<i class="fas fa-camera"></i></button>' +
+            '<input type="file" id="avatar-input" style="display: none;" accept="image/*">';
     } else {
-        profileAvatar.innerHTML = '<i class="fas fa-user"></i><button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn"><i class="fas fa-camera"></i></button><input type="file" id="avatar-input" style="display: none;" accept="image/*">';
+        profileAvatar.innerHTML = '<i class="fas fa-user"></i>' +
+            '<button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn">' +
+            '<i class="fas fa-camera"></i></button>' +
+            '<input type="file" id="avatar-input" style="display: none;" accept="image/*">';
     }
+    
+    // Re-attach avatar event listeners
+    setTimeout(function() {
+        var avatarBtn = document.getElementById('change-avatar-btn');
+        var avatarInput = document.getElementById('avatar-input');
+        if (avatarBtn) avatarBtn.onclick = changeAvatar;
+        if (avatarInput) avatarInput.addEventListener('change', handleAvatarUpload);
+    }, 100);
     
     var chats = Storage.get('chats') || [];
     var myChats = chats.filter(function(c) { return c.participants.indexOf(currentUser.id) !== -1; });
@@ -3507,7 +3521,10 @@ function createGroup() {
 // Profile Functions
 // ==========================================
 function changeAvatar() {
-    document.getElementById('avatar-input').click();
+    var input = document.getElementById('avatar-input');
+    if (input) {
+        input.click();
+    }
 }
 
 function handleAvatarUpload(event) {
@@ -3516,6 +3533,12 @@ function handleAvatarUpload(event) {
     
     if (!file.type.startsWith('image/')) {
         showToast('Please select an image file', 'error');
+        return;
+    }
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image too large. Max 5MB allowed.', 'error');
         return;
     }
     
@@ -3531,13 +3554,8 @@ function handleAvatarUpload(event) {
             Storage.set('users', users);
             currentUser.avatar = avatarData;
             
-            // Update profile avatar display
-            var profileAvatar = document.getElementById('profile-avatar');
-            profileAvatar.innerHTML = '<img src="' + avatarData + '" alt="Avatar">';
-            
-            // Update sidebar avatar
-            var sidebarAvatar = document.getElementById('sidebar-avatar');
-            sidebarAvatar.innerHTML = '<img src="' + avatarData + '" alt="Avatar">';
+            // Update all avatar displays
+            updateAvatarDisplay(avatarData);
             
             // Sync updated avatar to Firebase
             if (typeof syncUserToFirebase === 'function') {
@@ -3548,6 +3566,35 @@ function handleAvatarUpload(event) {
         }
     };
     reader.readAsDataURL(file);
+}
+
+function updateAvatarDisplay(avatarData) {
+    // Update profile avatar
+    var profileAvatar = document.getElementById('profile-avatar');
+    if (profileAvatar) {
+        profileAvatar.innerHTML = '<img src="' + avatarData + '" alt="Avatar">' +
+            '<button class="btn-icon edit-avatar" title="Change Avatar" id="change-avatar-btn">' +
+            '<i class="fas fa-camera"></i></button>' +
+            '<input type="file" id="avatar-input" style="display: none;" accept="image/*">';
+        
+        // Re-attach event listeners
+        var btn = document.getElementById('change-avatar-btn');
+        var input = document.getElementById('avatar-input');
+        if (btn) btn.onclick = changeAvatar;
+        if (input) input.addEventListener('change', handleAvatarUpload);
+    }
+    
+    // Update sidebar avatar
+    var sidebarAvatar = document.getElementById('sidebar-avatar');
+    if (sidebarAvatar) {
+        sidebarAvatar.innerHTML = '<img src="' + avatarData + '" alt="Avatar">';
+    }
+    
+    // Update header avatar
+    var headerAvatar = document.getElementById('header-avatar');
+    if (headerAvatar) {
+        headerAvatar.innerHTML = '<img src="' + avatarData + '" alt="Avatar">';
+    }
 }
 
 // Cover Upload Functions
