@@ -721,6 +721,11 @@ function showApp() {
     
     initializeApp();
     
+    // Initialize Socket.IO for real-time presence
+    if (currentUser && typeof initSocket === 'function') {
+        initSocket(currentUser.id);
+    }
+    
     // Set user online (wait for Firebase to be ready)
     if (currentUser) {
         setTimeout(function() {
