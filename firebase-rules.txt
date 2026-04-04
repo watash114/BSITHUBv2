@@ -19,6 +19,20 @@
       }
     },
     "users": {
+      ".indexOn": ["username"],
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "posts": {
+      ".indexOn": ["createdAt"],
+      "$postId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "online": {
       "$userId": {
         ".read": true,
         ".write": true
@@ -29,6 +43,16 @@
         ".read": true,
         ".write": true
       }
+    },
+    "userChats": {
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "deletedUsers": {
+      ".read": true,
+      ".write": true
     }
   }
 }

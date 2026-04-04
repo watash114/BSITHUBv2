@@ -2429,38 +2429,106 @@ function viewUserDetails(userId) {
     var userMessages = messages.filter(function(m) { return m.senderId === userId; });
     var chats = Storage.get('chats') || [];
     var userChats = chats.filter(function(c) { return c.participants.indexOf(userId) !== -1; });
+    var posts = Storage.get('posts') || [];
+    var userPosts = posts.filter(function(p) { return p.userId === userId; });
     
-    var avatar = user.avatar ? '<img src="' + user.avatar + '">' : (user.name || '?').charAt(0).toUpperCase();
+    var avatarHtml = user.avatar
+        ? '<img src="' + escapeHtml(user.avatar) + '" alt="">'
+        : '<span class="profile-initial">' + (user.name || '?').charAt(0).toUpperCase() + '</span>';
     
-    var html = '<div class="user-details-modal">';
-    html += '<div class="user-details-header">';
-    html += '<div class="user-details-avatar">' + avatar + '</div>';
-    html += '<div class="user-details-info">';
+    var coverHtml = user.cover
+        ? '<img class="profile-cover-img" src="' + escapeHtml(user.cover) + '" alt="">'
+        : '<div class="profile-cover-gradient"></div>';
+
+    var roleBadge = user.role === 'admin'
+        ? '<span class="badge-inline badge-admin"><i class="fas fa-shield-alt"></i> Admin</span>'
+        : '<span class="badge-inline badge-user"><i class="fas fa-user"></i> User</span>';
+
+    var statusBadge = user.status === 'banned'
+        ? '<span class="badge-inline badge-banned"><i class="fas fa-ban"></i> Banned</span>'
+        : '<span class="badge-inline badge-active"><i class="fas fa-circle"></i> Active</span>';
+
+    var isOwner = currentUser && userId === currentUser.id;
+    var isBlocked = currentUser && currentUser.blockedUsers && currentUser.blockedUsers.indexOf(userId) !== -1;
+
+    var html = '<div class="user-profile-modal">';
+    html += '<div class="user-cover">' + coverHtml + '</div>';
+    html += '<div class="user-avatar-section"><div class="user-avatar-large">' + avatarHtml + '</div></div>';
+    html += '<div class="user-identity">';
     html += '<h3>' + escapeHtml(user.name || 'Unknown') + '</h3>';
-    html += '<p>@' + escapeHtml(user.username || 'unknown') + '</p>';
-    html += '</div></div>';
-    
-    html += '<div class="user-details-stats">';
-    html += '<div class="stat-item"><span class="stat-value">' + userMessages.length + '</span><span class="stat-label">Messages</span></div>';
-    html += '<div class="stat-item"><span class="stat-value">' + userChats.length + '</span><span class="stat-label">Chats</span></div>';
-    html += '<div class="stat-item"><span class="stat-value">' + (user.role || 'user') + '</span><span class="stat-label">Role</span></div>';
-    html += '<div class="stat-item"><span class="stat-value">' + (user.status || 'active') + '</span><span class="stat-label">Status</span></div>';
+    html += '<p class="user-handle">@' + escapeHtml(user.username || 'unknown') + '</p>';
+    html += '<div class="user-badges">' + roleBadge + statusBadge + '</div>';
     html += '</div>';
-    
-    html += '<div class="user-details-info-list">';
-    html += '<div class="info-row"><span>Email:</span><span>' + escapeHtml(user.email || 'N/A') + '</span></div>';
-    html += '<div class="info-row"><span>Phone:</span><span>' + escapeHtml(user.phone || 'N/A') + '</span></div>';
-    html += '<div class="info-row"><span>Location:</span><span>' + escapeHtml(user.location || 'N/A') + '</span></div>';
-    html += '<div class="info-row"><span>Joined:</span><span>' + formatDate(user.createdAt) + '</span></div>';
-    html += '</div>';
-    
+
     if (user.bio) {
-        html += '<div class="user-details-bio"><strong>Bio:</strong><p>' + escapeHtml(user.bio) + '</p></div>';
+        html += '<div class="user-bio">' + escapeHtml(user.bio) + '</div>';
     }
-    
-    html += '<button class="btn" onclick="closeModal()">Close</button>';
+
+    html += '<div class="user-stats-row">';
+    html += '<div class="user-stat"><strong>' + userMessages.length + '</strong><span>Messages</span></div>';
+    html += '<div class="user-stat"><strong>' + userChats.length + '</strong><span>Chats</span></div>';
+    html += '<div class="user-stat"><strong>' + userPosts.length + '</strong><span>Posts</span></div>';
+    html += '</div>';
+
+    html += '<div class="user-info-grid">';
+    if (user.email) html += '<div class="info-item"><i class="fas fa-envelope"></i><span>' + escapeHtml(user.email) + '</span></div>';
+    if (user.phone) html += '<div class="info-item"><i class="fas fa-phone"></i><span>' + escapeHtml(user.phone) + '</span></div>';
+    if (user.location) html += '<div class="info-item"><i class="fas fa-map-marker-alt"></i><span>' + escapeHtml(user.location) + '</span></div>';
+    html += '<div class="info-item"><i class="fas fa-calendar-alt"></i><span>Joined ' + formatDate(user.createdAt) + '</span></div>';
+    html += '</div>';
+
+    if (!isOwner) {
+        html += '<div class="user-actions">';
+        html += '<button class="btn btn-primary user-action-btn" onclick="closeModal(); startChatWith(\'' + userId + '\')"><i class="fas fa-comment"></i> Message</button>';
+        if (isBlocked) {
+            html += '<button class="btn btn-outline user-action-btn" onclick="unblockUserFromModal(\'' + userId + '\')"><i class="fas fa-unlock"></i> Unblock</button>';
+        } else {
+            html += '<button class="btn btn-outline user-action-btn danger-outline" onclick="blockUserFromModal(\'' + userId + '\')"><i class="fas fa-ban"></i> Block</button>';
+        }
+        html += '</div>';
+    }
+
     html += '</div>';
     showModal(html);
+}
+
+function startChatWith(userId) {
+    var chats = Storage.get('chats') || [];
+    var existing = chats.find(function(c) { return !c.isGroup && c.participants.indexOf(currentUser.id) !== -1 && c.participants.indexOf(userId) !== -1; });
+    if (existing) {
+        openChat(existing.id);
+    } else {
+        var newChat = { id: generateId(), participants: [currentUser.id, userId], createdAt: new Date().toISOString(), pinned: false, muted: false, archived: false, isGroup: false };
+        chats.push(newChat);
+        Storage.set('chats', chats);
+        openChat(newChat.id);
+        loadChats();
+    }
+}
+
+function blockUserFromModal(userId) {
+    var users = Storage.get('users') || [];
+    var user = users.find(function(u) { return u.id === currentUser.id; });
+    if (!user) return;
+    if (!user.blockedUsers) user.blockedUsers = [];
+    if (user.blockedUsers.indexOf(userId) === -1) {
+        user.blockedUsers.push(userId);
+        currentUser.blockedUsers = user.blockedUsers;
+        Storage.set('users', users);
+        showToast('User blocked', 'info');
+        closeModal();
+    }
+}
+
+function unblockUserFromModal(userId) {
+    var users = Storage.get('users') || [];
+    var user = users.find(function(u) { return u.id === currentUser.id; });
+    if (!user || !user.blockedUsers) return;
+    user.blockedUsers = user.blockedUsers.filter(function(id) { return id !== userId; });
+    currentUser.blockedUsers = user.blockedUsers;
+    Storage.set('users', users);
+    showToast('User unblocked', 'success');
+    closeModal();
 }
 
 function searchAdminUsers(query) {
