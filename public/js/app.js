@@ -7052,6 +7052,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var feedPostImageData = null;
     var currentCommentsPostId = null;
     var selectedFeeling = null;
+    var reactionsPopupPostId = null;
+    var reactionsPopupTimer = null;
+
+    var REACTION_EMOJIS = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+    var REACTION_LABELS = { like: 'Like', love: 'Love', haha: 'Haha', wow: 'Wow', sad: 'Sad', angry: 'Angry' };
 
     function initFeed() {
         var composerTrigger = document.getElementById('composer-trigger');
@@ -7100,7 +7105,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (composerActionFeeling) composerActionFeeling.onclick = function() { openComposer(); document.getElementById('composer-feeling-bar').style.display = 'flex'; };
         if (closeComposer) closeComposer.onclick = closeComposerFn;
 
+        // Character counter
         postContent.oninput = function() {
+            var len = postContent.value.length;
+            var counter = document.getElementById('char-count');
+            var counterWrap = document.getElementById('composer-char-counter');
+            if (counter && counterWrap) {
+                counter.textContent = len;
+                counterWrap.classList.toggle('visible', len > 0);
+                counterWrap.classList.toggle('warning', len > 4500);
+                counterWrap.classList.toggle('danger', len > 4900);
+            }
             postSubmitBtn.disabled = !postContent.value.trim() && !feedPostImageData;
         };
 
@@ -7153,7 +7168,136 @@ document.addEventListener('DOMContentLoaded', function() {
             createPost(content, feedPostImageData);
         };
 
+        // Lightbox
+        var lightboxOverlay = document.getElementById('lightbox-overlay');
+        var lightboxClose = document.getElementById('lightbox-close');
+        if (lightboxOverlay) {
+            lightboxOverlay.onclick = function(e) {
+                if (e.target === lightboxOverlay || e.target === lightboxClose) {
+                    lightboxOverlay.style.display = 'none';
+                }
+            };
+        }
+        if (lightboxClose) {
+            lightboxClose.onclick = function() { lightboxOverlay.style.display = 'none'; };
+        }
+
+        // Share modal
+        var shareModalOverlay = document.getElementById('share-modal-overlay');
+        var shareModalClose = document.getElementById('share-modal-close');
+        if (shareModalOverlay) {
+            shareModalOverlay.onclick = function(e) {
+                if (e.target === shareModalOverlay) shareModalOverlay.style.display = 'none';
+            };
+        }
+        if (shareModalClose) {
+            shareModalClose.onclick = function() { shareModalOverlay.style.display = 'none'; };
+        }
+        var shareCopyLink = document.getElementById('share-copy-link');
+        if (shareCopyLink) {
+            shareCopyLink.onclick = function() {
+                var postId = shareModalOverlay.dataset.postId;
+                var url = window.location.origin + window.location.pathname + '?post=' + postId;
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(url).then(function() {
+                        showToast('Link copied!', 'success');
+                    });
+                } else {
+                    showToast('Link copied!', 'success');
+                }
+                shareModalOverlay.style.display = 'none';
+            };
+        }
+        var shareNative = document.getElementById('share-native');
+        if (shareNative) {
+            shareNative.onclick = function() {
+                var postId = shareModalOverlay.dataset.postId;
+                var posts = Storage.get('posts') || [];
+                var post = posts.find(function(p) { return p.id === postId; });
+                if (post && navigator.share) {
+                    navigator.share({
+                        title: 'BSITHUB Post',
+                        text: post.content || 'Check out this post!',
+                        url: window.location.href
+                    }).catch(function() {});
+                }
+                shareModalOverlay.style.display = 'none';
+            };
+        }
+
+        // Reactions popup
+        document.querySelectorAll('.reactions-popup .reaction-btn').forEach(function(btn) {
+            btn.onclick = function(e) {
+                e.stopPropagation();
+                var reaction = this.dataset.reaction;
+                if (reactionsPopupPostId) {
+                    applyReaction(reactionsPopupPostId, reaction);
+                }
+                hideReactionsPopup();
+            };
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.reactions-popup') && !e.target.closest('.like-btn')) {
+                hideReactionsPopup();
+            }
+        });
+
         loadFeed();
+    }
+
+    function showReactionsPopup(btnEl, postId) {
+        var popup = document.getElementById('reactions-popup');
+        if (!popup) return;
+        reactionsPopupPostId = postId;
+        var rect = btnEl.getBoundingClientRect();
+        popup.style.display = 'flex';
+        popup.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+        popup.style.left = Math.max(8, Math.min(rect.left - 60, window.innerWidth - 280)) + 'px';
+        popup.style.top = 'auto';
+    }
+
+    function hideReactionsPopup() {
+        var popup = document.getElementById('reactions-popup');
+        if (popup) popup.style.display = 'none';
+        reactionsPopupPostId = null;
+    }
+
+    function applyReaction(postId, reaction) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !currentUser) return;
+        if (!post.reactions) post.reactions = {};
+        if (post.reactions[currentUser.id] === reaction) {
+            delete post.reactions[currentUser.id];
+        } else {
+            post.reactions[currentUser.id] = reaction;
+        }
+        // Sync old likes format
+        if (post.likes) delete post.likes;
+        Storage.set('posts', posts);
+        renderFeed();
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/reactions').set(post.reactions); }
+    }
+
+    function getReactionSummary(reactions) {
+        if (!reactions) return {};
+        var counts = {};
+        Object.values(reactions).forEach(function(r) {
+            counts[r] = (counts[r] || 0) + 1;
+        });
+        return counts;
+    }
+
+    function getTotalReactions(reactions) {
+        if (!reactions) return 0;
+        return Object.keys(reactions).length;
+    }
+
+    function getTopReactions(reactions) {
+        var counts = getReactionSummary(reactions);
+        var sorted = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a]; });
+        return sorted.slice(0, 3);
     }
 
     function updateComposerAvatars() {
@@ -7275,10 +7419,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderPostCard(post) {
         var isOwner = currentUser && post.userId === currentUser.id;
         var timeAgo = getTimeAgo(post.createdAt);
-        var likeCount = post.likes ? Object.keys(post.likes).length : 0;
+        var totalReactions = getTotalReactions(post.reactions || post.likes);
         var commentCount = post.comments ? post.comments.length : 0;
         var shareCount = post.shares || 0;
-        var isLiked = currentUser && post.likes && post.likes[currentUser.id];
+        var myReaction = currentUser && post.reactions ? post.reactions[currentUser.id] : null;
+        var isLiked = !!myReaction;
+        var topReactions = getTopReactions(post.reactions || post.likes);
         var avatarHtml;
         if (post.userAvatar) {
             avatarHtml = '<div class="post-avatar"><img src="' + escapeHtml(post.userAvatar) + '" alt="Avatar"></div>';
@@ -7287,12 +7433,16 @@ document.addEventListener('DOMContentLoaded', function() {
             avatarHtml = '<div class="post-avatar">' + initial + '</div>';
         }
 
+        var privacyIcon = 'fa-globe-americas';
+        if (post.visibility === 'friends') privacyIcon = 'fa-user-friends';
+        if (post.visibility === 'private') privacyIcon = 'fa-lock';
+
         var html = '<div class="post-card" data-post-id="' + post.id + '">';
         html += '<div class="post-header">';
         html += avatarHtml;
         html += '<div class="post-user-info">';
         html += '<div class="post-user-name">' + escapeHtml(post.userName || 'User') + '</div>';
-        html += '<div class="post-meta"><i class="fas fa-globe-americas"></i> ' + timeAgo + '</div>';
+        html += '<div class="post-meta"><i class="fas ' + privacyIcon + '"></i> ' + timeAgo + '</div>';
         html += '</div>';
         if (isOwner) {
             html += '<div style="position:relative;">';
@@ -7313,16 +7463,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Body
         html += '<div class="post-body">';
         if (post.content) html += '<div class="post-text">' + escapeHtml(post.content) + '</div>';
-        if (post.imageUrl) html += '<div class="post-image"><img src="' + post.imageUrl + '" alt="Post image"></div>';
+        if (post.imageUrl) html += '<div class="post-image"><img src="' + post.imageUrl + '" alt="Post image" onclick="openLightbox(this.src)"></div>';
         html += '</div>';
 
         // Stats row
-        if (likeCount > 0 || commentCount > 0 || shareCount > 0) {
+        if (totalReactions > 0 || commentCount > 0 || shareCount > 0) {
             html += '<div class="post-stats">';
             html += '<div class="post-stats-left">';
-            if (likeCount > 0) {
-                html += '<div class="reaction-icons"><span style="background:#1877f2;">👍</span></div>';
-                html += '<span>' + likeCount + '</span>';
+            if (totalReactions > 0) {
+                html += '<div class="reaction-icons">';
+                topReactions.forEach(function(r) {
+                    html += '<span>' + (REACTION_EMOJIS[r] || '👍') + '</span>';
+                });
+                html += '</div>';
+                html += '<span>' + totalReactions + '</span>';
             }
             html += '</div>';
             html += '<div class="post-stats-right">';
@@ -7334,8 +7488,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Actions bar
         html += '<div class="post-actions-bar">';
-        html += '<button class="post-action-btn like-btn' + (isLiked ? ' liked' : '') + '" data-post-id="' + post.id + '">';
-        html += '<i class="fas fa-thumbs-up"></i> ' + (isLiked ? 'Liked' : 'Like');
+        var likeLabel = myReaction ? (REACTION_EMOJIS[myReaction] + ' ' + REACTION_LABELS[myReaction]) : '<i class="fas fa-thumbs-up"></i> Like';
+        var likeExtraClass = isLiked ? ' liked' : '';
+        html += '<button class="post-action-btn like-btn' + likeExtraClass + '" data-post-id="' + post.id + '">';
+        html += likeLabel;
         html += '</button>';
         html += '<button class="post-action-btn comment-btn" data-post-id="' + post.id + '">';
         html += '<i class="fas fa-comment"></i> Comment';
@@ -7395,10 +7551,41 @@ document.addEventListener('DOMContentLoaded', function() {
         return html;
     }
 
+    function openLightbox(src) {
+        var overlay = document.getElementById('lightbox-overlay');
+        var img = document.getElementById('lightbox-img');
+        if (overlay && img) {
+            img.src = src;
+            overlay.style.display = 'flex';
+        }
+    }
+    window.openLightbox = openLightbox;
+
     function bindPostEvents() {
+        // Like with hold for reactions
         document.querySelectorAll('.like-btn').forEach(function(btn) {
-            btn.onclick = function() { toggleLike(this.dataset.postId); };
+            var postId = btn.dataset.postId;
+            var holdTimer = null;
+            var didHold = false;
+
+            btn.onmousedown = btn.ontouchstart = function(e) {
+                didHold = false;
+                holdTimer = setTimeout(function() {
+                    didHold = true;
+                    showReactionsPopup(btn, postId);
+                }, 500);
+            };
+
+            btn.onmouseup = btn.onmouseleave = btn.ontouchend = function(e) {
+                clearTimeout(holdTimer);
+                if (!didHold) {
+                    toggleLike(postId);
+                    btn.classList.add('like-animate');
+                    setTimeout(function() { btn.classList.remove('like-animate'); }, 400);
+                }
+            };
         });
+
         document.querySelectorAll('.comment-btn').forEach(function(btn) {
             btn.onclick = function() {
                 var section = document.getElementById('comments-' + this.dataset.postId);
@@ -7410,7 +7597,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         });
         document.querySelectorAll('.share-btn').forEach(function(btn) {
-            btn.onclick = function() { sharePost(this.dataset.postId); };
+            btn.onclick = function() { openShareModal(this.dataset.postId); };
         });
         document.querySelectorAll('[data-toggle-comments]').forEach(function(el) {
             el.onclick = function() {
@@ -7462,6 +7649,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.view-more-comments').forEach(function(btn) {
             btn.onclick = function() { showAllComments(this.dataset.postId); };
         });
+        document.querySelectorAll('.post-image img').forEach(function(img) {
+            img.style.cursor = 'zoom-in';
+        });
         document.addEventListener('click', function closeMenus(e) {
             if (!e.target.closest('.post-menu-btn') && !e.target.closest('.post-context-menu')) {
                 document.querySelectorAll('.post-context-menu').forEach(function(m) { m.style.display = 'none'; });
@@ -7469,17 +7659,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function openShareModal(postId) {
+        var overlay = document.getElementById('share-modal-overlay');
+        if (overlay) {
+            overlay.dataset.postId = postId;
+            overlay.style.display = 'flex';
+        }
+    }
+
     function toggleLike(postId) {
         var posts = Storage.get('posts') || [];
         var post = posts.find(function(p) { return p.id === postId; });
         if (!post || !currentUser) return;
-        if (!post.likes) post.likes = {};
-        if (post.likes[currentUser.id]) { delete post.likes[currentUser.id]; }
-        else { post.likes[currentUser.id] = { userId: currentUser.id, userName: currentUser.name || currentUser.username, timestamp: new Date().toISOString() }; }
+        if (!post.reactions) post.reactions = {};
+        if (post.reactions[currentUser.id]) {
+            delete post.reactions[currentUser.id];
+        } else {
+            post.reactions[currentUser.id] = 'like';
+        }
+        if (post.likes) delete post.likes;
         Storage.set('posts', posts);
         renderFeed();
         if (DB.isReady()) { DB.toggleLike(postId, currentUser.id); }
-        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/likes').set(post.likes); }
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/reactions').set(post.reactions); }
     }
 
     function submitComment(postId, content) {
@@ -7566,17 +7768,45 @@ document.addEventListener('DOMContentLoaded', function() {
         // Close context menu
         document.querySelectorAll('.post-context-menu').forEach(function(m) { m.style.display = 'none'; });
 
-        var newContent = prompt('Edit your post:', post.content);
-        if (newContent === null) return; // cancelled
+        // Inline editing
+        var postCard = document.querySelector('.post-card[data-post-id="' + postId + '"]');
+        if (!postCard) return;
+        var bodyEl = postCard.querySelector('.post-body');
+        if (!bodyEl) return;
 
+        var currentContent = post.content || '';
+        bodyEl.innerHTML = '<div class="inline-edit-wrapper"><textarea class="inline-edit-textarea" id="inline-edit-' + postId + '" maxlength="5000">' + escapeHtml(currentContent) + '</textarea><div class="inline-edit-actions"><button class="btn btn-sm btn-outline" onclick="cancelEdit(\'' + postId + '\')">Cancel</button><button class="btn btn-sm btn-primary" onclick="saveEdit(\'' + postId + '\')">Save</button></div></div>';
+        var textarea = document.getElementById('inline-edit-' + postId);
+        if (textarea) {
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        }
+    }
+
+    function cancelEdit(postId) {
+        renderFeed();
+    }
+    window.cancelEdit = cancelEdit;
+
+    function saveEdit(postId) {
+        var textarea = document.getElementById('inline-edit-' + postId);
+        if (!textarea) return;
+        var newContent = textarea.value.trim();
+        if (!newContent) {
+            showToast('Post cannot be empty', 'error');
+            return;
+        }
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post) return;
         post.content = newContent;
         Storage.set('posts', posts);
         renderFeed();
-
         if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/content').set(post.content); }
         if (DB.isReady()) { DB.updatePost(postId, { content: newContent }); }
         showToast('Post updated!', 'success');
     }
+    window.saveEdit = saveEdit;
 
     function deletePost(postId) {
         if (!confirm('Delete this post?')) return;

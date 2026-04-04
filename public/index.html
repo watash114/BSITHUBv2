@@ -433,6 +433,14 @@
                 <!-- Postings Section -->
                 <section id="feed-section" class="content-section">
                     <div class="feed-container">
+                        <!-- Stories Bar -->
+                        <div class="stories-bar" id="stories-bar">
+                            <div class="story-add" id="story-add">
+                                <div class="story-add-icon"><i class="fas fa-plus"></i></div>
+                                <span>Your Story</span>
+                            </div>
+                        </div>
+
                         <!-- Post Composer -->
                         <div class="post-composer">
                             <div class="composer-top">
@@ -471,7 +479,12 @@
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
-                                <textarea id="post-content" placeholder="What's on your mind?" rows="4"></textarea>
+                                <div class="composer-textarea-wrapper">
+                                    <textarea id="post-content" placeholder="What's on your mind?" rows="4" maxlength="5000"></textarea>
+                                    <div class="composer-char-counter" id="composer-char-counter">
+                                        <span id="char-count">0</span> / 5000
+                                    </div>
+                                </div>
                                 <div class="composer-feeling-bar" id="composer-feeling-bar" style="display:none;">
                                     <span class="feeling-label">Feeling:</span>
                                     <div class="feeling-options">
@@ -523,6 +536,46 @@
                                 <i class="fas fa-plus"></i> Create Post
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Image Lightbox -->
+                    <div class="lightbox-overlay" id="lightbox-overlay" style="display:none;">
+                        <button class="lightbox-close" id="lightbox-close"><i class="fas fa-times"></i></button>
+                        <img id="lightbox-img" src="" alt="Full size image">
+                    </div>
+
+                    <!-- Share Modal -->
+                    <div class="share-modal-overlay" id="share-modal-overlay" style="display:none;">
+                        <div class="share-modal">
+                            <div class="share-modal-header">
+                                <h3><i class="fas fa-share-alt"></i> Share Post</h3>
+                                <button class="share-modal-close" id="share-modal-close"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="share-modal-body">
+                                <button class="share-option-btn" id="share-to-chat">
+                                    <i class="fas fa-comment-dots" style="color:#667eea;"></i>
+                                    <div><strong>Share to Chat</strong><span>Send to a conversation</span></div>
+                                </button>
+                                <button class="share-option-btn" id="share-copy-link">
+                                    <i class="fas fa-link" style="color:#45bd62;"></i>
+                                    <div><strong>Copy Link</strong><span>Copy post link to clipboard</span></div>
+                                </button>
+                                <button class="share-option-btn" id="share-native">
+                                    <i class="fas fa-share" style="color:#f7b928;"></i>
+                                    <div><strong>Share Externally</strong><span>Share via other apps</span></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reactions Popup -->
+                    <div class="reactions-popup" id="reactions-popup" style="display:none;">
+                        <button class="reaction-btn" data-reaction="like" title="Like">👍</button>
+                        <button class="reaction-btn" data-reaction="love" title="Love">❤️</button>
+                        <button class="reaction-btn" data-reaction="haha" title="Haha">😂</button>
+                        <button class="reaction-btn" data-reaction="wow" title="Wow">😮</button>
+                        <button class="reaction-btn" data-reaction="sad" title="Sad">😢</button>
+                        <button class="reaction-btn" data-reaction="angry" title="Angry">😡</button>
                     </div>
                 </section>
 
