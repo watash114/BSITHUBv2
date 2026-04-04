@@ -3782,12 +3782,12 @@ function showNewChat() {
         
         var allUsers = Object.values(firebaseUsers);
         
-        // Filter out users with no username
+        // Show all users except current user
         var otherUsers = allUsers.filter(function(u) { 
-            return u.id !== currentUser.id && u.username && u.username.trim() !== ''; 
+            return u.id !== currentUser.id; 
         });
         
-        console.log('Other users (with username):', otherUsers);
+        console.log('Other users:', otherUsers);
         
         if (otherUsers.length === 0) {
             showToast('No other users found', 'info');
@@ -3808,8 +3808,8 @@ function showNewChat() {
             html += '<div class="new-chat-item" onclick="createNewChat(\'' + user.id + '\')" data-user-name="' + (user.name || '').toLowerCase() + '">';
             html += '<div class="new-chat-avatar">' + avatar + '</div>';
             html += '<div class="new-chat-info">';
-            html += '<span class="new-chat-name">' + (user.name || 'Unknown') + '</span>';
-            html += '<span class="new-chat-username">@' + (user.username || 'unknown') + '</span>';
+            html += '<span class="new-chat-name">' + (user.name || user.email || 'Unknown User') + '</span>';
+            html += '<span class="new-chat-username">@' + (user.username || user.email ? user.email.split('@')[0] : 'unknown') + '</span>';
             html += '</div>';
             html += '<i class="fas fa-chevron-right"></i>';
             html += '</div>';
