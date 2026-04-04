@@ -3905,13 +3905,30 @@ function setWallpaper(color) {
 }
 
 function showChangePassword() {
-    var html = '<div class="change-password"><h3>Change Password</h3>';
-    html += '<input type="password" id="current-password" placeholder="Current password">';
-    html += '<input type="password" id="new-password" placeholder="New password">';
+    var html = '<div class="change-password-modal">';
+    html += '<div class="modal-header">';
+    html += '<h3>Change Password</h3>';
+    html += '<button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>';
+    html += '</div>';
+    html += '<div class="form-group">';
+    html += '<label for="current-password">Current Password</label>';
+    html += '<input type="password" id="current-password" placeholder="Enter current password">';
+    html += '</div>';
+    html += '<div class="form-group">';
+    html += '<label for="new-password">New Password</label>';
+    html += '<input type="password" id="new-password" placeholder="Enter new password">';
+    html += '</div>';
+    html += '<div class="form-group">';
+    html += '<label for="confirm-new-password">Confirm New Password</label>';
     html += '<input type="password" id="confirm-new-password" placeholder="Confirm new password">';
-    html += '<button class="btn btn-primary" onclick="changePassword()">Change Password</button>';
+    html += '</div>';
+    html += '<button class="btn btn-primary" onclick="changePassword()">Update Password</button>';
     html += '</div>';
     showModal(html);
+    setTimeout(function() {
+        var el = document.getElementById('current-password');
+        if (el) el.focus();
+    }, 100);
 }
 
 function changePassword() {
@@ -7034,6 +7051,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     var feedPostImageData = null;
     var currentCommentsPostId = null;
+    var selectedFeeling = null;
 
     function initFeed() {
         var composerTrigger = document.getElementById('composer-trigger');
@@ -7043,24 +7061,44 @@ document.addEventListener('DOMContentLoaded', function() {
         var postImageBtn = document.getElementById('post-image-btn');
         var postImageInput = document.getElementById('post-image-input');
         var removeImageBtn = document.getElementById('remove-composer-image');
+        var closeComposer = document.getElementById('close-composer');
+        var postFeelingBtn = document.getElementById('post-feeling-btn');
+        var composerActionPhoto = document.getElementById('composer-action-photo');
+        var composerActionFeeling = document.getElementById('composer-action-feeling');
+        var emptyCreatePost = document.getElementById('empty-create-post');
+        var storyAdd = document.getElementById('story-add');
 
         if (!composerTrigger) return;
 
-        composerTrigger.onclick = function() {
+        function openComposer() {
             composerTrigger.style.display = 'none';
+            var quickActions = composerTrigger.parentElement.querySelector('.composer-quick-actions');
+            var divider = composerTrigger.parentElement.querySelector('.composer-divider');
+            if (quickActions) quickActions.style.display = 'none';
+            if (divider) divider.style.display = 'none';
             composerExpanded.style.display = 'block';
             postContent.focus();
-            updateComposerAvatar();
-        };
+            updateComposerAvatars();
+            updateComposerUsername();
+        }
 
-        postContent.onblur = function() {
-            setTimeout(function() {
-                if (!postContent.value.trim() && !feedPostImageData) {
-                    composerExpanded.style.display = 'none';
-                    composerTrigger.style.display = 'flex';
-                }
-            }, 200);
-        };
+        function closeComposerFn() {
+            composerExpanded.style.display = 'none';
+            composerTrigger.style.display = 'flex';
+            var quickActions = composerTrigger.parentElement.querySelector('.composer-quick-actions');
+            var divider = composerTrigger.parentElement.querySelector('.composer-divider');
+            if (quickActions) quickActions.style.display = 'flex';
+            if (divider) divider.style.display = 'block';
+            document.getElementById('composer-feeling-bar').style.display = 'none';
+            selectedFeeling = null;
+        }
+
+        composerTrigger.onclick = openComposer;
+        if (storyAdd) storyAdd.onclick = openComposer;
+        if (emptyCreatePost) emptyCreatePost.onclick = openComposer;
+        if (composerActionPhoto) composerActionPhoto.onclick = function() { openComposer(); postImageInput.click(); };
+        if (composerActionFeeling) composerActionFeeling.onclick = function() { openComposer(); document.getElementById('composer-feeling-bar').style.display = 'flex'; };
+        if (closeComposer) closeComposer.onclick = closeComposerFn;
 
         postContent.oninput = function() {
             postSubmitBtn.disabled = !postContent.value.trim() && !feedPostImageData;
@@ -7075,21 +7113,42 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.onload = function(ev) {
                 feedPostImageData = ev.target.result;
                 document.getElementById('composer-preview-img').src = feedPostImageData;
-                document.getElementById('composer-image-preview').style.display = 'block';
+                document.getElementById('composer-attachment-preview').style.display = 'block';
                 postSubmitBtn.disabled = false;
             };
             reader.readAsDataURL(file);
             postImageInput.value = '';
         };
 
-        removeImageBtn.onclick = function() {
-            feedPostImageData = null;
-            document.getElementById('composer-image-preview').style.display = 'none';
-            postSubmitBtn.disabled = !postContent.value.trim();
-        };
+        if (removeImageBtn) {
+            removeImageBtn.onclick = function() {
+                feedPostImageData = null;
+                document.getElementById('composer-attachment-preview').style.display = 'none';
+                postSubmitBtn.disabled = !postContent.value.trim();
+            };
+        }
+
+        // Feeling buttons
+        if (postFeelingBtn) {
+            postFeelingBtn.onclick = function() {
+                var bar = document.getElementById('composer-feeling-bar');
+                bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
+            };
+        }
+
+        document.querySelectorAll('.feeling-option').forEach(function(btn) {
+            btn.onclick = function() {
+                document.querySelectorAll('.feeling-option').forEach(function(b) { b.classList.remove('selected'); });
+                this.classList.add('selected');
+                selectedFeeling = this.dataset.feeling;
+            };
+        });
 
         postSubmitBtn.onclick = function() {
             var content = postContent.value.trim();
+            if (selectedFeeling) {
+                content = (content ? content + '\n' : '') + 'Feeling ' + selectedFeeling;
+            }
             if (!content && !feedPostImageData) return;
             createPost(content, feedPostImageData);
         };
@@ -7097,13 +7156,23 @@ document.addEventListener('DOMContentLoaded', function() {
         loadFeed();
     }
 
-    function updateComposerAvatar() {
-        var avatar = document.getElementById('composer-avatar');
-        if (!avatar || !currentUser) return;
-        if (currentUser.avatar) {
-            avatar.innerHTML = '<img src="' + escapeHtml(currentUser.avatar) + '" alt="Avatar">';
-        } else {
-            avatar.innerHTML = '<i class="fas fa-user"></i>';
+    function updateComposerAvatars() {
+        var avatars = ['composer-avatar', 'composer-avatar-2'];
+        avatars.forEach(function(id) {
+            var avatar = document.getElementById(id);
+            if (!avatar || !currentUser) return;
+            if (currentUser.avatar) {
+                avatar.innerHTML = '<img src="' + escapeHtml(currentUser.avatar) + '" alt="Avatar">';
+            } else {
+                avatar.innerHTML = '<i class="fas fa-user"></i>';
+            }
+        });
+    }
+
+    function updateComposerUsername() {
+        var el = document.getElementById('composer-username');
+        if (el && currentUser) {
+            el.textContent = currentUser.name || currentUser.username || 'User';
         }
     }
 
@@ -7119,18 +7188,29 @@ document.addEventListener('DOMContentLoaded', function() {
             visibility: 'public',
             likes: {},
             comments: [],
+            shares: 0,
             createdAt: new Date().toISOString()
         };
         var posts = Storage.get('posts') || [];
         posts.unshift(post);
         Storage.set('posts', posts);
         if (DB.isReady()) { DB.createPost(post); }
+
+        // Reset composer
         document.getElementById('post-content').value = '';
         feedPostImageData = null;
-        document.getElementById('composer-image-preview').style.display = 'none';
+        selectedFeeling = null;
+        document.getElementById('composer-attachment-preview').style.display = 'none';
+        document.getElementById('composer-feeling-bar').style.display = 'none';
         document.getElementById('composer-expanded').style.display = 'none';
         document.getElementById('composer-trigger').style.display = 'flex';
+        var quickActions = document.querySelector('.composer-quick-actions');
+        var divider = document.querySelector('.composer-divider');
+        if (quickActions) quickActions.style.display = 'flex';
+        if (divider) divider.style.display = 'block';
         document.getElementById('post-submit-btn').disabled = true;
+        document.querySelectorAll('.feeling-option').forEach(function(b) { b.classList.remove('selected'); });
+
         renderFeed();
         if (firebaseDb) { firebaseDb.ref('posts/' + post.id).set(post); }
         showToast('Posting published!', 'success');
@@ -7197,6 +7277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var timeAgo = getTimeAgo(post.createdAt);
         var likeCount = post.likes ? Object.keys(post.likes).length : 0;
         var commentCount = post.comments ? post.comments.length : 0;
+        var shareCount = post.shares || 0;
         var isLiked = currentUser && post.likes && post.likes[currentUser.id];
         var avatarHtml;
         if (post.userAvatar) {
@@ -7205,37 +7286,66 @@ document.addEventListener('DOMContentLoaded', function() {
             var initial = (post.userName || 'U').charAt(0).toUpperCase();
             avatarHtml = '<div class="post-avatar">' + initial + '</div>';
         }
+
         var html = '<div class="post-card" data-post-id="' + post.id + '">';
         html += '<div class="post-header">';
         html += avatarHtml;
         html += '<div class="post-user-info">';
         html += '<div class="post-user-name">' + escapeHtml(post.userName || 'User') + '</div>';
-        html += '<div class="post-meta">' + timeAgo + '</div>';
+        html += '<div class="post-meta"><i class="fas fa-globe-americas"></i> ' + timeAgo + '</div>';
         html += '</div>';
         if (isOwner) {
             html += '<div style="position:relative;">';
             html += '<button class="post-menu-btn" data-post-id="' + post.id + '"><i class="fas fa-ellipsis-h"></i></button>';
             html += '<div class="post-context-menu" id="menu-' + post.id + '" style="display:none;">';
-            html += '<button class="delete-post-btn" data-post-id="' + post.id + '"><i class="fas fa-trash"></i> Delete Post</button>';
+            html += '<button class="edit-post-btn" data-post-id="' + post.id + '"><i class="fas fa-pencil-alt"></i> Edit Post</button>';
+            html += '<button class="delete-post-btn danger" data-post-id="' + post.id + '"><i class="fas fa-trash"></i> Delete Post</button>';
+            html += '</div></div>';
+        } else {
+            html += '<div style="position:relative;">';
+            html += '<button class="post-menu-btn" data-post-id="' + post.id + '"><i class="fas fa-ellipsis-h"></i></button>';
+            html += '<div class="post-context-menu" id="menu-' + post.id + '" style="display:none;">';
+            html += '<button onclick="showToast(\'Post reported\',\'info\')"><i class="fas fa-flag"></i> Report Post</button>';
             html += '</div></div>';
         }
         html += '</div>';
+
+        // Body
         html += '<div class="post-body">';
         if (post.content) html += '<div class="post-text">' + escapeHtml(post.content) + '</div>';
         if (post.imageUrl) html += '<div class="post-image"><img src="' + post.imageUrl + '" alt="Post image"></div>';
         html += '</div>';
-        if (likeCount > 0 || commentCount > 0) {
+
+        // Stats row
+        if (likeCount > 0 || commentCount > 0 || shareCount > 0) {
             html += '<div class="post-stats">';
             html += '<div class="post-stats-left">';
-            if (likeCount > 0) html += '<div class="reaction-icons"><span style="background:#6366f1;color:#fff;">👍</span></div> ' + likeCount;
+            if (likeCount > 0) {
+                html += '<div class="reaction-icons"><span style="background:#1877f2;">👍</span></div>';
+                html += '<span>' + likeCount + '</span>';
+            }
             html += '</div>';
-            if (commentCount > 0) html += '<div class="post-stats-right" data-toggle-comments="' + post.id + '">' + commentCount + ' comment' + (commentCount !== 1 ? 's' : '') + '</div>';
+            html += '<div class="post-stats-right">';
+            if (commentCount > 0) html += '<span data-toggle-comments="' + post.id + '">' + commentCount + ' comment' + (commentCount !== 1 ? 's' : '') + '</span>';
+            if (shareCount > 0) html += '<span>' + shareCount + ' share' + (shareCount !== 1 ? 's' : '') + '</span>';
+            html += '</div>';
             html += '</div>';
         }
+
+        // Actions bar
         html += '<div class="post-actions-bar">';
-        html += '<button class="post-action-btn like-btn' + (isLiked ? ' liked' : '') + '" data-post-id="' + post.id + '"><i class="fas fa-thumbs-up"></i> ' + (isLiked ? 'Liked' : 'Like') + '</button>';
-        html += '<button class="post-action-btn comment-btn" data-post-id="' + post.id + '"><i class="fas fa-comment"></i> Comment</button>';
+        html += '<button class="post-action-btn like-btn' + (isLiked ? ' liked' : '') + '" data-post-id="' + post.id + '">';
+        html += '<i class="fas fa-thumbs-up"></i> ' + (isLiked ? 'Liked' : 'Like');
+        html += '</button>';
+        html += '<button class="post-action-btn comment-btn" data-post-id="' + post.id + '">';
+        html += '<i class="fas fa-comment"></i> Comment';
+        html += '</button>';
+        html += '<button class="post-action-btn share-btn" data-post-id="' + post.id + '">';
+        html += '<i class="fas fa-share"></i> Share';
+        html += '</button>';
         html += '</div>';
+
+        // Comments section
         html += '<div class="post-comments-section" id="comments-' + post.id + '" style="display:none;">';
         var commentAvatarHtml;
         if (currentUser && currentUser.avatar) {
@@ -7253,13 +7363,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (post.comments && post.comments.length > 0) {
             var visibleComments = post.comments.slice(-3);
             if (post.comments.length > 3) html += '<button class="view-more-comments" data-post-id="' + post.id + '">View ' + (post.comments.length - 3) + ' more comments</button>';
-            visibleComments.forEach(function(c) { html += renderComment(c); });
+            visibleComments.forEach(function(c) { html += renderComment(c, post.id); });
         }
         html += '</div></div></div>';
         return html;
     }
 
-    function renderComment(comment) {
+    function renderComment(comment, postId) {
         var cAvatarHtml;
         if (comment.userAvatar) {
             cAvatarHtml = '<div class="comment-avatar"><img src="' + escapeHtml(comment.userAvatar) + '" alt=""></div>';
@@ -7267,12 +7377,21 @@ document.addEventListener('DOMContentLoaded', function() {
             var initial = (comment.userName || 'U').charAt(0).toUpperCase();
             cAvatarHtml = '<div class="comment-avatar">' + initial + '</div>';
         }
+        var isLikedComment = comment.likedBy && currentUser && comment.likedBy[currentUser.id];
+        var likeCountComment = comment.likedBy ? Object.keys(comment.likedBy).length : 0;
+
         var html = '<div class="comment-item">';
         html += cAvatarHtml;
-        html += '<div><div class="comment-bubble">';
+        html += '<div>';
+        html += '<div class="comment-bubble">';
         html += '<div class="comment-author">' + escapeHtml(comment.userName || 'User') + '</div>';
         html += '<div class="comment-text">' + escapeHtml(comment.content) + '</div>';
-        html += '</div><div class="comment-time">' + getTimeAgo(comment.createdAt) + '</div></div></div>';
+        html += '</div>';
+        html += '<div class="comment-actions-row">';
+        html += '<button class="comment-action-link' + (isLikedComment ? ' liked' : '') + '" data-comment-like="' + comment.id + '" data-post-id="' + postId + '">Like' + (likeCountComment > 0 ? ' (' + likeCountComment + ')' : '') + '</button>';
+        html += '<button class="comment-action-link" data-comment-reply="' + comment.id + '" data-post-id="' + postId + '">Reply</button>';
+        html += '<span class="comment-action-link">' + getTimeAgo(comment.createdAt) + '</span>';
+        html += '</div></div></div>';
         return html;
     }
 
@@ -7289,6 +7408,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!isVisible) { var input = section.querySelector('.comment-text-input'); if (input) input.focus(); }
                 }
             };
+        });
+        document.querySelectorAll('.share-btn').forEach(function(btn) {
+            btn.onclick = function() { sharePost(this.dataset.postId); };
         });
         document.querySelectorAll('[data-toggle-comments]').forEach(function(el) {
             el.onclick = function() {
@@ -7316,6 +7438,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 };
             }
+        });
+        document.querySelectorAll('.comment-action-link[data-comment-like]').forEach(function(btn) {
+            btn.onclick = function() {
+                toggleCommentLike(this.dataset.postId, this.dataset.commentLike);
+            };
         });
         document.querySelectorAll('.post-menu-btn').forEach(function(btn) {
             btn.onclick = function(e) {
@@ -7377,6 +7504,55 @@ document.addEventListener('DOMContentLoaded', function() {
         var html = '';
         post.comments.forEach(function(c) { html += renderComment(c); });
         list.innerHTML = html;
+    }
+
+    function sharePost(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post) return;
+
+        post.shares = (post.shares || 0) + 1;
+        Storage.set('posts', posts);
+        renderFeed();
+
+        // Try native share
+        if (navigator.share) {
+            navigator.share({
+                title: 'BSITHUB Post',
+                text: post.content || 'Check out this post!',
+                url: window.location.href
+            }).catch(function() {});
+        } else {
+            showToast('Post shared!', 'success');
+        }
+
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/shares').set(post.shares); }
+    }
+
+    function toggleCommentLike(postId, commentId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !post.comments || !currentUser) return;
+
+        var comment = post.comments.find(function(c) { return c.id === commentId; });
+        if (!comment) return;
+
+        if (!comment.likedBy) comment.likedBy = {};
+
+        if (comment.likedBy[currentUser.id]) {
+            delete comment.likedBy[currentUser.id];
+        } else {
+            comment.likedBy[currentUser.id] = true;
+        }
+
+        Storage.set('posts', posts);
+        renderFeed();
+
+        // Keep comments section open
+        var section = document.getElementById('comments-' + postId);
+        if (section) section.style.display = 'block';
+
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/comments').set(post.comments); }
     }
 
     function deletePost(postId) {

@@ -432,50 +432,103 @@
 
                 <!-- Postings Section -->
                 <section id="feed-section" class="content-section">
-                    <div class="section-header">
-                        <h2><i class="fas fa-clipboard-list"></i> Postings</h2>
-                    </div>
                     <div class="feed-container">
                         <!-- Post Composer -->
                         <div class="post-composer">
-                            <div class="composer-header">
+                            <div class="composer-top">
                                 <div class="composer-avatar" id="composer-avatar">
                                     <i class="fas fa-user"></i>
                                 </div>
                                 <div class="composer-input-wrapper" id="composer-trigger">
-                                    <span class="composer-placeholder">What's on your mind?</span>
+                                    <span>What's on your mind?</span>
                                 </div>
                             </div>
-                            <div class="composer-expanded" id="composer-expanded" style="display: none;">
-                                <textarea id="post-content" placeholder="What's on your mind?" rows="3"></textarea>
-                                <div class="composer-image-preview" id="composer-image-preview" style="display: none;">
-                                    <img id="composer-preview-img" src="" alt="Preview">
-                                    <button class="btn-icon remove-image" id="remove-composer-image"><i class="fas fa-times"></i></button>
-                                </div>
-                                <div class="composer-actions">
-                                    <div class="composer-tools">
-                                        <button class="btn-icon" title="Photo" id="post-image-btn">
-                                            <i class="fas fa-image"></i>
-                                        </button>
-                                        <input type="file" id="post-image-input" accept="image/*" style="display: none;">
+                            <div class="composer-divider"></div>
+                            <div class="composer-quick-actions">
+                                <button class="composer-action-btn" id="composer-action-photo">
+                                    <i class="fas fa-image" style="color:#45bd62;"></i>
+                                    <span>Photo/Video</span>
+                                </button>
+                                <button class="composer-action-btn" id="composer-action-feeling">
+                                    <i class="fas fa-smile" style="color:#f7b928;"></i>
+                                    <span>Feeling</span>
+                                </button>
+                                <button class="composer-action-btn" id="composer-action-gif">
+                                    <i class="fas fa-file-image" style="color:#f35369;"></i>
+                                    <span>GIF</span>
+                                </button>
+                            </div>
+                            <div class="composer-expanded" id="composer-expanded" style="display:none;">
+                                <div class="composer-expanded-header">
+                                    <div class="composer-avatar" id="composer-avatar-2">
+                                        <i class="fas fa-user"></i>
                                     </div>
-                                    <button class="btn btn-primary" id="post-submit-btn" disabled>
-                                        <i class="fas fa-paper-plane"></i> Post
+                                    <div class="composer-user-info">
+                                        <span class="composer-username" id="composer-username">User</span>
+                                        <select class="composer-privacy-select" id="post-privacy">
+                                            <option value="public">🌍 Public</option>
+                                            <option value="friends">👥 Friends</option>
+                                            <option value="private">🔒 Only Me</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn-icon close-composer" id="close-composer">
+                                        <i class="fas fa-times"></i>
                                     </button>
                                 </div>
+                                <textarea id="post-content" placeholder="What's on your mind?" rows="4"></textarea>
+                                <div class="composer-feeling-bar" id="composer-feeling-bar" style="display:none;">
+                                    <span class="feeling-label">Feeling:</span>
+                                    <div class="feeling-options">
+                                        <button class="feeling-option" data-feeling="😊 Happy">😊</button>
+                                        <button class="feeling-option" data-feeling="😢 Sad">😢</button>
+                                        <button class="feeling-option" data-feeling="😍 Love">😍</button>
+                                        <button class="feeling-option" data-feeling="🔥 Fire">🔥</button>
+                                        <button class="feeling-option" data-feeling="😮 Wow">😮</button>
+                                        <button class="feeling-option" data-feeling="😂 Laughing">😂</button>
+                                        <button class="feeling-option" data-feeling="🤔 Thinking">🤔</button>
+                                        <button class="feeling-option" data-feeling="🎉 Party">🎉</button>
+                                    </div>
+                                </div>
+                                <div class="composer-attachment-preview" id="composer-attachment-preview" style="display:none;">
+                                    <div class="attachment-wrapper">
+                                        <img id="composer-preview-img" src="" alt="Preview">
+                                        <button class="remove-attachment" id="remove-composer-image">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="composer-add-to-post">
+                                    <span>Add to your post</span>
+                                    <div class="composer-add-buttons">
+                                        <button class="add-btn" title="Photo/Video" id="post-image-btn">
+                                            <i class="fas fa-image" style="color:#45bd62;"></i>
+                                        </button>
+                                        <input type="file" id="post-image-input" accept="image/*" style="display:none;">
+                                        <button class="add-btn" title="Feeling" id="post-feeling-btn">
+                                            <i class="fas fa-smile" style="color:#f7b928;"></i>
+                                        </button>
+                                        <button class="add-btn" title="Location" id="post-location-btn">
+                                            <i class="fas fa-map-marker-alt" style="color:#f35369;"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button class="btn-post" id="post-submit-btn" disabled>Post</button>
                             </div>
                         </div>
 
                         <!-- Feed -->
                         <div class="feed-list" id="feed-list"></div>
-                        <div class="feed-loading" id="feed-loading" style="display: none;">
-                            <div class="spinner"></div>
-                            <span>Loading posts...</span>
+                        <div class="feed-loading" id="feed-loading" style="display:none;">
+                            <div class="loading-pulse"></div>
+                            <span>Loading postings...</span>
                         </div>
-                        <div class="feed-empty" id="feed-empty" style="display: none;">
-                            <i class="fas fa-newspaper"></i>
+                        <div class="feed-empty" id="feed-empty" style="display:none;">
+                            <div class="empty-icon"><i class="fas fa-pen-fancy"></i></div>
                             <h3>No postings yet</h3>
                             <p>Be the first to share something with everyone!</p>
+                            <button class="btn btn-primary" id="empty-create-post">
+                                <i class="fas fa-plus"></i> Create Post
+                            </button>
                         </div>
                     </div>
                 </section>
