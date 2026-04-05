@@ -6748,12 +6748,6 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = false;
             return false;
         }
-            generateCaptcha();
-            document.getElementById('captcha-input').value = '';
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            return false;
-        }
         
         // Handle remember me
         var rememberMe = document.getElementById('remember-me');
