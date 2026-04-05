@@ -8677,18 +8677,67 @@ document.addEventListener('DOMContentLoaded', function() {
         var posts = Storage.get('posts') || [];
         var post = posts.find(function(p) { return p.id === postId; });
         if (!post) return;
+        
         var postEl = document.querySelector('.post-card[data-post-id="' + postId + '"]');
-        if (!postEl) {
-            renderFeed();
-            return;
+        if (!postEl) return;
+        
+        // Update reaction/like button only - no full re-render
+        var myReaction = currentUser && post.reactions ? post.reactions[currentUser.id] : null;
+        var isLiked = !!myReaction;
+        var totalReactions = getTotalReactions(post.reactions || post.likes);
+        var topReactions = getTopReactions(post.reactions || post.likes);
+        
+        // Update like button
+        var likeBtn = postEl.querySelector('.like-btn');
+        if (likeBtn) {
+            if (isLiked) {
+                likeBtn.classList.add('liked');
+                var label = REACTION_EMOJIS[myReaction] + ' ' + (REACTION_LABELS[myReaction] || 'Like');
+                likeBtn.innerHTML = label;
+            } else {
+                likeBtn.classList.remove('liked');
+                likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i> Like';
+            }
         }
-        var newHtml = renderPostCard(post);
-        var tempDiv = document.createElement('div');
-        tempDiv.innerHTML = newHtml;
-        var newPostEl = tempDiv.querySelector('.post-card');
-        if (newPostEl) {
-            postEl.replaceWith(newPostEl);
-            bindPostEvents();
+        
+        // Update reaction count
+        var statsLeft = postEl.querySelector('.post-stats-left');
+        if (statsLeft) {
+            if (totalReactions > 0) {
+                var reactionsHtml = '<div class="reaction-icons">';
+                topReactions.forEach(function(r) {
+                    reactionsHtml += '<span>' + (REACTION_EMOJIS[r] || '👍') + '</span>';
+                });
+                reactionsHtml += '</div><span>' + totalReactions + '</span>';
+                statsLeft.innerHTML = reactionsHtml;
+            } else {
+                statsLeft.innerHTML = '';
+            }
+        }
+        
+        // Update comment count
+        var commentCount = post.comments ? post.comments.length : 0;
+        var commentBtn = postEl.querySelector('.comment-btn');
+        if (commentBtn) {
+            commentBtn.innerHTML = '<i class="fas fa-comment"></i> Comment';
+        }
+        
+        // Update comments list if visible
+        var commentsSection = postEl.querySelector('#comments-' + postId);
+        if (commentsSection && commentsSection.style.display !== 'none') {
+            var commentsList = postEl.querySelector('#comments-list-' + postId);
+            if (commentsList) {
+                var html = '';
+                if (post.comments && post.comments.length > 0) {
+                    var visibleComments = post.comments.slice(-3);
+                    if (post.comments.length > 3) {
+                        html += '<button class="view-more-comments" data-post-id="' + postId + '">View ' + (post.comments.length - 3) + ' more comments</button>';
+                    }
+                    visibleComments.forEach(function(c) { html += renderComment(c, postId); });
+                }
+                commentsList.innerHTML = html;
+                bindPostEvents();
+            }
         }
     }
 
