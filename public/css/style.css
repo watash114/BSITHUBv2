@@ -6583,38 +6583,115 @@ body {
 /* Auto-logout Warning */
 .auto-logout-warning {
     position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--warning);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 12px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
     z-index: 1000;
-    animation: slideDown 0.3s ease;
-    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+    animation: fadeIn 0.3s ease;
+    backdrop-filter: blur(4px);
 }
 
-.auto-logout-warning button {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    padding: 6px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
+.auto-logout-content {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: scaleIn 0.3s ease;
+}
+
+.auto-logout-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(245, 158, 11, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.auto-logout-icon i {
+    font-size: 28px;
+    color: var(--warning);
+}
+
+.auto-logout-text h4 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.auto-logout-text p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+#logout-countdown {
+    font-weight: 700;
+    color: var(--warning);
+    font-size: 16px;
+    transition: color 0.3s;
+}
+
+.auto-logout-progress {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px 0;
+    overflow: hidden;
+}
+
+.auto-logout-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--warning), var(--danger));
+    border-radius: 2px;
+    transition: width 1s linear;
+    width: 100%;
+}
+
+.auto-logout-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.auto-logout-actions .btn {
+    min-width: 120px;
+}
+
+.auto-logout-actions .btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.auto-logout-actions .btn:not(.btn-primary) {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
 }
 
 .auto-logout-warning button:hover {
-    background: rgba(255,255,255,0.3);
+    opacity: 0.9;
 }
 
-@keyframes slideDown {
-    from { transform: translate(-50%, -100%); opacity: 0; }
-    to { transform: translate(-50%, 0); opacity: 1; }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
 /* Screenshot Protection Overlay */

@@ -6512,13 +6512,41 @@ document.addEventListener('DOMContentLoaded', function() {
         if (autoLogoutWarningShown) return;
         autoLogoutWarningShown = true;
         
+        var countdown = 60;
         var warning = document.createElement('div');
         warning.className = 'auto-logout-warning';
-        warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>You will be logged out in 1 minute due to inactivity</span> <button onclick="resetAutoLogoutTimer()">Stay Active</button>';
+        warning.innerHTML = '<div class="auto-logout-content">' +
+            '<div class="auto-logout-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+            '<div class="auto-logout-text">' +
+            '<h4>Session Expiring</h4>' +
+            '<p>You will be logged out in <span id="logout-countdown">' + countdown + '</span> seconds due to inactivity</p>' +
+            '<div class="auto-logout-progress"><div class="auto-logout-bar" id="logout-bar"></div></div>' +
+            '</div>' +
+            '<div class="auto-logout-actions">' +
+            '<button class="btn btn-primary" onclick="resetAutoLogoutTimer()">Stay Active</button>' +
+            '<button class="btn" onclick="logout()">Logout Now</button>' +
+            '</div>' +
+            '</div>';
         document.body.appendChild(warning);
         
-        // Auto logout after 1 more minute
+        // Animate progress bar
+        var bar = document.getElementById('logout-bar');
+        if (bar) bar.style.width = '100%';
+        
+        // Countdown timer
+        var countdownInterval = setInterval(function() {
+            countdown--;
+            var el = document.getElementById('logout-countdown');
+            if (el) el.textContent = countdown;
+            if (bar) bar.style.width = (countdown / 60 * 100) + '%';
+            
+            if (countdown <= 10 && el) el.style.color = '#ef4444';
+            if (countdown <= 0) clearInterval(countdownInterval);
+        }, 1000);
+        
+        // Auto logout after countdown
         setTimeout(function() {
+            clearInterval(countdownInterval);
             if (autoLogoutWarningShown) {
                 logout();
             }
