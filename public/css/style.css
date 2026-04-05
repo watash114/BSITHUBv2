@@ -1762,12 +1762,16 @@ body {
 
 .message {
     max-width: 75%;
-    padding: 8px 12px 6px;
+    padding: 10px 14px 8px;
     border-radius: 18px;
     position: relative;
     animation: messageSlide 0.25s ease;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-    transition: transform 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.message:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
 @keyframes messageSlide {
@@ -1789,7 +1793,7 @@ body {
 }
 
 .message.sent {
-    background: var(--primary);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 6px;
@@ -1858,8 +1862,8 @@ body {
 }
 
 .message-text {
-    font-size: 14.5px;
-    line-height: 1.45;
+    font-size: 15px;
+    line-height: 1.5;
     word-wrap: break-word;
     white-space: normal;
     overflow-wrap: break-word;
@@ -1867,7 +1871,8 @@ body {
 }
 
 .message.sent .message-text {
-    color: rgba(255,255,255,0.95);
+    color: white;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
 
 .message.received .message-text {
@@ -1875,10 +1880,15 @@ body {
 }
 
 .message-text .mention {
-    background: rgba(99, 102, 241, 0.3);
-    padding: 0 4px;
+    background: rgba(255,255,255,0.2);
+    padding: 1px 6px;
     border-radius: 4px;
-    font-weight: 500;
+    font-weight: 600;
+}
+
+.message.received .message-text .mention {
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--primary);
 }
 
 .message-image {
@@ -4964,17 +4974,17 @@ body {
 
 .message.sent .message-bubble {
     background: transparent;
-    color: var(--text-primary);
+    color: white;
     margin-left: auto;
     border-radius: 0;
-    padding: 2px 5px;
+    padding: 4px 6px;
 }
 
 .message.received .message-bubble {
     background: transparent;
     margin-right: auto;
     border-radius: 0;
-    padding: 2px 5px;
+    padding: 4px 6px;
 }
 
 /* Reduce padding for audio/file messages */
@@ -5031,13 +5041,13 @@ body {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 4px;
-    margin-top: 2px;
+    gap: 5px;
+    margin-top: 4px;
     font-size: 11px;
 }
 
 .message.sent .message-footer {
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.8);
 }
 
 .message.received .message-footer {
@@ -5046,12 +5056,21 @@ body {
 
 .message-time {
     font-size: 11px;
+    font-weight: 500;
 }
 
 .message-status {
     font-size: 13px;
     line-height: 1;
     margin-left: 1px;
+}
+
+.message.sent .message-status {
+    color: rgba(255,255,255,0.9);
+}
+
+.message.sent .message-status.read {
+    color: #4ade80;
 }
 
 .message.received .message-status {
