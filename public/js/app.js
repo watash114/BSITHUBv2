@@ -10093,8 +10093,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (chat.participants.indexOf(currentUser.id) !== -1) {
-            showToast('You are already in this group', 'info');
-            openChat(chat.id, currentUser.id);
+            // Already in group - refresh chats and open
+            loadChats();
+            setTimeout(function() {
+                openChat(chat.id, currentUser.id);
+            }, 300);
+            showToast('Opening group chat...', 'info');
             window.location.hash = '';
             return;
         }
@@ -10109,9 +10113,13 @@ document.addEventListener('DOMContentLoaded', function() {
             syncChat(chat);
         }
         
-        showToast('You joined ' + (chat.groupName || 'the group') + '!', 'success');
-        openChat(chat.id, currentUser.id);
+        // Refresh chats first, then open
         loadChats();
+        setTimeout(function() {
+            openChat(chat.id, currentUser.id);
+        }, 300);
+        
+        showToast('You joined ' + (chat.groupName || 'the group') + '!', 'success');
         window.location.hash = '';
     };
 });
