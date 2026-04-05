@@ -2129,7 +2129,16 @@ function renderMessages(chatId) {
         }
         // Check for voice message (audioData field)
         else if (msg.audioData) {
-            html += '<div class="message-voice"><div class="voice-icon"><i class="fas fa-microphone"></i></div><audio controls src="' + msg.audioData + '"></audio></div>';
+            html += '<div class="message-voice" data-audio="' + msg.id + '">';
+            html += '<button class="voice-play-btn" onclick="playVoiceMessage(this, \'' + msg.audioData + '\')"><i class="fas fa-play"></i></button>';
+            html += '<div class="voice-waveform" id="waveform-' + msg.id + '">';
+            for (var w = 0; w < 30; w++) {
+                var h = Math.random() * 60 + 20;
+                html += '<span style="height:' + h + '%"></span>';
+            }
+            html += '</div>';
+            html += '<span class="voice-duration">0:00</span>';
+            html += '</div>';
         }
         // Check for file
         else if (msg.fileData) {
@@ -8882,10 +8891,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var topReactions = getTopReactions(post.reactions || post.likes);
         var avatarHtml;
         if (post.userAvatar) {
-            avatarHtml = '<div class="post-avatar"><img src="' + escapeHtml(post.userAvatar) + '" alt="Avatar"></div>';
+            avatarHtml = '<div class="post-avatar" onclick="showUserProfile(\'' + post.userId + '\')"><img src="' + escapeHtml(post.userAvatar) + '" alt="Avatar"></div>';
         } else {
             var initial = (post.userName || 'U').charAt(0).toUpperCase();
-            avatarHtml = '<div class="post-avatar">' + initial + '</div>';
+            avatarHtml = '<div class="post-avatar" onclick="showUserProfile(\'' + post.userId + '\')">' + initial + '</div>';
         }
 
         var privacyIcon = 'fa-globe-americas';
@@ -8896,7 +8905,7 @@ document.addEventListener('DOMContentLoaded', function() {
         html += '<div class="post-header">';
         html += avatarHtml;
         html += '<div class="post-user-info">';
-        html += '<div class="post-user-name">' + escapeHtml(post.userName || 'User') + '</div>';
+        html += '<div class="post-user-name" onclick="showUserProfile(\'' + post.userId + '\')">' + escapeHtml(post.userName || 'User') + '</div>';
         html += '<div class="post-meta"><i class="fas ' + privacyIcon + '"></i> ' + timeAgo + '</div>';
         html += '</div>';
         if (isOwner) {
@@ -8983,10 +8992,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderComment(comment, postId) {
         var cAvatarHtml;
         if (comment.userAvatar) {
-            cAvatarHtml = '<div class="comment-avatar"><img src="' + escapeHtml(comment.userAvatar) + '" alt=""></div>';
+            cAvatarHtml = '<div class="comment-avatar" onclick="showUserProfile(\'' + comment.userId + '\')"><img src="' + escapeHtml(comment.userAvatar) + '" alt=""></div>';
         } else {
             var initial = (comment.userName || 'U').charAt(0).toUpperCase();
-            cAvatarHtml = '<div class="comment-avatar">' + initial + '</div>';
+            cAvatarHtml = '<div class="comment-avatar" onclick="showUserProfile(\'' + comment.userId + '\')">' + initial + '</div>';
         }
         var isLikedComment = comment.likedBy && currentUser && comment.likedBy[currentUser.id];
         var likeCountComment = comment.likedBy ? Object.keys(comment.likedBy).length : 0;
@@ -9068,6 +9077,162 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             showToast('User not found', 'info');
         }
+    };
+
+    window.showUserProfile = function(userId) {
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === userId; });
+        if (!user) {
+            showToast('User not found', 'info');
+            return;
+        }
+
+        var isOnline = user.isOnline || false;
+        var statusText = isOnline ? 'Online' : 'Last seen ' + getTimeAgo(user.lastSeen || user.updatedAt);
+        var isBlocked = currentUser && currentUser.blockedUsers && currentUser.blockedUsers.indexOf(userId) !== -1;
+        
+        var html = '<div class="user-profile-popup">';
+        html += '<div class="profile-popup-header">';
+        html += '<button class="close-popup-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>';
+        html += '</div>';
+        
+        // Avatar
+        if (user.avatar) {
+            html += '<div class="profile-popup-avatar"><img src="' + escapeHtml(user.avatar) + '" alt="Avatar"></div>';
+        } else {
+            var initial = (user.name || user.username || 'U').charAt(0).toUpperCase();
+            html += '<div class="profile-popup-avatar">' + initial + '</div>';
+        }
+        
+        html += '<h3 class="profile-popup-name">' + escapeHtml(user.name || user.username || 'User') + '</h3>';
+        html += '<p class="profile-popup-username">@' + escapeHtml(user.username || 'user') + '</p>';
+        
+        // Online status
+        html += '<div class="profile-popup-status ' + (isOnline ? 'online' : 'offline') + '">';
+        html += '<span class="status-dot"></span>';
+        html += '<span>' + statusText + '</span>';
+        html += '</div>';
+        
+        // Bio/About
+        if (user.bio) {
+            html += '<div class="profile-popup-bio">' + escapeHtml(user.bio) + '</div>';
+        }
+        
+        // Stats
+        var userMessages = (Storage.get('messages') || []).filter(function(m) { return m.senderId === userId; });
+        var userPosts = (Storage.get('posts') || []).filter(function(p) { return p.userId === userId; });
+        
+        html += '<div class="profile-popup-stats">';
+        html += '<div class="stat-item"><span class="stat-value">' + userMessages.length + '</span><span class="stat-label">Messages</span></div>';
+        html += '<div class="stat-item"><span class="stat-value">' + userPosts.length + '</span><span class="stat-label">Posts</span></div>';
+        html += '</div>';
+        
+        // Actions
+        html += '<div class="profile-popup-actions">';
+        if (currentUser && userId !== currentUser.id) {
+            html += '<button class="profile-action-btn primary" onclick="startChatFromProfile(\'' + userId + '\')"><i class="fas fa-comment"></i> Message</button>';
+            if (isBlocked) {
+                html += '<button class="profile-action-btn danger" onclick="unblockUserFromProfile(\'' + userId + '\')"><i class="fas fa-unlock"></i> Unblock</button>';
+            } else {
+                html += '<button class="profile-action-btn" onclick="blockUserFromProfile(\'' + userId + '\')"><i class="fas fa-ban"></i> Block</button>';
+            }
+        }
+        html += '</div>';
+        html += '</div>';
+        
+        showModal(html);
+    };
+
+    window.startChatFromProfile = function(userId) {
+        closeModal();
+        var chats = Storage.get('chats') || [];
+        var existingChat = chats.find(function(c) {
+            return !c.isGroup && c.participants.indexOf(currentUser.id) !== -1 && c.participants.indexOf(userId) !== -1;
+        });
+        if (existingChat) {
+            openChat(existingChat.id, userId);
+        } else {
+            createNewChat(userId);
+        }
+    };
+
+    window.blockUserFromProfile = function(userId) {
+        if (!currentUser) return;
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === currentUser.id; });
+        if (userIndex !== -1) {
+            if (!users[userIndex].blockedUsers) users[userIndex].blockedUsers = [];
+            if (users[userIndex].blockedUsers.indexOf(userId) === -1) {
+                users[userIndex].blockedUsers.push(userId);
+                Storage.set('users', users);
+                currentUser = users[userIndex];
+                showToast('User blocked', 'success');
+                closeModal();
+            }
+        }
+    };
+
+    window.unblockUserFromProfile = function(userId) {
+        if (!currentUser) return;
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === currentUser.id; });
+        if (userIndex !== -1) {
+            users[userIndex].blockedUsers = (users[userIndex].blockedUsers || []).filter(function(id) { return id !== userId; });
+            Storage.set('users', users);
+            currentUser = users[userIndex];
+            showToast('User unblocked', 'success');
+            closeModal();
+        }
+    };
+
+    window.playVoiceMessage = function(btn, audioData) {
+        var audio = new Audio(audioData);
+        var icon = btn.querySelector('i');
+        var voiceContainer = btn.closest('.message-voice');
+        var waveform = voiceContainer.querySelector('.voice-waveform');
+        var duration = voiceContainer.querySelector('.voice-duration');
+        var bars = waveform.querySelectorAll('span');
+        
+        if (btn.dataset.playing === 'true') {
+            audio.pause();
+            icon.className = 'fas fa-play';
+            btn.dataset.playing = 'false';
+            bars.forEach(function(bar) { bar.classList.remove('active'); });
+            return;
+        }
+        
+        btn.dataset.playing = 'true';
+        icon.className = 'fas fa-pause';
+        
+        audio.addEventListener('loadedmetadata', function() {
+            var mins = Math.floor(audio.duration / 60);
+            var secs = Math.floor(audio.duration % 60).toString().padStart(2, '0');
+            duration.textContent = mins + ':' + secs;
+        });
+        
+        audio.addEventListener('timeupdate', function() {
+            var progress = audio.currentTime / audio.duration;
+            var activeBars = Math.floor(progress * bars.length);
+            bars.forEach(function(bar, i) {
+                if (i < activeBars) {
+                    bar.classList.add('active');
+                } else {
+                    bar.classList.remove('active');
+                }
+            });
+        });
+        
+        audio.addEventListener('ended', function() {
+            icon.className = 'fas fa-play';
+            btn.dataset.playing = 'false';
+            bars.forEach(function(bar) { bar.classList.remove('active'); });
+        });
+        
+        audio.play().catch(function(err) {
+            console.error('Audio playback error:', err);
+            icon.className = 'fas fa-play';
+            btn.dataset.playing = 'false';
+        });
     };
 
     function deleteComment(postId, commentId) {
