@@ -6612,6 +6612,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var captchaAnswer = document.getElementById('captcha-input').value;
         console.log('Email/Username:', email);
         
+        // Get submit button reference
+        var submitBtn = this.querySelector('button[type="submit"]');
+        var originalText = submitBtn.innerHTML;
+        
         // Validate captcha
         if (!validateCaptcha(captchaAnswer)) {
             document.getElementById('login-error').textContent = 'Incorrect security answer. Please try again.';
@@ -6632,8 +6636,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Show loading state
-        var submitBtn = this.querySelector('button[type="submit"]');
-        var originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
         submitBtn.disabled = true;
         
