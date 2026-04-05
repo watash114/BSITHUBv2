@@ -129,16 +129,22 @@ function sendTypingIndicator() {
 function updateOnlineStatus() {
     if (!currentUser || !currentUser.id) return;
     
+    var userStatus = Storage.get('userStatus_' + currentUser.id) || { status: 'online', message: '' };
+    
     // Update current user's online status in Firebase
     if (firebaseDb) {
         firebaseDb.ref('online/' + currentUser.id).set({
-            online: true,
+            online: userStatus.status !== 'invisible',
+            status: userStatus.status,
+            statusMessage: userStatus.message,
             lastSeen: firebase.database.ServerValue.TIMESTAMP
         });
         
         // Set up disconnect handler when user closes browser
         firebaseDb.ref('online/' + currentUser.id).onDisconnect().set({
             online: false,
+            status: 'offline',
+            statusMessage: '',
             lastSeen: firebase.database.ServerValue.TIMESTAMP
         });
     }
@@ -155,6 +161,122 @@ function setUserOffline() {
     var onlineUsers = Storage.get('onlineUsers') || {};
     delete onlineUsers[currentUser.id];
     Storage.set('onlineUsers', onlineUsers);
+}
+
+function getUserStatus(userId) {
+    var status = { online: false, status: 'offline', statusMessage: '', lastSeen: null };
+    
+    if (window.firebaseOnlineData && window.firebaseOnlineData[userId]) {
+        var data = window.firebaseOnlineData[userId];
+        status.online = data.online === true;
+        status.status = data.status || (data.online ? 'online' : 'offline');
+        status.statusMessage = data.statusMessage || '';
+        status.lastSeen = data.lastSeen;
+    }
+    
+    return status;
+}
+
+function setUserStatus(statusType, message) {
+    if (!currentUser) return;
+    
+    var statusData = {
+        status: statusType,
+        message: message || '',
+        updatedAt: new Date().toISOString()
+    };
+    
+    Storage.set('userStatus_' + currentUser.id, statusData);
+    updateOnlineStatus();
+    updateSidebarStatus();
+    
+    var statusLabels = {
+        'online': 'Online',
+        'away': 'Away',
+        'busy': 'Do Not Disturb',
+        'invisible': 'Invisible'
+    };
+    
+    showToast('Status changed to ' + (statusLabels[statusType] || statusType), 'success');
+}
+
+function updateSidebarStatus() {
+    if (!currentUser) return;
+    
+    var statusData = Storage.get('userStatus_' + currentUser.id) || { status: 'online', message: '' };
+    var statusEl = document.getElementById('sidebar-status');
+    var statusDot = document.getElementById('sidebar-status-dot');
+    
+    if (statusEl) {
+        var labels = {
+            'online': 'Online',
+            'away': 'Away',
+            'busy': 'Busy',
+            'invisible': 'Invisible'
+        };
+        statusEl.textContent = statusData.message || labels[statusData.status] || 'Online';
+    }
+    
+    if (statusDot) {
+        statusDot.className = 'status-dot ' + (statusData.status || 'online');
+    }
+}
+
+function showStatusPicker() {
+    if (!currentUser) return;
+    
+    var currentStatus = Storage.get('userStatus_' + currentUser.id) || { status: 'online', message: '' };
+    
+    var html = '<div class="status-picker-modal"><h3>Set Status</h3>';
+    
+    html += '<div class="status-options">';
+    var statuses = [
+        { type: 'online', label: 'Online', icon: 'fa-circle', color: '#10b981' },
+        { type: 'away', label: 'Away', icon: 'fa-clock', color: '#f59e0b' },
+        { type: 'busy', label: 'Do Not Disturb', icon: 'fa-minus-circle', color: '#ef4444' },
+        { type: 'invisible', label: 'Invisible', icon: 'fa-eye-slash', color: '#94a3b8' }
+    ];
+    
+    statuses.forEach(function(s) {
+        var isActive = currentStatus.status === s.type;
+        html += '<div class="status-option' + (isActive ? ' active' : '') + '" onclick="selectStatusType(\'' + s.type + '\')">';
+        html += '<i class="fas ' + s.icon + '" style="color:' + s.color + '"></i>';
+        html += '<span>' + s.label + '</span>';
+        if (isActive) html += '<i class="fas fa-check"></i>';
+        html += '</div>';
+    });
+    html += '</div>';
+    
+    html += '<div class="status-message-section">';
+    html += '<label>Custom Status Message</label>';
+    html += '<input type="text" id="custom-status-input" value="' + escapeHtml(currentStatus.message || '') + '" placeholder="What\'s on your mind?" maxlength="80">';
+    html += '</div>';
+    
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="saveCustomStatus()">Save</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    showModal(html);
+    
+    window._selectedStatusType = currentStatus.status;
+}
+
+function selectStatusType(type) {
+    window._selectedStatusType = type;
+    document.querySelectorAll('.status-option').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+}
+
+function saveCustomStatus() {
+    var type = window._selectedStatusType || 'online';
+    var message = document.getElementById('custom-status-input').value.trim();
+    
+    setUserStatus(type, message);
+    closeModal();
 }
 
 // Security: Simple hash function
@@ -333,6 +455,295 @@ function showToast(message, type) {
         toast.style.animation = 'slideIn 0.3s ease reverse';
         setTimeout(function() { toast.remove(); }, 300);
     }, 3000);
+}
+
+// ==========================================
+// Notification System
+// ==========================================
+let currentNotifTab = 'all';
+
+function getNotifications() {
+    return Storage.get('notifications') || [];
+}
+
+function saveNotifications(notifications) {
+    Storage.set('notifications', notifications);
+}
+
+function addNotification(type, actorId, actorName, actorAvatar, content, postId, chatId) {
+    if (!currentUser) return;
+    
+    var notifications = getNotifications();
+    var notification = {
+        id: generateId(),
+        type: type,
+        recipientId: currentUser.id,
+        actorId: actorId,
+        actorName: actorName,
+        actorAvatar: actorAvatar,
+        content: content,
+        postId: postId || null,
+        chatId: chatId || null,
+        read: false,
+        timestamp: new Date().toISOString()
+    };
+    
+    notifications.unshift(notification);
+    if (notifications.length > 100) {
+        notifications = notifications.slice(0, 100);
+    }
+    saveNotifications(notifications);
+    updateNotificationBadge();
+    renderNotifications();
+}
+
+function markNotificationAsRead(notifId) {
+    var notifications = getNotifications();
+    var notif = notifications.find(function(n) { return n.id === notifId; });
+    if (notif) {
+        notif.read = true;
+        saveNotifications(notifications);
+        updateNotificationBadge();
+        renderNotifications();
+    }
+}
+
+function markAllNotificationsAsRead() {
+    var notifications = getNotifications();
+    notifications.forEach(function(n) {
+        if (n.recipientId === currentUser.id) {
+            n.read = true;
+        }
+    });
+    saveNotifications(notifications);
+    updateNotificationBadge();
+    renderNotifications();
+    showToast('All notifications marked as read', 'success');
+}
+
+function clearAllNotifications() {
+    var notifications = getNotifications();
+    notifications = notifications.filter(function(n) { return n.recipientId !== currentUser.id; });
+    saveNotifications(notifications);
+    updateNotificationBadge();
+    renderNotifications();
+    showToast('Notifications cleared', 'success');
+}
+
+function deleteNotification(notifId) {
+    var notifications = getNotifications();
+    notifications = notifications.filter(function(n) { return n.id !== notifId; });
+    saveNotifications(notifications);
+    updateNotificationBadge();
+    renderNotifications();
+}
+
+function getUnreadNotificationCount() {
+    if (!currentUser) return 0;
+    var notifications = getNotifications();
+    return notifications.filter(function(n) { return n.recipientId === currentUser.id && !n.read; }).length;
+}
+
+function updateNotificationBadge() {
+    var count = getUnreadNotificationCount();
+    var badge = document.getElementById('notification-badge');
+    if (badge) {
+        if (count > 0) {
+            badge.style.display = 'inline';
+            badge.textContent = count > 99 ? '99+' : count;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function getFilteredNotifications() {
+    if (!currentUser) return [];
+    var notifications = getNotifications();
+    var myNotifs = notifications.filter(function(n) { return n.recipientId === currentUser.id; });
+    
+    if (currentNotifTab === 'unread') {
+        return myNotifs.filter(function(n) { return !n.read; });
+    } else if (currentNotifTab === 'mentions') {
+        return myNotifs.filter(function(n) { return n.type === 'mention'; });
+    }
+    return myNotifs;
+}
+
+function getNotificationIcon(type) {
+    var icons = {
+        'like': '<i class="fas fa-thumbs-up"></i>',
+        'comment': '<i class="fas fa-comment"></i>',
+        'reaction': '<i class="fas fa-heart"></i>',
+        'mention': '<i class="fas fa-at"></i>',
+        'follow': '<i class="fas fa-user-plus"></i>',
+        'message': '<i class="fas fa-envelope"></i>',
+        'group': '<i class="fas fa-users"></i>'
+    };
+    return icons[type] || '<i class="fas fa-bell"></i>';
+}
+
+function getNotificationTypeClass(type) {
+    var classes = {
+        'like': 'like',
+        'comment': 'comment',
+        'reaction': 'reaction',
+        'mention': 'mention',
+        'follow': 'follow'
+    };
+    return classes[type] || '';
+}
+
+function getNotificationText(notification) {
+    var type = notification.type;
+    var name = escapeHtml(notification.actorName);
+    
+    switch (type) {
+        case 'like':
+            return '<strong>' + name + '</strong> liked your post';
+        case 'comment':
+            return '<strong>' + name + '</strong> commented on your post';
+        case 'reaction':
+            return '<strong>' + name + '</strong> reacted to your post';
+        case 'mention':
+            return '<strong>' + name + '</strong> mentioned you in a post';
+        case 'follow':
+            return '<strong>' + name + '</strong> started following you';
+        case 'message':
+            return '<strong>' + name + '</strong> sent you a message';
+        case 'group':
+            return '<strong>' + name + '</strong> added you to a group';
+        default:
+            return '<strong>' + name + '</strong> ' + (notification.content || 'interacted with you');
+    }
+}
+
+function formatNotificationTime(timestamp) {
+    var date = new Date(timestamp);
+    var now = new Date();
+    var diff = now - date;
+    var seconds = Math.floor(diff / 1000);
+    var minutes = Math.floor(seconds / 60);
+    var hours = Math.floor(minutes / 60);
+    var days = Math.floor(hours / 24);
+    
+    if (seconds < 60) return 'Just now';
+    if (minutes < 60) return minutes + 'm ago';
+    if (hours < 24) return hours + 'h ago';
+    if (days < 7) return days + 'd ago';
+    return date.toLocaleDateString();
+}
+
+function renderNotifications() {
+    var list = document.getElementById('notification-list');
+    var empty = document.getElementById('notification-empty');
+    if (!list) return;
+    
+    var notifications = getFilteredNotifications();
+    
+    if (notifications.length === 0) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = 'flex';
+        list.appendChild(empty || document.createElement('div'));
+        return;
+    }
+    
+    if (empty) empty.style.display = 'none';
+    
+    var html = '';
+    notifications.forEach(function(notif) {
+        var avatar = notif.actorAvatar 
+            ? '<img src="' + notif.actorAvatar + '" alt="Avatar">'
+            : '<i class="fas fa-user"></i>';
+        
+        html += '<div class="notification-item' + (notif.read ? '' : ' unread') + '" data-id="' + notif.id + '">';
+        html += '<div class="notification-avatar">' + avatar + '</div>';
+        html += '<div class="notification-type-icon ' + getNotificationTypeClass(notif.type) + '">' + getNotificationIcon(notif.type) + '</div>';
+        html += '<div class="notification-content">';
+        html += '<div class="notification-text">' + getNotificationText(notif) + '</div>';
+        if (notif.content && notif.type !== 'follow') {
+            html += '<div class="notification-preview">' + escapeHtml(notif.content).substring(0, 100) + '</div>';
+        }
+        html += '<div class="notification-meta">';
+        html += '<span class="notification-time">' + formatNotificationTime(notif.timestamp) + '</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '<button class="btn-icon" onclick="event.stopPropagation(); deleteNotification(\'' + notif.id + '\')" title="Dismiss">';
+        html += '<i class="fas fa-times"></i>';
+        html += '</button>';
+        html += '</div>';
+    });
+    
+    list.innerHTML = html;
+    
+    list.querySelectorAll('.notification-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+            var notifId = this.dataset.id;
+            markNotificationAsRead(notifId);
+            var notif = getNotifications().find(function(n) { return n.id === notifId; });
+            if (notif && notif.postId) {
+                toggleNotificationPanel();
+                switchSection('feed');
+            }
+        });
+    });
+}
+
+function toggleNotificationPanel() {
+    var panel = document.getElementById('notification-panel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'flex';
+        renderNotifications();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function initNotifications() {
+    var bell = document.getElementById('notification-bell');
+    var closeBtn = document.getElementById('close-notification-panel');
+    var markAllBtn = document.getElementById('mark-all-read');
+    var clearBtn = document.getElementById('clear-notifications');
+    
+    if (bell) {
+        bell.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleNotificationPanel();
+        });
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            document.getElementById('notification-panel').style.display = 'none';
+        });
+    }
+    
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', markAllNotificationsAsRead);
+    }
+    
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearAllNotifications);
+    }
+    
+    document.querySelectorAll('.notif-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.notif-tab').forEach(function(t) { t.classList.remove('active'); });
+            this.classList.add('active');
+            currentNotifTab = this.dataset.tab;
+            renderNotifications();
+        });
+    });
+    
+    document.addEventListener('click', function(e) {
+        var panel = document.getElementById('notification-panel');
+        var bell = document.getElementById('notification-bell');
+        if (panel && panel.style.display !== 'none' && !panel.contains(e.target) && !bell.contains(e.target)) {
+            panel.style.display = 'none';
+        }
+    });
+    
+    updateNotificationBadge();
 }
 
 // ==========================================
@@ -691,6 +1102,12 @@ function showApp() {
     initFirebase();
     
     initializeApp();
+    
+    // Initialize Notifications
+    initNotifications();
+    
+    // Initialize Sidebar Status
+    updateSidebarStatus();
     
     // Initialize Socket.IO for real-time presence
     if (currentUser && typeof initSocket === 'function') {
@@ -1116,21 +1533,23 @@ function loadChats() {
         // Check online status
         var isOnline = false;
         var lastSeenText = '';
+        var userStatusType = 'offline';
         if (!chat.isGroup && otherUserId) {
-            // Try to get from Firebase online data
-            if (window.firebaseOnlineData && window.firebaseOnlineData[otherUserId]) {
-                isOnline = window.firebaseOnlineData[otherUserId].online === true;
-                if (window.firebaseOnlineData[otherUserId].lastSeen) {
-                    lastSeenText = formatLastSeen(window.firebaseOnlineData[otherUserId].lastSeen);
-                }
+            // Get full status from Firebase
+            var userStatusInfo = getUserStatus(otherUserId);
+            isOnline = userStatusInfo.online;
+            userStatusType = userStatusInfo.status || (isOnline ? 'online' : 'offline');
+            if (userStatusInfo.lastSeen) {
+                lastSeenText = formatLastSeen(userStatusInfo.lastSeen);
             }
         }
         
         html += '<div class="chat-item ' + (isActive ? 'active' : '') + (chat.pinned ? ' pinned' : '') + '" data-chat-id="' + chat.id + '" data-user-id="' + chatUserId + '">';
         html += '<div class="chat-item-avatar-wrapper">';
         html += '<div class="chat-item-avatar">' + chatAvatar + '</div>';
-        // Always show indicator - green if online, gray if offline
-        html += '<div class="online-indicator ' + (isOnline ? 'online' : 'offline') + '"></div>';
+        // Show indicator with status-based color
+        var indicatorClass = isOnline ? userStatusType : 'offline';
+        html += '<div class="online-indicator ' + indicatorClass + '"></div>';
         html += '</div>';
         html += '<div class="chat-item-info">';
         html += '<div class="chat-item-name">' + chatName;
@@ -1271,22 +1690,24 @@ function openChat(chatId, userId) {
         if (otherUser) {
             document.getElementById('chat-user-name').textContent = otherUser.name;
             
-            // Check actual online status from Firebase
-            var isOnline = false;
-            var lastSeenText = '';
-            if (window.firebaseOnlineData && window.firebaseOnlineData[userId]) {
-                isOnline = window.firebaseOnlineData[userId].online === true;
-                if (window.firebaseOnlineData[userId].lastSeen) {
-                    lastSeenText = formatLastSeen(window.firebaseOnlineData[userId].lastSeen);
-                }
-            }
+            // Get user status from Firebase
+            var userStatus = getUserStatus(userId);
             
-            if (isOnline) {
-                document.getElementById('chat-user-status').textContent = 'Online';
-            } else if (lastSeenText) {
-                document.getElementById('chat-user-status').textContent = lastSeenText;
+            if (userStatus.online) {
+                var statusLabels = {
+                    'online': 'Online',
+                    'away': 'Away',
+                    'busy': 'Do Not Disturb'
+                };
+                var statusText = userStatus.statusMessage || statusLabels[userStatus.status] || 'Online';
+                document.getElementById('chat-user-status').textContent = statusText;
+                document.getElementById('chat-user-status').className = 'chat-status ' + (userStatus.status || 'online');
+            } else if (userStatus.lastSeen) {
+                document.getElementById('chat-user-status').textContent = formatLastSeen(userStatus.lastSeen);
+                document.getElementById('chat-user-status').className = 'chat-status offline';
             } else {
                 document.getElementById('chat-user-status').textContent = 'Offline';
+                document.getElementById('chat-user-status').className = 'chat-status offline';
             }
         } else {
             document.getElementById('chat-user-name').textContent = 'Chat';
@@ -1334,6 +1755,7 @@ function openChat(chatId, userId) {
                 // Play sound if not our message
                 if (msg.senderId !== currentUser.id) {
                     playReceiveSound();
+                    addNotification('message', msg.senderId, msg.senderName || 'Someone', null, msg.text.substring(0, 100), null, chatId);
                 }
                 
                 renderMessages(chatId);
@@ -1539,7 +1961,8 @@ function renderMessages(chatId) {
         html += '<button class="message-action-btn" onclick="replyToMessage(\'' + msg.id + '\')" title="Reply"><i class="fas fa-reply"></i></button>';
         html += '<button class="message-action-btn" onclick="showReactionPicker(\'' + msg.id + '\')" title="React"><i class="far fa-smile"></i></button>';
         html += '<button class="message-action-btn" onclick="forwardMessage(\'' + msg.id + '\')" title="Forward"><i class="fas fa-share"></i></button>';
-        html += '<button class="message-action-btn" onclick="pinMessage(\'' + msg.id + '\')" title="' + (msg.pinned ? 'Unpin' : 'Pin') + '"><i class="fas fa-thumbtack' + (msg.pinned ? '' : '') + '"></i></button>';
+        html += '<button class="message-action-btn' + (msg.starred ? ' starred' : '') + '" onclick="toggleStarMessage(\'' + msg.id + '\')" title="' + (msg.starred ? 'Unstar' : 'Star') + '"><i class="' + (msg.starred ? 'fas' : 'far') + ' fa-star"></i></button>';
+        html += '<button class="message-action-btn' + (msg.pinned ? ' pinned' : '') + '" onclick="pinMessage(\'' + msg.id + '\')" title="' + (msg.pinned ? 'Unpin' : 'Pin') + '"><i class="fas fa-thumbtack"></i></button>';
         if (canEdit) {
             html += '<button class="message-action-btn" onclick="editMessage(\'' + msg.id + '\')" title="Edit"><i class="fas fa-pen"></i></button>';
         }
@@ -1887,6 +2310,128 @@ function confirmForward(messageId, toChatId) {
     closeModal();
     showToast('Message forwarded', 'success');
     loadChats();
+}
+
+// Pin/Unpin Message
+function pinMessage(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message || !activeChat) return;
+    
+    // Count pinned messages in this chat
+    var pinnedInChat = messages.filter(function(m) { return m.chatId === activeChat.id && m.pinned; });
+    
+    if (message.pinned) {
+        // Unpin
+        message.pinned = false;
+        message.pinnedBy = null;
+        message.pinnedAt = null;
+        showToast('Message unpinned', 'success');
+    } else {
+        // Pin (limit to 10 pinned messages per chat)
+        if (pinnedInChat.length >= 10) {
+            showToast('Maximum 10 pinned messages per chat', 'warning');
+            return;
+        }
+        message.pinned = true;
+        message.pinnedBy = currentUser.id;
+        message.pinnedAt = new Date().toISOString();
+        showToast('Message pinned', 'success');
+    }
+    
+    Storage.set('messages', messages);
+    renderMessages(activeChat.id);
+    
+    // Sync to Firebase
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(message);
+    }
+}
+
+// Toggle Star Message
+function toggleStarMessage(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message) return;
+    
+    message.starred = !message.starred;
+    Storage.set('messages', messages);
+    
+    if (activeChat) {
+        renderMessages(activeChat.id);
+    }
+    
+    showToast(message.starred ? 'Message starred' : 'Message unstarred', 'success');
+    
+    // Sync to Firebase
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(message);
+    }
+}
+
+// Show Pinned Messages Panel
+function showPinnedMessages() {
+    if (!activeChat) return;
+    
+    var messages = Storage.get('messages') || [];
+    var pinnedMessages = messages.filter(function(m) { 
+        return m.chatId === activeChat.id && m.pinned; 
+    });
+    
+    if (pinnedMessages.length === 0) {
+        showToast('No pinned messages in this chat', 'info');
+        return;
+    }
+    
+    var users = Storage.get('users') || [];
+    var html = '<div class="pinned-messages-modal"><h3><i class="fas fa-thumbtack"></i> Pinned Messages</h3>';
+    html += '<div class="pinned-messages-list">';
+    
+    pinnedMessages.sort(function(a, b) { return new Date(b.pinnedAt) - new Date(a.pinnedAt); });
+    
+    pinnedMessages.forEach(function(msg) {
+        var sender = users.find(function(u) { return u.id === msg.senderId; });
+        var senderName = sender ? sender.name : 'Unknown';
+        var avatar = sender && sender.avatar 
+            ? '<img src="' + sender.avatar + '" alt="">' 
+            : '<i class="fas fa-user"></i>';
+        
+        html += '<div class="pinned-message-item" onclick="scrollToMessage(\'' + msg.id + '\'); closeModal();">';
+        html += '<div class="pinned-msg-header">';
+        html += '<div class="pinned-msg-avatar">' + avatar + '</div>';
+        html += '<span class="pinned-msg-sender">' + escapeHtml(senderName) + '</span>';
+        html += '<span class="pinned-msg-time">' + formatTime(msg.timestamp) + '</span>';
+        html += '</div>';
+        html += '<div class="pinned-msg-text">' + escapeHtml(msg.text || '[Media]') + '</div>';
+        html += '<button class="btn-icon unpin-btn" onclick="event.stopPropagation(); unpinFromModal(\'' + msg.id + '\')" title="Unpin">';
+        html += '<i class="fas fa-times"></i>';
+        html += '</button>';
+        html += '</div>';
+    });
+    
+    html += '</div></div>';
+    showModal(html);
+}
+
+function unpinFromModal(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (message) {
+        message.pinned = false;
+        message.pinnedBy = null;
+        message.pinnedAt = null;
+        Storage.set('messages', messages);
+        
+        if (typeof sendMsgToFirebase === 'function') {
+            sendMsgToFirebase(message);
+        }
+    }
+    
+    closeModal();
+    if (activeChat) {
+        renderMessages(activeChat.id);
+    }
+    showToast('Message unpinned', 'success');
 }
 
 function handleMentionInput(input) {
@@ -2807,13 +3352,11 @@ function showGroupInfo() {
     // If no admin is set, make the current user the admin
     if (!chat.admin) {
         chat.admin = currentUser.id;
-        // Save the updated chat
         var chats = Storage.get('chats') || [];
         var chatIndex = chats.findIndex(function(c) { return c.id === chat.id; });
         if (chatIndex !== -1) {
             chats[chatIndex] = chat;
             Storage.set('chats', chats);
-            // Sync to Firebase
             if (typeof syncChat === 'function') {
                 syncChat(chat);
             }
@@ -2821,21 +3364,60 @@ function showGroupInfo() {
     }
     
     var isAdmin = chat.admin === currentUser.id;
+    var avatar = chat.groupAvatar 
+        ? '<img src="' + chat.groupAvatar + '" alt="Group Photo">'
+        : '<i class="fas fa-users"></i>';
     
-    console.log('Group:', chat.groupName, '| Admin ID:', chat.admin, '| Your ID:', currentUser.id, '| isAdmin:', isAdmin);
+    var html = '<div class="group-info-modal">';
+    html += '<div class="group-info-header">';
+    html += '<div class="group-avatar-large" onclick="' + (isAdmin ? 'changeGroupAvatar()' : '') + '">' + avatar;
+    if (isAdmin) html += '<div class="avatar-overlay"><i class="fas fa-camera"></i></div>';
+    html += '</div>';
+    html += '<div class="group-title-row">';
+    html += '<h3 id="group-title-display">' + escapeHtml(chat.groupName || 'Group') + '</h3>';
+    if (isAdmin) html += '<button class="btn-icon" onclick="editGroupName()" title="Edit Name"><i class="fas fa-pen"></i></button>';
+    html += '</div>';
+    html += '<p class="group-member-count">' + chat.participants.length + ' members</p>';
+    html += '</div>';
     
-    var html = '<div class="group-info"><h3>' + escapeHtml(chat.groupName || 'Group') + '</h3>';
-    html += '<p>' + chat.participants.length + ' members</p>';
+    // Group Description
+    html += '<div class="group-section">';
+    html += '<div class="group-section-header">';
+    html += '<h4>Description</h4>';
+    if (isAdmin) html += '<button class="btn-icon" onclick="editGroupDescription()" title="Edit"><i class="fas fa-pen"></i></button>';
+    html += '</div>';
+    html += '<p class="group-description">' + (chat.description ? escapeHtml(chat.description) : '<em style="color:var(--text-muted)">No description</em>') + '</p>';
+    html += '</div>';
     
-    // Show Add Members button for all members
+    // Group Invite Link
+    html += '<div class="group-section">';
+    html += '<h4>Invite Link</h4>';
+    html += '<div class="invite-link-row">';
+    html += '<input type="text" id="group-invite-link" value="' + (chat.inviteCode || 'Not generated') + '" readonly>';
+    html += '<button class="btn btn-small" onclick="copyInviteLink()"><i class="fas fa-copy"></i></button>';
+    if (isAdmin) html += '<button class="btn btn-small" onclick="generateInviteLink()"><i class="fas fa-sync"></i></button>';
+    html += '</div>';
+    html += '</div>';
+    
+    // Actions
+    html += '<div class="group-section">';
+    html += '<h4>Actions</h4>';
+    html += '<div class="group-action-buttons">';
     html += '<button class="btn btn-primary" onclick="showAddMembers()"><i class="fas fa-user-plus"></i> Add Members</button>';
+    if (isAdmin) html += '<button class="btn" onclick="showTransferAdmin()"><i class="fas fa-crown"></i> Transfer Ownership</button>';
+    html += '<button class="btn" onclick="leaveGroup()"><i class="fas fa-sign-out-alt"></i> Leave Group</button>';
+    if (isAdmin) html += '<button class="btn danger" onclick="deleteGroup()"><i class="fas fa-trash"></i> Delete Group</button>';
+    html += '</div>';
+    html += '</div>';
     
+    // Members List
+    html += '<div class="group-section">';
+    html += '<h4>Members (' + chat.participants.length + ')</h4>';
     html += '<div class="group-members-list">';
     
     chat.participants.forEach(function(userId) {
         var user = users.find(function(u) { return u.id === userId; });
         if (!user) {
-            // Try to fetch from Firebase
             if (typeof fetchUserFromFirebase === 'function') {
                 fetchUserFromFirebase(userId);
             }
@@ -2849,31 +3431,294 @@ function showGroupInfo() {
             return;
         }
         
-        var avatar = user.avatar ? '<img src="' + user.avatar + '">' : user.name.charAt(0).toUpperCase();
+        var userAvatar = user.avatar ? '<img src="' + user.avatar + '">' : user.name.charAt(0).toUpperCase();
         var isGroupAdmin = chat.admin === userId;
         
         html += '<div class="group-member">';
-        html += '<div class="member-avatar">' + avatar + '</div>';
+        html += '<div class="member-avatar">' + userAvatar + '</div>';
         html += '<div class="member-info">';
         html += '<span class="member-name">' + escapeHtml(user.name);
-        if (isGroupAdmin) html += ' <span class="admin-badge">Admin</span>';
+        if (isGroupAdmin) html += ' <span class="admin-badge"><i class="fas fa-crown"></i> Admin</span>';
         if (userId === currentUser.id) html += ' <span class="you-badge">You</span>';
         html += '</span>';
         html += '<span class="member-username">@' + escapeHtml(user.username) + '</span>';
         html += '</div>';
         
-        // Kick button - show for everyone except yourself (for testing)
-        if (userId !== currentUser.id) {
-            html += '<button class="btn btn-small danger" onclick="kickMember(\'' + userId + '\')"><i class="fas fa-user-minus"></i> Kick</button>';
+        if (isAdmin && userId !== currentUser.id && !isGroupAdmin) {
+            html += '<div class="member-actions">';
+            html += '<button class="btn-icon" onclick="kickMember(\'' + userId + '\')" title="Remove"><i class="fas fa-user-minus"></i></button>';
+            html += '</div>';
         }
         
         html += '</div>';
     });
     
     html += '</div>';
+    html += '</div>';
+    
     html += '<button class="btn" onclick="closeModal()">Close</button>';
     html += '</div>';
     showModal(html);
+}
+
+function editGroupName() {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (!chat || !chat.isGroup || chat.admin !== currentUser.id) return;
+    
+    var html = '<div class="edit-group-modal"><h3>Edit Group Name</h3>';
+    html += '<input type="text" id="new-group-name" value="' + escapeHtml(chat.groupName || '') + '" placeholder="Group name" maxlength="50">';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="showGroupInfo()">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="saveGroupName()">Save</button>';
+    html += '</div></div>';
+    showModal(html);
+    setTimeout(function() { document.getElementById('new-group-name').focus(); }, 100);
+}
+
+function saveGroupName() {
+    if (!activeChat) return;
+    var newName = document.getElementById('new-group-name').value.trim();
+    if (!newName) {
+        showToast('Group name cannot be empty', 'error');
+        return;
+    }
+    
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    
+    chats[chatIndex].groupName = newName;
+    Storage.set('chats', chats);
+    
+    if (typeof syncChat === 'function') {
+        syncChat(chats[chatIndex]);
+    }
+    
+    document.getElementById('chat-user-name').textContent = newName;
+    showToast('Group name updated', 'success');
+    showGroupInfo();
+}
+
+function editGroupDescription() {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (!chat || !chat.isGroup || chat.admin !== currentUser.id) return;
+    
+    var html = '<div class="edit-group-modal"><h3>Edit Description</h3>';
+    html += '<textarea id="new-group-desc" placeholder="Add a description..." rows="3" maxlength="200">' + escapeHtml(chat.description || '') + '</textarea>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="showGroupInfo()">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="saveGroupDescription()">Save</button>';
+    html += '</div></div>';
+    showModal(html);
+    setTimeout(function() { document.getElementById('new-group-desc').focus(); }, 100);
+}
+
+function saveGroupDescription() {
+    if (!activeChat) return;
+    var newDesc = document.getElementById('new-group-desc').value.trim();
+    
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    
+    chats[chatIndex].description = newDesc;
+    Storage.set('chats', chats);
+    
+    if (typeof syncChat === 'function') {
+        syncChat(chats[chatIndex]);
+    }
+    
+    showToast('Description updated', 'success');
+    showGroupInfo();
+}
+
+function changeGroupAvatar() {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (!chat || !chat.isGroup || chat.admin !== currentUser.id) return;
+    
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select an image', 'error');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('Image too large. Max 2MB.', 'error');
+            return;
+        }
+        
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            var chats = Storage.get('chats') || [];
+            var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+            if (chatIndex === -1) return;
+            
+            chats[chatIndex].groupAvatar = ev.target.result;
+            Storage.set('chats', chats);
+            
+            if (typeof syncChat === 'function') {
+                syncChat(chats[chatIndex]);
+            }
+            
+            showToast('Group photo updated', 'success');
+            showGroupInfo();
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
+
+function generateInviteLink() {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    
+    var chat = chats[chatIndex];
+    if (!chat.isGroup || chat.admin !== currentUser.id) {
+        showToast('Only admin can generate invite link', 'error');
+        return;
+    }
+    
+    var code = generateId().toUpperCase().substring(0, 8);
+    chats[chatIndex].inviteCode = code;
+    Storage.set('chats', chats);
+    
+    if (typeof syncChat === 'function') {
+        syncChat(chats[chatIndex]);
+    }
+    
+    var linkInput = document.getElementById('group-invite-link');
+    if (linkInput) linkInput.value = code;
+    
+    showToast('New invite code generated', 'success');
+}
+
+function copyInviteLink() {
+    var linkInput = document.getElementById('group-invite-link');
+    if (!linkInput || linkInput.value === 'Not generated') {
+        showToast('No invite link available', 'info');
+        return;
+    }
+    
+    navigator.clipboard.writeText(linkInput.value).then(function() {
+        showToast('Invite code copied!', 'success');
+    }).catch(function() {
+        linkInput.select();
+        document.execCommand('copy');
+        showToast('Invite code copied!', 'success');
+    });
+}
+
+function showTransferAdmin() {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (!chat || !chat.isGroup || chat.admin !== currentUser.id) return;
+    
+    var users = Storage.get('users') || [];
+    var otherMembers = chat.participants.filter(function(id) { return id !== currentUser.id; });
+    
+    if (otherMembers.length === 0) {
+        showToast('No other members to transfer to', 'info');
+        return;
+    }
+    
+    var html = '<div class="transfer-admin-modal"><h3><i class="fas fa-crown"></i> Transfer Ownership</h3>';
+    html += '<p>Select a member to become the new admin:</p>';
+    html += '<div class="member-select-list">';
+    
+    otherMembers.forEach(function(userId) {
+        var user = users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+        var avatar = user.avatar ? '<img src="' + user.avatar + '">' : user.name.charAt(0).toUpperCase();
+        
+        html += '<div class="member-select-item" onclick="confirmTransferAdmin(\'' + userId + '\')">';
+        html += '<div class="member-avatar">' + avatar + '</div>';
+        html += '<span class="member-name">' + escapeHtml(user.name) + '</span>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    html += '<button class="btn" onclick="showGroupInfo()">Cancel</button>';
+    html += '</div>';
+    showModal(html);
+}
+
+function confirmTransferAdmin(newAdminId) {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    
+    var users = Storage.get('users') || [];
+    var newAdmin = users.find(function(u) { return u.id === newAdminId; });
+    
+    showModal('<div class="confirm-transfer"><h3>Transfer Ownership?</h3><p>' + (newAdmin ? escapeHtml(newAdmin.name) : 'This user') + ' will become the new group admin.</p><div class="modal-buttons"><button class="btn" onclick="showTransferAdmin()">Cancel</button><button class="btn btn-primary" onclick="executeTransferAdmin(\'' + newAdminId + '\')">Transfer</button></div></div>');
+}
+
+function executeTransferAdmin(newAdminId) {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    
+    chats[chatIndex].admin = newAdminId;
+    Storage.set('chats', chats);
+    
+    if (typeof syncChat === 'function') {
+        syncChat(chats[chatIndex]);
+    }
+    
+    showToast('Ownership transferred', 'success');
+    showGroupInfo();
+}
+
+function deleteGroup() {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (!chat || !chat.isGroup || chat.admin !== currentUser.id) {
+        showToast('Only admin can delete the group', 'error');
+        return;
+    }
+    
+    showModal('<div class="delete-confirm"><h3>Delete Group?</h3><p>This will permanently delete the group and all messages for everyone.</p><div class="modal-buttons"><button class="btn" onclick="showGroupInfo()">Cancel</button><button class="btn danger" onclick="confirmDeleteGroup()">Delete Group</button></div></div>');
+}
+
+function confirmDeleteGroup() {
+    if (!activeChat) return;
+    var groupId = activeChat.id;
+    
+    // Remove chat
+    var chats = Storage.get('chats') || [];
+    chats = chats.filter(function(c) { return c.id !== groupId; });
+    Storage.set('chats', chats);
+    
+    // Remove messages
+    var messages = Storage.get('messages') || [];
+    messages = messages.filter(function(m) { return m.chatId !== groupId; });
+    Storage.set('messages', messages);
+    
+    // Clear active chat
+    activeChat = null;
+    document.getElementById('chat-placeholder').style.display = 'block';
+    document.getElementById('chat-active').style.display = 'none';
+    
+    closeModal();
+    loadChats();
+    loadGroups();
+    showToast('Group deleted', 'success');
 }
 
 function showAddMembers() {
@@ -2963,9 +3808,21 @@ function kickMember(userId) {
         return;
     }
     
+    // Only admin can kick
+    if (chat.admin !== currentUser.id) {
+        showToast('Only admin can remove members', 'error');
+        return;
+    }
+    
     // Can't kick yourself
     if (userId === currentUser.id) {
-        showToast('Cannot kick yourself', 'error');
+        showToast('Cannot kick yourself. Use Leave Group instead.', 'error');
+        return;
+    }
+    
+    // Can't kick the admin
+    if (userId === chat.admin) {
+        showToast('Cannot remove the group admin', 'error');
         return;
     }
     
@@ -5347,6 +6204,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Starred Messages
     document.getElementById('starred-messages-btn').onclick = showStarredMessages;
     
+    // Pinned Messages
+    document.getElementById('pinned-messages-btn').onclick = showPinnedMessages;
+    
     // Quick Actions
     document.getElementById('quick-actions-btn').onclick = showQuickActions;
     
@@ -7303,7 +8163,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 content = (content ? content + '\n' : '') + 'Feeling ' + selectedFeeling;
             }
             if (!content && !feedPostImageData) return;
-            createPost(content, feedPostImageData);
+            var privacy = document.getElementById('post-privacy').value || 'public';
+            createPost(content, feedPostImageData, privacy);
         };
 
         // Lightbox
@@ -7460,11 +8321,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var posts = Storage.get('posts') || [];
         var post = posts.find(function(p) { return p.id === postId; });
         if (!post || !currentUser) return;
+        var wasReacted = post.reactions && post.reactions[currentUser.id];
         if (!post.reactions) post.reactions = {};
         if (post.reactions[currentUser.id] === reaction) {
             delete post.reactions[currentUser.id];
         } else {
             post.reactions[currentUser.id] = reaction;
+            if (post.userId !== currentUser.id && !wasReacted) {
+                addNotification('reaction', currentUser.id, currentUser.name, currentUser.avatar, reaction + ' on your post', postId);
+            }
         }
         // Sync old likes format
         if (post.likes) delete post.likes;
@@ -7513,7 +8378,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function createPost(content, imageData) {
+    function createPost(content, imageData, privacy) {
         if (!currentUser) return;
         var post = {
             id: generateId(),
@@ -7522,8 +8387,9 @@ document.addEventListener('DOMContentLoaded', function() {
             userAvatar: currentUser.avatar || null,
             content: content || '',
             imageUrl: imageData || null,
-            visibility: 'public',
+            visibility: privacy || 'public',
             likes: {},
+            reactions: {},
             comments: [],
             shares: 0,
             createdAt: new Date().toISOString()
@@ -7532,6 +8398,20 @@ document.addEventListener('DOMContentLoaded', function() {
         posts.unshift(post);
         Storage.set('posts', posts);
         if (DB.isReady()) { DB.createPost(post); }
+
+        // Check for mentions and notify users
+        if (content) {
+            var mentionRegex = /@(\w+)/g;
+            var match;
+            var users = Storage.get('users') || [];
+            while ((match = mentionRegex.exec(content)) !== null) {
+                var mentionedUsername = match[1];
+                var mentionedUser = users.find(function(u) { return u.username === mentionedUsername; });
+                if (mentionedUser && mentionedUser.id !== currentUser.id) {
+                    addNotification('mention', currentUser.id, currentUser.name, currentUser.avatar, content.substring(0, 100), post.id);
+                }
+            }
+        }
 
         // Reset composer
         document.getElementById('post-content').value = '';
@@ -7728,21 +8608,182 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var isLikedComment = comment.likedBy && currentUser && comment.likedBy[currentUser.id];
         var likeCountComment = comment.likedBy ? Object.keys(comment.likedBy).length : 0;
+        var isOwner = currentUser && comment.userId === currentUser.id;
+        var contentHtml = renderMentions(escapeHtml(comment.content));
 
-        var html = '<div class="comment-item">';
+        var html = '<div class="comment-item" data-comment-id="' + comment.id + '">';
         html += cAvatarHtml;
-        html += '<div>';
+        html += '<div class="comment-content-wrapper">';
         html += '<div class="comment-bubble">';
         html += '<div class="comment-author">' + escapeHtml(comment.userName || 'User') + '</div>';
-        html += '<div class="comment-text">' + escapeHtml(comment.content) + '</div>';
+        html += '<div class="comment-text">' + contentHtml + '</div>';
         html += '</div>';
         html += '<div class="comment-actions-row">';
         html += '<button class="comment-action-link' + (isLikedComment ? ' liked' : '') + '" data-comment-like="' + comment.id + '" data-post-id="' + postId + '">Like' + (likeCountComment > 0 ? ' (' + likeCountComment + ')' : '') + '</button>';
-        html += '<button class="comment-action-link" data-comment-reply="' + comment.id + '" data-post-id="' + postId + '">Reply</button>';
+        html += '<button class="comment-action-link" data-comment-reply="' + comment.id + '" data-post-id="' + postId + '" data-author="' + escapeHtml(comment.userName || '') + '">Reply</button>';
+        if (isOwner) {
+            html += '<button class="comment-action-link" onclick="deleteComment(\'' + postId + '\', \'' + comment.id + '\')">Delete</button>';
+        }
         html += '<span class="comment-action-link">' + getTimeAgo(comment.createdAt) + '</span>';
-        html += '</div></div></div>';
+        html += '</div>';
+        
+        // Replies section
+        if (comment.replies && comment.replies.length > 0) {
+            html += '<div class="comment-replies">';
+            comment.replies.forEach(function(reply) {
+                html += renderReply(reply, postId, comment.id);
+            });
+            html += '</div>';
+        }
+        
+        // Reply input (hidden by default)
+        html += '<div class="reply-input-row" id="reply-input-' + comment.id + '" style="display:none;">';
+        html += '<input type="text" class="reply-text-input" data-post-id="' + postId + '" data-comment-id="' + comment.id + '" placeholder="Write a reply...">';
+        html += '<button class="reply-submit-btn" data-post-id="' + postId + '" data-comment-id="' + comment.id + '"><i class="fas fa-paper-plane"></i></button>';
+        html += '</div>';
+        
+        html += '</div></div>';
         return html;
     }
+
+    function renderReply(reply, postId, commentId) {
+        var rAvatarHtml;
+        if (reply.userAvatar) {
+            rAvatarHtml = '<div class="reply-avatar"><img src="' + escapeHtml(reply.userAvatar) + '" alt=""></div>';
+        } else {
+            var initial = (reply.userName || 'U').charAt(0).toUpperCase();
+            rAvatarHtml = '<div class="reply-avatar">' + initial + '</div>';
+        }
+        var isOwner = currentUser && reply.userId === currentUser.id;
+        var contentHtml = renderMentions(escapeHtml(reply.content));
+
+        var html = '<div class="reply-item">';
+        html += rAvatarHtml;
+        html += '<div class="reply-content-wrapper">';
+        html += '<div class="reply-bubble">';
+        html += '<div class="reply-author">' + escapeHtml(reply.userName || 'User') + '</div>';
+        html += '<div class="reply-text">' + contentHtml + '</div>';
+        html += '</div>';
+        html += '<div class="reply-actions-row">';
+        if (isOwner) {
+            html += '<button class="reply-action-link" onclick="deleteReply(\'' + postId + '\', \'' + commentId + '\', \'' + reply.id + '\')">Delete</button>';
+        }
+        html += '<span class="reply-action-link">' + getTimeAgo(reply.createdAt) + '</span>';
+        html += '</div>';
+        html += '</div></div>';
+        return html;
+    }
+
+    function renderMentions(text) {
+        return text.replace(/@(\w+)/g, '<span class="mention" onclick="viewMentionedUser(\'$1\')">@$1</span>');
+    }
+
+    window.viewMentionedUser = function(username) {
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.username === username; });
+        if (user) {
+            showUserProfile(user.id);
+        } else {
+            showToast('User not found', 'info');
+        }
+    };
+
+    function deleteComment(postId, commentId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !post.comments) return;
+        
+        var commentIndex = post.comments.findIndex(function(c) { return c.id === commentId; });
+        if (commentIndex === -1) return;
+        
+        if (post.comments[commentIndex].userId !== currentUser.id) {
+            showToast('You can only delete your own comments', 'error');
+            return;
+        }
+        
+        post.comments.splice(commentIndex, 1);
+        Storage.set('posts', posts);
+        renderFeed();
+        
+        if (DB.isReady()) { DB.updatePost(postId, { comments: post.comments }); }
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/comments').set(post.comments); }
+        
+        showToast('Comment deleted', 'success');
+    }
+
+    function deleteReply(postId, commentId, replyId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !post.comments) return;
+        
+        var comment = post.comments.find(function(c) { return c.id === commentId; });
+        if (!comment || !comment.replies) return;
+        
+        var replyIndex = comment.replies.findIndex(function(r) { return r.id === replyId; });
+        if (replyIndex === -1) return;
+        
+        if (comment.replies[replyIndex].userId !== currentUser.id) {
+            showToast('You can only delete your own replies', 'error');
+            return;
+        }
+        
+        comment.replies.splice(replyIndex, 1);
+        Storage.set('posts', posts);
+        renderFeed();
+        
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/comments').set(post.comments); }
+        
+        showToast('Reply deleted', 'success');
+    }
+
+    function submitReply(postId, commentId, content) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !currentUser) return;
+        
+        var comment = post.comments.find(function(c) { return c.id === commentId; });
+        if (!comment) return;
+        
+        if (!comment.replies) comment.replies = [];
+        
+        var reply = {
+            id: generateId(),
+            userId: currentUser.id,
+            userName: currentUser.name || currentUser.username,
+            userAvatar: currentUser.avatar || null,
+            content: content,
+            createdAt: new Date().toISOString()
+        };
+        
+        comment.replies.push(reply);
+        Storage.set('posts', posts);
+        
+        // Notify the comment author
+        if (comment.userId !== currentUser.id) {
+            addNotification('comment', currentUser.id, currentUser.name, currentUser.avatar, 'replied to your comment: ' + content.substring(0, 50), postId);
+        }
+        
+        renderFeed();
+        var section = document.getElementById('comments-' + postId);
+        if (section) section.style.display = 'block';
+        
+        if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/comments').set(post.comments); }
+    }
+
+    function showAllComments(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post || !post.comments) return;
+        var list = document.getElementById('comments-list-' + postId);
+        if (!list) return;
+        var html = '';
+        post.comments.forEach(function(c) { html += renderComment(c, postId); });
+        list.innerHTML = html;
+        bindCommentEvents();
+    }
+
+    window.deleteComment = deleteComment;
+    window.deleteReply = deleteReply;
 
     function openLightbox(src) {
         var overlay = document.getElementById('lightbox-overlay');
@@ -7824,6 +8865,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleCommentLike(this.dataset.postId, this.dataset.commentLike);
             };
         });
+        document.querySelectorAll('.comment-action-link[data-comment-reply]').forEach(function(btn) {
+            btn.onclick = function() {
+                var commentId = this.dataset.commentReply;
+                var replyInput = document.getElementById('reply-input-' + commentId);
+                if (replyInput) {
+                    replyInput.style.display = replyInput.style.display === 'none' ? 'flex' : 'none';
+                    if (replyInput.style.display === 'flex') {
+                        replyInput.querySelector('input').focus();
+                    }
+                }
+            };
+        });
+        document.querySelectorAll('.reply-text-input').forEach(function(input) {
+            var postId = input.dataset.postId;
+            var commentId = input.dataset.commentId;
+            var submitBtn = document.querySelector('.reply-submit-btn[data-comment-id="' + commentId + '"]');
+            input.onkeydown = function(e) {
+                if (e.key === 'Enter' && input.value.trim()) {
+                    submitReply(postId, commentId, input.value.trim());
+                    input.value = '';
+                    var replyInput = document.getElementById('reply-input-' + commentId);
+                    if (replyInput) replyInput.style.display = 'none';
+                }
+            };
+            if (submitBtn) {
+                submitBtn.onclick = function() {
+                    if (input.value.trim()) {
+                        submitReply(postId, commentId, input.value.trim());
+                        input.value = '';
+                        var replyInput = document.getElementById('reply-input-' + commentId);
+                        if (replyInput) replyInput.style.display = 'none';
+                    }
+                };
+            }
+        });
         document.querySelectorAll('.post-menu-btn').forEach(function(btn) {
             btn.onclick = function(e) {
                 e.stopPropagation();
@@ -7869,6 +8945,9 @@ document.addEventListener('DOMContentLoaded', function() {
             delete post.reactions[currentUser.id];
         } else {
             post.reactions[currentUser.id] = 'like';
+            if (post.userId !== currentUser.id) {
+                addNotification('like', currentUser.id, currentUser.name, currentUser.avatar, 'liked your post', postId);
+            }
         }
         if (post.likes) delete post.likes;
         Storage.set('posts', posts);
@@ -7889,6 +8968,9 @@ document.addEventListener('DOMContentLoaded', function() {
         renderFeed();
         var section = document.getElementById('comments-' + postId);
         if (section) section.style.display = 'block';
+        if (post.userId !== currentUser.id) {
+            addNotification('comment', currentUser.id, currentUser.name, currentUser.avatar, content.substring(0, 100), postId);
+        }
         if (DB.isReady()) { DB.addComment(postId, comment.userId, comment.userName, comment.userAvatar, comment.content); }
         if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/comments').set(post.comments); }
     }
