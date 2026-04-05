@@ -6586,6 +6586,127 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     });
     
+    // Password Strength Meter
+    window.updatePasswordStrength = function(password) {
+        var strength = 0;
+        var strengthBar = document.querySelector('.password-strength-bar');
+        var strengthText = document.querySelector('.password-strength-text');
+        
+        if (!strengthBar) {
+            // Create strength bar if it doesn't exist
+            var container = document.getElementById('password-strength');
+            if (container) {
+                container.innerHTML = '<div class="password-strength-bar"></div><div class="password-strength-text"></div>';
+                strengthBar = container.querySelector('.password-strength-bar');
+                strengthText = container.querySelector('.password-strength-text');
+            }
+        }
+        
+        if (!password || password.length === 0) {
+            if (strengthBar) strengthBar.className = 'password-strength-bar';
+            if (strengthText) { strengthText.textContent = ''; strengthText.className = 'password-strength-text'; }
+            return;
+        }
+        
+        // Length check
+        if (password.length >= 8) strength++;
+        if (password.length >= 12) strength++;
+        
+        // Character variety checks
+        if (/[a-z]/.test(password)) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^a-zA-Z0-9]/.test(password)) strength++;
+        
+        var level, label;
+        if (strength <= 2) { level = 'weak'; label = 'Weak'; }
+        else if (strength <= 3) { level = 'fair'; label = 'Fair'; }
+        else if (strength <= 4) { level = 'good'; label = 'Good'; }
+        else { level = 'strong'; label = 'Strong'; }
+        
+        if (strengthBar) strengthBar.className = 'password-strength-bar ' + level;
+        if (strengthText) { strengthText.textContent = label; strengthText.className = 'password-strength-text ' + level; }
+    };
+    
+    // Input Validation
+    window.validateEmail = function(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+    
+    window.validateUsername = function(username) {
+        return /^[a-zA-Z0-9_]{3,20}$/.test(username);
+    };
+    
+    window.validateInput = function(input, type) {
+        var value = input.value.trim();
+        var isValid = false;
+        var message = '';
+        
+        switch(type) {
+            case 'email':
+                isValid = validateEmail(value);
+                message = isValid ? 'Valid email' : 'Please enter a valid email';
+                break;
+            case 'username':
+                isValid = validateUsername(value);
+                message = isValid ? 'Username available' : 'Username must be 3-20 characters (letters, numbers, _)';
+                break;
+            case 'password':
+                isValid = value.length >= 6;
+                message = isValid ? 'Password accepted' : 'Password must be at least 6 characters';
+                break;
+            case 'required':
+                isValid = value.length > 0;
+                message = isValid ? '' : 'This field is required';
+                break;
+        }
+        
+        input.classList.remove('valid', 'invalid');
+        if (value.length > 0) {
+            input.classList.add(isValid ? 'valid' : 'invalid');
+        }
+        
+        // Update validation message
+        var msgEl = input.parentElement.querySelector('.validation-message');
+        if (!msgEl && message) {
+            msgEl = document.createElement('div');
+            msgEl.className = 'validation-message';
+            input.parentElement.appendChild(msgEl);
+        }
+        if (msgEl) {
+            msgEl.innerHTML = isValid ? '<i class="fas fa-check-circle"></i> ' + message : '<i class="fas fa-exclamation-circle"></i> ' + message;
+            msgEl.className = 'validation-message ' + (isValid ? 'success' : 'error');
+            if (!message) msgEl.innerHTML = '';
+        }
+        
+        return isValid;
+    };
+    
+    // Add real-time validation to inputs
+    var emailInput = document.getElementById('login-email');
+    if (emailInput) {
+        emailInput.addEventListener('blur', function() { validateInput(this, 'email'); });
+        emailInput.addEventListener('input', function() { 
+            if (this.value.includes('@')) validateInput(this, 'email');
+        });
+    }
+    
+    var registerEmail = document.getElementById('register-email');
+    if (registerEmail) {
+        registerEmail.addEventListener('blur', function() { validateInput(this, 'email'); });
+        registerEmail.addEventListener('input', function() { 
+            if (this.value.includes('@')) validateInput(this, 'email');
+        });
+    }
+    
+    var registerUsername = document.getElementById('register-username');
+    if (registerUsername) {
+        registerUsername.addEventListener('blur', function() { validateInput(this, 'username'); });
+        registerUsername.addEventListener('input', function() { 
+            if (this.value.length >= 3) validateInput(this, 'username');
+        });
+    }
+    
     // Forgot Password
     document.getElementById('forgot-password-link').onclick = function(e) {
         e.preventDefault();
@@ -6641,6 +6762,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         var result = await login(email, password);
         console.log('Login result:', result);
+        
+        // Record login history
+        if (typeof addLoginHistory === 'function') {
+            addLoginHistory(result.success, email.includes('@') ? 'email' : 'username');
+        }
         
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -10851,6 +10977,131 @@ document.addEventListener('DOMContentLoaded', function() {
         html += '<p>If you have any questions about this Privacy Policy, please contact us at support@bsithub.com.</p>';
         html += '</div>';
         html += '<button class="btn btn-primary" onclick="closeModal()">I Understand</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Device Management
+    // ==========================================
+    window.getDevices = function() {
+        var devices = Storage.get('devices') || [];
+        // Add current device if not exists
+        var currentDevice = {
+            id: 'device_' + navigator.userAgent.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20),
+            name: getDeviceName(),
+            browser: getBrowserInfo(),
+            os: getOSInfo(),
+            lastActive: new Date().toISOString(),
+            isCurrent: true
+        };
+        
+        var existing = devices.find(function(d) { return d.id === currentDevice.id; });
+        if (existing) {
+            existing.lastActive = currentDevice.lastActive;
+            existing.isCurrent = true;
+        } else {
+            devices.push(currentDevice);
+        }
+        
+        Storage.set('devices', devices);
+        return devices;
+    };
+    
+    window.getDeviceName = function() {
+        var ua = navigator.userAgent;
+        if (/Mobile|Android|iPhone/.test(ua)) return 'Mobile Device';
+        if (/Tablet|iPad/.test(ua)) return 'Tablet';
+        return 'Desktop';
+    };
+    
+    window.getBrowserInfo = function() {
+        var ua = navigator.userAgent;
+        if (ua.includes('Chrome')) return 'Chrome';
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Safari')) return 'Safari';
+        if (ua.includes('Edge')) return 'Edge';
+        return 'Unknown Browser';
+    };
+    
+    window.getOSInfo = function() {
+        var ua = navigator.userAgent;
+        if (ua.includes('Windows')) return 'Windows';
+        if (ua.includes('Mac')) return 'MacOS';
+        if (ua.includes('Linux')) return 'Linux';
+        if (ua.includes('Android')) return 'Android';
+        if (ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+        return 'Unknown OS';
+    };
+    
+    window.showDeviceManagement = function() {
+        var devices = getDevices();
+        var html = '<div class="device-management"><h3><i class="fas fa-laptop"></i> Device Management</h3>';
+        html += '<p class="device-desc">Manage devices where you\'re logged in</p>';
+        
+        devices.forEach(function(device) {
+            html += '<div class="device-card">';
+            html += '<div class="device-icon"><i class="fas fa-' + (device.name.includes('Mobile') ? 'mobile-alt' : 'laptop') + '"></i></div>';
+            html += '<div class="device-info">';
+            html += '<div class="device-name">' + device.name + '</div>';
+            html += '<div class="device-details">' + device.browser + ' on ' + device.os + '</div>';
+            html += '</div>';
+            html += '<span class="device-status ' + (device.isCurrent ? 'current' : 'other') + '">' + (device.isCurrent ? 'Current' : 'Active') + '</span>';
+            html += '</div>';
+        });
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Login History
+    // ==========================================
+    window.getLoginHistory = function() {
+        return Storage.get('loginHistory') || [];
+    };
+    
+    window.addLoginHistory = function(success, method) {
+        var history = getLoginHistory();
+        history.unshift({
+            id: generateId(),
+            timestamp: new Date().toISOString(),
+            success: success,
+            method: method || 'email',
+            device: getDeviceName(),
+            browser: getBrowserInfo(),
+            ip: 'Local'
+        });
+        
+        // Keep only last 50 entries
+        if (history.length > 50) history = history.slice(0, 50);
+        Storage.set('loginHistory', history);
+    };
+    
+    window.showLoginHistory = function() {
+        var history = getLoginHistory();
+        var html = '<div class="login-history"><h3><i class="fas fa-history"></i> Login History</h3>';
+        
+        if (history.length === 0) {
+            html += '<p class="history-empty">No login history yet</p>';
+        } else {
+            history.slice(0, 20).forEach(function(entry) {
+                var time = new Date(entry.timestamp);
+                var timeStr = time.toLocaleDateString() + ' ' + time.toLocaleTimeString();
+                
+                html += '<div class="history-item">';
+                html += '<div class="history-icon ' + (entry.success ? 'success' : 'failed') + '">';
+                html += '<i class="fas fa-' + (entry.success ? 'check' : 'times') + '"></i>';
+                html += '</div>';
+                html += '<div class="history-info">';
+                html += '<div class="history-action">' + (entry.success ? 'Successful login' : 'Failed login attempt') + '</div>';
+                html += '<div class="history-details">' + entry.method + ' via ' + entry.browser + ' on ' + entry.device + '</div>';
+                html += '</div>';
+                html += '<div class="history-time">' + timeStr + '</div>';
+                html += '</div>';
+            });
+        }
+        
         html += '</div>';
         showModal(html);
     };
