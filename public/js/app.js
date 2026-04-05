@@ -3665,10 +3665,13 @@ function showGroupInfo() {
     // Group Invite Link
     html += '<div class="group-section">';
     html += '<h4>Invite Link</h4>';
-    html += '<div class="invite-link-row">';
-    html += '<input type="text" id="group-invite-link" value="' + (chat.inviteCode || 'Not generated') + '" readonly>';
-    html += '<button class="btn btn-small" onclick="copyInviteLink()"><i class="fas fa-copy"></i></button>';
-    if (isAdmin) html += '<button class="btn btn-small" onclick="generateInviteLink()"><i class="fas fa-sync"></i></button>';
+    html += '<p class="group-section-desc">Share this link with people you want to invite</p>';
+    html += '<div class="invite-link-card">';
+    html += '<div class="invite-code-display"><i class="fas fa-link"></i><span id="invite-code-text">' + (chat.inviteCode || 'Not generated') + '</span></div>';
+    html += '<div class="invite-actions">';
+    html += '<button class="invite-btn copy" onclick="copyInviteLink()" title="Copy link"><i class="fas fa-copy"></i><span>Copy</span></button>';
+    if (isAdmin) html += '<button class="invite-btn refresh" onclick="generateInviteLink()" title="Generate new link"><i class="fas fa-sync"></i><span>New</span></button>';
+    html += '</div>';
     html += '</div>';
     html += '</div>';
     
@@ -3903,24 +3906,29 @@ function generateInviteLink() {
         syncChat(chats[chatIndex]);
     }
     
-    var linkInput = document.getElementById('group-invite-link');
-    if (linkInput) linkInput.value = code;
+    var linkText = document.getElementById('invite-code-text');
+    if (linkText) linkText.textContent = code;
     
     showToast('New invite code generated', 'success');
 }
 
 function copyInviteLink() {
-    var linkInput = document.getElementById('group-invite-link');
-    if (!linkInput || linkInput.value === 'Not generated') {
+    var linkText = document.getElementById('invite-code-text');
+    if (!linkText || linkText.textContent === 'Not generated') {
         showToast('No invite link available', 'info');
         return;
     }
     
-    navigator.clipboard.writeText(linkInput.value).then(function() {
+    navigator.clipboard.writeText(linkText.textContent).then(function() {
         showToast('Invite code copied!', 'success');
     }).catch(function() {
-        linkInput.select();
+        // Fallback for older browsers
+        var temp = document.createElement('input');
+        document.body.appendChild(temp);
+        temp.value = linkText.textContent;
+        temp.select();
         document.execCommand('copy');
+        document.body.removeChild(temp);
         showToast('Invite code copied!', 'success');
     });
 }
