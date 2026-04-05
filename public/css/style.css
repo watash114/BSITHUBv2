@@ -12559,3 +12559,117 @@ body {
     outline: none;
     border-color: var(--primary);
 }
+
+/* Delete Account Modal */
+.delete-account-modal {
+    text-align: center;
+    padding: 30px 20px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.delete-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 36px;
+    color: #ef4444;
+}
+
+.delete-account-modal h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.delete-warning {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.delete-warning strong {
+    color: #ef4444;
+}
+
+.delete-list {
+    text-align: left;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+}
+
+.delete-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.delete-list li i {
+    color: #ef4444;
+    font-size: 12px;
+}
+
+.delete-confirm {
+    margin-bottom: 24px;
+}
+
+.delete-confirm label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.delete-confirm input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 16px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.delete-confirm input:focus {
+    outline: none;
+    border-color: #ef4444;
+}
+
+.delete-confirm input::placeholder {
+    text-transform: none;
+    font-weight: 400;
+}
+
+.delete-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.delete-actions .btn {
+    min-width: 120px;
+    padding: 12px 20px;
+}
+
+.delete-actions .btn.danger:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

@@ -5734,7 +5734,38 @@ function clearCache() {
 }
 
 function confirmDeleteAccount() {
-    showModal('<div class="delete-account"><h3>Delete Account</h3><p>Are you sure? This cannot be undone.</p><button class="btn danger" onclick="deleteAccount()">Delete My Account</button></div>');
+    var html = '<div class="delete-account-modal">';
+    html += '<div class="delete-icon"><i class="fas fa-exclamation-triangle"></i></div>';
+    html += '<h3>Delete Account</h3>';
+    html += '<p class="delete-warning">This action is <strong>permanent</strong> and cannot be undone. All your data will be deleted:</p>';
+    html += '<ul class="delete-list">';
+    html += '<li><i class="fas fa-times"></i> All messages and chats</li>';
+    html += '<li><i class="fas fa-times"></i> All posts and comments</li>';
+    html += '<li><i class="fas fa-times"></i> Profile and settings</li>';
+    html += '<li><i class="fas fa-times"></i> Friends and connections</li>';
+    html += '</ul>';
+    html += '<div class="delete-confirm">';
+    html += '<label for="delete-confirm-text">Type <strong>DELETE</strong> to confirm:</label>';
+    html += '<input type="text" id="delete-confirm-text" placeholder="Type DELETE here" autocomplete="off">';
+    html += '</div>';
+    html += '<div class="delete-actions">';
+    html += '<button class="btn" onclick="closeModal()"><i class="fas fa-arrow-left"></i> Cancel</button>';
+    html += '<button class="btn danger" id="confirm-delete-btn" onclick="deleteAccount()" disabled><i class="fas fa-trash"></i> Delete Account</button>';
+    html += '</div>';
+    html += '</div>';
+    showModal(html);
+    
+    // Enable delete button only when user types DELETE
+    setTimeout(function() {
+        var input = document.getElementById('delete-confirm-text');
+        var btn = document.getElementById('confirm-delete-btn');
+        if (input && btn) {
+            input.addEventListener('input', function() {
+                btn.disabled = this.value !== 'DELETE';
+            });
+            input.focus();
+        }
+    }, 100);
 }
 
 function showNewChat() {
