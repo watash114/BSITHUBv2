@@ -1025,7 +1025,14 @@ window.socialLogin = function(provider) {
     auth.signOut().catch(function() {});
     
     setTimeout(function() {
-        auth.signInWithRedirect(providerObj);
+        auth.signInWithRedirect(providerObj).catch(function(error) {
+            window.socialLoginInProgress = false;
+            if (error.code === 'auth/network-request-failed') {
+                showToast('Network error. Please check your connection and try again.', 'error');
+            } else {
+                showToast('Login failed: ' + error.message, 'error');
+            }
+        });
     }, 500);
 }
 
