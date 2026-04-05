@@ -4767,8 +4767,6 @@ body {
 }
 
 .group-members-list {
-    max-height: 300px;
-    overflow-y: auto;
     margin: 15px 0;
 }
 
