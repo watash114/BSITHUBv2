@@ -1905,6 +1905,13 @@ function openChat(chatId, userId) {
         return;
     }
     
+    // Check if chat is locked
+    if (chat.locked && !chat.tempUnlocked) {
+        activeChat = { id: chatId, userId: userId };
+        showUnlockDialog();
+        return;
+    }
+    
     activeChat = { id: chatId, userId: userId };
     
     // Switch to chats section if not already there
@@ -3570,6 +3577,23 @@ function showChatOptions() {
     html += '<i class="fas fa-archive"></i>';
     html += '<span>Archive Chat</span>';
     html += '<i class="fas fa-chevron-right"></i>';
+    html += '</div>';
+    
+    // Nickname (for 1-on-1 chats)
+    if (!chat.isGroup) {
+        html += '<div class="option-item" onclick="showNicknameEditor()">';
+        html += '<i class="fas fa-user-tag"></i>';
+        html += '<span>Set Nickname</span>';
+        html += '<i class="fas fa-chevron-right"></i>';
+        html += '</div>';
+    }
+    
+    // Lock Chat
+    var isLocked = chat && chat.locked;
+    html += '<div class="option-item" onclick="toggleChatLock()">';
+    html += '<i class="fas fa-lock' + (isLocked ? '' : '') + '"></i>';
+    html += '<span>' + (isLocked ? 'Unlock' : 'Lock') + ' Chat</span>';
+    html += '<div class="option-toggle ' + (isLocked ? 'active' : '') + '"></div>';
     html += '</div>';
     
     // Clear history
@@ -10149,5 +10173,307 @@ document.addEventListener('DOMContentLoaded', function() {
         
         showToast('You joined ' + (chat.groupName || 'the group') + '!', 'success');
         window.location.hash = '';
+    };
+    
+    // ==========================================
+    // Chat Nicknames
+    // ==========================================
+    window.showNicknameEditor = function() {
+        if (!activeChat) return;
+        var chats = Storage.get('chats') || [];
+        var chat = chats.find(function(c) { return c.id === activeChat.id; });
+        if (!chat || chat.isGroup) {
+            showToast('Nicknames only work for 1-on-1 chats', 'info');
+            return;
+        }
+        
+        var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
+        var users = Storage.get('users') || [];
+        var otherUser = users.find(function(u) { return u.id === otherUserId; });
+        var currentNickname = chat.nicknames && chat.nicknames[currentUser.id] ? chat.nicknames[currentUser.id] : '';
+        
+        var html = '<div class="nickname-modal">';
+        html += '<div class="nickname-modal-header"><h3>Set Nickname</h3></div>';
+        html += '<div class="nickname-user-info">';
+        if (otherUser.avatar) {
+            html += '<div class="nickname-avatar"><img src="' + otherUser.avatar + '"></div>';
+        } else {
+            html += '<div class="nickname-avatar">' + (otherUser.name || 'U').charAt(0).toUpperCase() + '</div>';
+        }
+        html += '<span class="nickname-username">@' + (otherUser.username || 'user') + '</span>';
+        html += '</div>';
+        html += '<input type="text" id="nickname-input" placeholder="Enter nickname..." value="' + escapeHtml(currentNickname) + '" maxlength="32">';
+        html += '<p class="nickname-hint">This nickname will only be visible to you</p>';
+        html += '<div class="nickname-actions">';
+        html += '<button class="btn" onclick="clearNickname()">Clear</button>';
+        html += '<button class="btn btn-primary" onclick="saveNickname()">Save</button>';
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+        setTimeout(function() { document.getElementById('nickname-input').focus(); }, 100);
+    };
+    
+    window.saveNickname = function() {
+        if (!activeChat) return;
+        var input = document.getElementById('nickname-input');
+        var nickname = input ? input.value.trim() : '';
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        if (chatIndex === -1) return;
+        
+        if (!chats[chatIndex].nicknames) chats[chatIndex].nicknames = {};
+        chats[chatIndex].nicknames[currentUser.id] = nickname;
+        Storage.set('chats', chats);
+        
+        if (typeof syncChat === 'function') {
+            syncChat(chats[chatIndex]);
+        }
+        
+        closeModal();
+        showToast(nickname ? 'Nickname set!' : 'Nickname cleared', 'success');
+        loadChats();
+    };
+    
+    window.clearNickname = function() {
+        var input = document.getElementById('nickname-input');
+        if (input) input.value = '';
+        saveNickname();
+    };
+    
+    window.getDisplayName = function(chat, userId) {
+        if (!chat || !chat.nicknames) return null;
+        return chat.nicknames[userId] || null;
+    };
+    
+    // ==========================================
+    // Chat Lock
+    // ==========================================
+    window.toggleChatLock = function() {
+        if (!activeChat) return;
+        var chats = Storage.get('chats') || [];
+        var chat = chats.find(function(c) { return c.id === activeChat.id; });
+        if (!chat) return;
+        
+        if (chat.locked) {
+            // Unlock - ask for PIN
+            showUnlockDialog();
+        } else {
+            // Lock - set PIN
+            showLockDialog();
+        }
+    };
+    
+    window.showLockDialog = function() {
+        var html = '<div class="lock-modal">';
+        html += '<div class="lock-icon"><i class="fas fa-lock"></i></div>';
+        html += '<h3>Lock this chat</h3>';
+        html += '<p>Set a 4-digit PIN to lock this chat</p>';
+        html += '<div class="pin-input-group">';
+        html += '<input type="password" id="lock-pin-1" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '<input type="password" id="lock-pin-2" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '<input type="password" id="lock-pin-3" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '<input type="password" id="lock-pin-4" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '</div>';
+        html += '<button class="btn btn-primary" onclick="confirmLockChat()" id="lock-btn" disabled>Lock Chat</button>';
+        html += '</div>';
+        showModal(html);
+        setupPinInputs('lock-pin-', 'lock-btn');
+    };
+    
+    window.showUnlockDialog = function() {
+        var html = '<div class="lock-modal">';
+        html += '<div class="lock-icon"><i class="fas fa-lock"></i></div>';
+        html += '<h3>Unlock Chat</h3>';
+        html += '<p>Enter your 4-digit PIN</p>';
+        html += '<div class="pin-input-group">';
+        html += '<input type="password" id="unlock-pin-1" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '<input type="password" id="unlock-pin-2" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '<input type="password" id="unlock-pin-3" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '<input type="password" id="unlock-pin-4" maxlength="1" class="pin-input" inputmode="numeric" pattern="[0-9]">';
+        html += '</div>';
+        html += '<button class="btn btn-primary" onclick="confirmUnlockChat()" id="unlock-btn" disabled>Unlock</button>';
+        html += '</div>';
+        showModal(html);
+        setupPinInputs('unlock-pin-', 'unlock-btn');
+    };
+    
+    window.setupPinInputs = function(prefix, btnId) {
+        for (var i = 1; i <= 4; i++) {
+            (function(idx) {
+                var input = document.getElementById(prefix + idx);
+                if (!input) return;
+                input.addEventListener('input', function() {
+                    if (this.value && idx < 4) {
+                        document.getElementById(prefix + (idx + 1)).focus();
+                    }
+                    checkPinComplete(prefix, btnId);
+                });
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && !this.value && idx > 1) {
+                        document.getElementById(prefix + (idx - 1)).focus();
+                    }
+                });
+            })(i);
+        }
+        setTimeout(function() {
+            var first = document.getElementById(prefix + '1');
+            if (first) first.focus();
+        }, 100);
+    };
+    
+    window.checkPinComplete = function(prefix, btnId) {
+        var pin = '';
+        for (var i = 1; i <= 4; i++) {
+            var input = document.getElementById(prefix + i);
+            pin += input ? input.value : '';
+        }
+        var btn = document.getElementById(btnId);
+        if (btn) btn.disabled = pin.length !== 4;
+    };
+    
+    window.getPin = function(prefix) {
+        var pin = '';
+        for (var i = 1; i <= 4; i++) {
+            var input = document.getElementById(prefix + i);
+            pin += input ? input.value : '';
+        }
+        return pin;
+    };
+    
+    window.confirmLockChat = function() {
+        var pin = getPin('lock-pin-');
+        if (pin.length !== 4) return;
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        if (chatIndex === -1) return;
+        
+        // Hash the PIN before storing
+        var hashedPin = hashPassword(pin);
+        chats[chatIndex].locked = true;
+        chats[chatIndex].lockPin = hashedPin;
+        Storage.set('chats', chats);
+        
+        if (typeof syncChat === 'function') {
+            syncChat(chats[chatIndex]);
+        }
+        
+        closeModal();
+        showToast('Chat locked!', 'success');
+    };
+    
+    window.confirmUnlockChat = function() {
+        var pin = getPin('unlock-pin-');
+        if (pin.length !== 4) return;
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        if (chatIndex === -1) return;
+        
+        var hashedPin = hashPassword(pin);
+        if (chats[chatIndex].lockPin !== hashedPin) {
+            showToast('Incorrect PIN', 'error');
+            // Clear inputs
+            for (var i = 1; i <= 4; i++) {
+                var input = document.getElementById('unlock-pin-' + i);
+                if (input) input.value = '';
+            }
+            document.getElementById('unlock-pin-1').focus();
+            return;
+        }
+        
+        // Temporarily unlock (for this session only)
+        chats[chatIndex].tempUnlocked = true;
+        Storage.set('chats', chats);
+        
+        closeModal();
+        showToast('Chat unlocked!', 'success');
+        showChatOptions();
+    };
+    
+    // Check if chat requires unlock before opening
+    window.checkChatLock = function(chatId) {
+        var chats = Storage.get('chats') || [];
+        var chat = chats.find(function(c) { return c.id === chatId; });
+        if (!chat || !chat.locked) return true;
+        if (chat.tempUnlocked) return true;
+        return false;
+    };
+    
+    // ==========================================
+    // Security: Rate Limiting
+    // ==========================================
+    window.loginAttempts = window.loginAttempts || {};
+    
+    window.checkRateLimit = function(action) {
+        var now = Date.now();
+        var key = action + '_' + (currentUser ? currentUser.id : 'anon');
+        
+        if (!window.loginAttempts[key]) {
+            window.loginAttempts[key] = { count: 0, lastAttempt: now };
+        }
+        
+        var attempt = window.loginAttempts[key];
+        
+        // Reset if 15 minutes passed
+        if (now - attempt.lastAttempt > 15 * 60 * 1000) {
+            attempt.count = 0;
+        }
+        
+        // Check limits
+        if (action === 'login' && attempt.count >= 5) {
+            var remaining = Math.ceil((15 * 60 * 1000 - (now - attempt.lastAttempt)) / 60000);
+            showToast('Too many attempts. Try again in ' + remaining + ' minutes.', 'error');
+            return false;
+        }
+        
+        attempt.count++;
+        attempt.lastAttempt = now;
+        return true;
+    };
+    
+    window.resetRateLimit = function(action) {
+        var key = action + '_' + (currentUser ? currentUser.id : 'anon');
+        window.loginAttempts[key] = { count: 0, lastAttempt: Date.now() };
+    };
+    
+    // ==========================================
+    // Security: Session Timeout
+    // ==========================================
+    window.SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    window.lastActivity = Date.now();
+    
+    window.updateActivity = function() {
+        window.lastActivity = Date.now();
+    };
+    
+    // Track activity
+    ['click', 'keypress', 'mousemove', 'scroll', 'touchstart'].forEach(function(event) {
+        document.addEventListener(event, updateActivity, { passive: true });
+    });
+    
+    // Check session every minute
+    setInterval(function() {
+        if (!currentUser) return;
+        var elapsed = Date.now() - window.lastActivity;
+        if (elapsed > window.SESSION_TIMEOUT) {
+            showToast('Session expired due to inactivity', 'info');
+            logout();
+        }
+    }, 60000);
+    
+    // ==========================================
+    // Security: CSRF Token
+    // ==========================================
+    window.csrfToken = window.csrfToken || generateId();
+    
+    // Add CSRF token to all fetch requests
+    var originalFetch = window.fetch;
+    window.fetch = function(url, options) {
+        options = options || {};
+        options.headers = options.headers || {};
+        options.headers['X-CSRF-Token'] = window.csrfToken;
+        return originalFetch.call(this, url, options);
     };
 });
