@@ -9206,10 +9206,35 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedFeeling) {
                 content = (content ? content + '\n' : '') + 'Feeling ' + selectedFeeling;
             }
-            if (!content && !feedPostImageData) return;
+            if (!content && !feedPostImageData && !feedPostGifUrl) return;
             var privacy = document.getElementById('post-privacy').value || 'public';
-            createPost(content, feedPostImageData, privacy);
+            createPost(content, feedPostImageData, privacy, feedPostGifUrl);
         };
+
+        // GIF button for posts
+        var postGifBtn = document.getElementById('post-gif-btn');
+        if (postGifBtn) {
+            postGifBtn.onclick = function() {
+                showPostGifPicker();
+            };
+        }
+
+        // Privacy button for posts
+        var postPrivacyBtn = document.getElementById('post-privacy-btn');
+        if (postPrivacyBtn) {
+            postPrivacyBtn.onclick = function() {
+                showPostPrivacyPicker();
+            };
+        }
+
+        // Post content input handler for mentions
+        var postContentEl = document.getElementById('post-content');
+        if (postContentEl) {
+            postContentEl.oninput = function() {
+                handlePostMentionInput(this);
+                updatePostSubmitBtn();
+            };
+        }
 
         // Lightbox
         var lightboxOverlay = document.getElementById('lightbox-overlay');
@@ -9422,7 +9447,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function createPost(content, imageData, privacy) {
+    function createPost(content, imageData, privacy, gifUrl) {
         if (!currentUser) return;
         var post = {
             id: generateId(),
@@ -9431,6 +9456,7 @@ document.addEventListener('DOMContentLoaded', function() {
             userAvatar: currentUser.avatar || null,
             content: content || '',
             imageUrl: imageData || null,
+            gifUrl: gifUrl || null,
             visibility: privacy || 'public',
             likes: {},
             reactions: {},
@@ -9460,6 +9486,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset composer
         document.getElementById('post-content').value = '';
         feedPostImageData = null;
+        feedPostGifUrl = null;
         selectedFeeling = null;
         document.getElementById('composer-attachment-preview').style.display = 'none';
         document.getElementById('composer-feeling-bar').style.display = 'none';
@@ -9668,6 +9695,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Body
         html += '<div class="post-body">';
         if (post.content) html += '<div class="post-text">' + escapeHtml(post.content) + '</div>';
+        if (post.gifUrl) html += '<div class="post-gif"><img src="' + post.gifUrl + '" alt="GIF"></div>';
         if (post.imageUrl) html += '<div class="post-image"><img src="' + post.imageUrl + '" alt="Post image" onclick="openLightbox(this.src)"></div>';
         html += '</div>';
 
@@ -12096,4 +12124,322 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return { valid: true };
     };
+
+    // ==========================================
+    // Post Reporting
+    // ==========================================
+    window.reportPost = function(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post) {
+            showToast('Post not found', 'error');
+            return;
+        }
+
+        var html = '<div class="report-modal">';
+        html += '<h3><i class="fas fa-flag"></i> Report Post</h3>';
+        html += '<p>Why are you reporting this post?</p>';
+        html += '<div class="report-options">';
+        html += '<button class="report-option" onclick="submitReport(\'' + postId + '\', \'spam\')">🚫 Spam or misleading</button>';
+        html += '<button class="report-option" onclick="submitReport(\'' + postId + '\', \'harassment\')">😠 Harassment or bullying</button>';
+        html += '<button class="report-option" onclick="submitReport(\'' + postId + '\', \'hate\')">💢 Hate speech</button>';
+        html += '<button class="report-option" onclick="submitReport(\'' + postId + '\', \'violence\')">⚔️ Violence or dangerous</button>';
+        html += '<button class="report-option" onclick="submitReport(\'' + postId + '\', \'nudity\')">🔞 Nudity or sexual content</button>';
+        html += '<button class="report-option" onclick="submitReport(\'' + postId + '\', \'other\')">❓ Other</button>';
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+    };
+
+    window.submitReport = function(postId, reason) {
+        var reports = Storage.get('postReports') || [];
+        reports.push({
+            id: generateId(),
+            postId: postId,
+            reporterId: currentUser.id,
+            reporterName: currentUser.name,
+            reason: reason,
+            createdAt: new Date().toISOString()
+        });
+        Storage.set('postReports', reports);
+        closeModal();
+        showToast('Report submitted. Thank you!', 'success');
+    };
+
+    window.showReportedPosts = function() {
+        var reports = Storage.get('postReports') || [];
+        var posts = Storage.get('posts') || [];
+        
+        var html = '<div class="reported-posts-modal">';
+        html += '<h3><i class="fas fa-flag"></i> Reported Posts</h3>';
+        
+        if (reports.length === 0) {
+            html += '<p class="no-reports">No reports yet</p>';
+        } else {
+            reports.reverse().forEach(function(report) {
+                var post = posts.find(function(p) { return p.id === report.postId; });
+                html += '<div class="report-item">';
+                html += '<div class="report-info">';
+                html += '<div class="report-reason">' + report.reason.charAt(0).toUpperCase() + report.reason.slice(1) + '</div>';
+                html += '<div class="report-details">By: ' + escapeHtml(report.reporterName) + ' • ' + getTimeAgo(report.createdAt) + '</div>';
+                if (post) html += '<div class="report-content">' + escapeHtml(post.content || '').substring(0, 100) + '</div>';
+                html += '</div>';
+                html += '<div class="report-actions">';
+                html += '<button class="btn btn-small" onclick="dismissReport(\'' + report.id + '\')">Dismiss</button>';
+                html += '<button class="btn btn-small danger" onclick="deleteReportedPost(\'' + report.postId + '\', \'' + report.id + '\')">Delete Post</button>';
+                html += '</div>';
+                html += '</div>';
+            });
+        }
+        
+        html += '</div>';
+        showModal(html);
+    };
+
+    window.dismissReport = function(reportId) {
+        var reports = Storage.get('postReports') || [];
+        reports = reports.filter(function(r) { return r.id !== reportId; });
+        Storage.set('postReports', reports);
+        showReportedPosts();
+        showToast('Report dismissed', 'info');
+    };
+
+    window.deleteReportedPost = function(postId, reportId) {
+        var posts = Storage.get('posts') || [];
+        posts = posts.filter(function(p) { return p.id !== postId; });
+        Storage.set('posts', posts);
+        
+        var reports = Storage.get('postReports') || [];
+        reports = reports.filter(function(r) { return r.id !== reportId; });
+        Storage.set('postReports', reports);
+        
+        showReportedPosts();
+        renderFeed();
+        showToast('Post deleted', 'success');
+    };
+
+    // ==========================================
+    // Post GIF Picker
+    // ==========================================
+    var feedPostGifUrl = null;
+
+    window.showPostGifPicker = function() {
+        var html = '<div class="post-gif-modal">';
+        html += '<h3><i class="fas fa-file-image"></i> Add GIF</h3>';
+        html += '<div class="gif-search-box">';
+        html += '<input type="text" id="post-gif-search" placeholder="Search GIFs..." oninput="searchPostGifs(this.value)">';
+        html += '</div>';
+        html += '<div class="gif-grid" id="post-gif-grid">';
+        html += '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Loading trending GIFs...</div>';
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+        loadTrendingPostGifs();
+    };
+
+    function loadTrendingPostGifs() {
+        var grid = document.getElementById('post-gif-grid');
+        var apiKey = 'dc6zaTOxFJmzC';
+        var url = 'https://api.giphy.com/v1/gifs/trending?api_key=' + apiKey + '&limit=20&rating=g';
+        
+        fetch(url)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                grid.innerHTML = '';
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(function(gif) {
+                        var item = document.createElement('div');
+                        item.className = 'gif-item';
+                        var img = document.createElement('img');
+                        img.src = gif.images.fixed_height.url;
+                        img.alt = gif.title || 'GIF';
+                        item.appendChild(img);
+                        item.onclick = function() {
+                            selectPostGif(gif.images.fixed_height.url);
+                        };
+                        grid.appendChild(item);
+                    });
+                }
+            })
+            .catch(function() {
+                grid.innerHTML = '<div class="gif-no-results">Could not load GIFs</div>';
+            });
+    }
+
+    window.searchPostGifs = function(query) {
+        var grid = document.getElementById('post-gif-grid');
+        if (!query.trim()) {
+            loadTrendingPostGifs();
+            return;
+        }
+        
+        grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+        
+        var apiKey = 'dc6zaTOxFJmzC';
+        var url = 'https://api.giphy.com/v1/gifs/search?q=' + encodeURIComponent(query) + '&api_key=' + apiKey + '&limit=20&rating=g';
+        
+        fetch(url)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                grid.innerHTML = '';
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(function(gif) {
+                        var item = document.createElement('div');
+                        item.className = 'gif-item';
+                        var img = document.createElement('img');
+                        img.src = gif.images.fixed_height.url;
+                        img.alt = gif.title || 'GIF';
+                        item.appendChild(img);
+                        item.onclick = function() {
+                            selectPostGif(gif.images.fixed_height.url);
+                        };
+                        grid.appendChild(item);
+                    });
+                } else {
+                    grid.innerHTML = '<div class="gif-no-results">No GIFs found</div>';
+                }
+            })
+            .catch(function() {
+                grid.innerHTML = '<div class="gif-no-results">Search failed</div>';
+            });
+    };
+
+    function selectPostGif(gifUrl) {
+        feedPostGifUrl = gifUrl;
+        closeModal();
+        
+        var preview = document.getElementById('composer-attachment-preview');
+        preview.innerHTML = '<img src="' + gifUrl + '" class="preview-image"><button class="btn-icon remove-attachment" id="remove-post-gif"><i class="fas fa-times"></i></button>';
+        preview.style.display = 'block';
+        
+        document.getElementById('remove-post-gif').onclick = function() {
+            feedPostGifUrl = null;
+            preview.style.display = 'none';
+            preview.innerHTML = '';
+            updatePostSubmitBtn();
+        };
+        
+        updatePostSubmitBtn();
+    }
+
+    function updatePostSubmitBtn() {
+        var content = document.getElementById('post-content').value.trim();
+        var btn = document.getElementById('post-submit-btn');
+        btn.disabled = !content && !feedPostImageData && !feedPostGifUrl;
+    }
+
+    // ==========================================
+    // Post Privacy Selector
+    // ==========================================
+    window.showPostPrivacyPicker = function() {
+        var currentPrivacy = document.getElementById('post-privacy').value || 'public';
+        
+        var html = '<div class="privacy-picker-modal">';
+        html += '<h3><i class="fas fa-globe-americas"></i> Post Privacy</h3>';
+        html += '<p>Who can see this post?</p>';
+        html += '<div class="privacy-options">';
+        html += '<button class="privacy-option' + (currentPrivacy === 'public' ? ' selected' : '') + '" onclick="selectPostPrivacy(\'public\')">';
+        html += '<i class="fas fa-globe-americas"></i>';
+        html += '<div><strong>Public</strong><span>Anyone can see this post</span></div>';
+        html += '</button>';
+        html += '<button class="privacy-option' + (currentPrivacy === 'friends' ? ' selected' : '') + '" onclick="selectPostPrivacy(\'friends\')">';
+        html += '<i class="fas fa-user-friends"></i>';
+        html += '<div><strong>Friends</strong><span>Only your friends can see this</span></div>';
+        html += '</button>';
+        html += '<button class="privacy-option' + (currentPrivacy === 'private' ? ' selected' : '') + '" onclick="selectPostPrivacy(\'private\')">';
+        html += '<i class="fas fa-lock"></i>';
+        html += '<div><strong>Only Me</strong><span>Only you can see this post</span></div>';
+        html += '</button>';
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+    };
+
+    window.selectPostPrivacy = function(privacy) {
+        document.getElementById('post-privacy').value = privacy;
+        closeModal();
+        
+        var icons = { public: 'fa-globe-americas', friends: 'fa-user-friends', private: 'fa-lock' };
+        var labels = { public: 'Public', friends: 'Friends', private: 'Only Me' };
+        
+        var privacyBtn = document.getElementById('post-privacy-btn');
+        if (privacyBtn) {
+            privacyBtn.innerHTML = '<i class="fas ' + icons[privacy] + '" style="color:#6366f1;"></i>';
+            privacyBtn.title = labels[privacy];
+        }
+        
+        showToast('Privacy set to ' + labels[privacy], 'info');
+    };
+
+    // ==========================================
+    // Post Mentions
+    // ==========================================
+    window.handlePostMentionInput = function(textarea) {
+        var text = textarea.value;
+        var cursorPos = textarea.selectionStart;
+        var textBeforeCursor = text.substring(0, cursorPos);
+        var mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+        
+        if (mentionMatch) {
+            var query = mentionMatch[1];
+            var users = Storage.get('users') || [];
+            var filteredUsers = users.filter(function(u) {
+                return u.id !== currentUser.id && 
+                       (u.username.toLowerCase().startsWith(query.toLowerCase()) ||
+                        (u.name && u.name.toLowerCase().startsWith(query.toLowerCase())));
+            }).slice(0, 5);
+            
+            if (filteredUsers.length > 0) {
+                showPostMentionsDropdown(filteredUsers, mentionMatch[0].length, textarea);
+            } else {
+                hidePostMentionsDropdown();
+            }
+        } else {
+            hidePostMentionsDropdown();
+        }
+    };
+
+    function showPostMentionsDropdown(users, mentionLength, textarea) {
+        var dropdown = document.getElementById('post-mentions-dropdown');
+        if (!dropdown) {
+            dropdown = document.createElement('div');
+            dropdown.id = 'post-mentions-dropdown';
+            dropdown.className = 'mentions-dropdown';
+            textarea.parentElement.appendChild(dropdown);
+        }
+        
+        var html = '';
+        users.forEach(function(user) {
+            html += '<div class="mention-item" onclick="selectPostMention(\'' + user.username + '\', ' + mentionLength + ')">';
+            html += '<span class="mention-name">' + escapeHtml(user.name || user.username) + '</span>';
+            html += '<span class="mention-username">@' + user.username + '</span>';
+            html += '</div>';
+        });
+        
+        dropdown.innerHTML = html;
+        dropdown.style.display = 'block';
+    }
+
+    window.selectPostMention = function(username, mentionLength) {
+        var textarea = document.getElementById('post-content');
+        var text = textarea.value;
+        var cursorPos = textarea.selectionStart;
+        var textBeforeCursor = text.substring(0, cursorPos);
+        var atIndex = textBeforeCursor.lastIndexOf('@');
+        
+        if (atIndex !== -1) {
+            var newText = text.substring(0, atIndex) + '@' + username + ' ' + text.substring(cursorPos);
+            textarea.value = newText;
+            var newCursorPos = atIndex + username.length + 2;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+        
+        hidePostMentionsDropdown();
+        textarea.focus();
+    };
+
+    function hidePostMentionsDropdown() {
+        var dropdown = document.getElementById('post-mentions-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
 });
