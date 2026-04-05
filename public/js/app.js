@@ -2026,10 +2026,6 @@ function closeEditProfile() {
     document.querySelector('.profile-container').classList.remove('editing');
 }
 
-function changePassword() {
-    showToast('Change password feature coming soon!', 'info');
-}
-
 function updateProfile(data) {
     var users = Storage.get('users') || [];
     var userIndex = users.findIndex(function(u) { return u.id === currentUser.id; });
