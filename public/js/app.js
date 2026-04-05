@@ -6537,6 +6537,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize Firebase immediately
     initFirebase();
     
+    // Captcha System - Define before calling
+    var captchaAnswer = 0;
+    
+    window.generateCaptcha = function() {
+        var num1 = Math.floor(Math.random() * 10) + 1;
+        var num2 = Math.floor(Math.random() * 10) + 1;
+        captchaAnswer = num1 + num2;
+        var question = document.getElementById('captcha-question');
+        if (question) {
+            question.textContent = num1 + ' + ' + num2 + ' = ?';
+        }
+    };
+    
+    window.validateCaptcha = function(answer) {
+        return parseInt(answer) === captchaAnswer;
+    };
+    
     // Generate captcha
     generateCaptcha();
     
@@ -10736,25 +10753,6 @@ document.addEventListener('DOMContentLoaded', function() {
         options.headers = options.headers || {};
         options.headers['X-CSRF-Token'] = window.csrfToken;
         return originalFetch.call(this, url, options);
-    };
-    
-    // ==========================================
-    // Captcha System
-    // ==========================================
-    var captchaAnswer = 0;
-    
-    window.generateCaptcha = function() {
-        var num1 = Math.floor(Math.random() * 10) + 1;
-        var num2 = Math.floor(Math.random() * 10) + 1;
-        captchaAnswer = num1 + num2;
-        var question = document.getElementById('captcha-question');
-        if (question) {
-            question.textContent = num1 + ' + ' + num2 + ' = ?';
-        }
-    };
-    
-    window.validateCaptcha = function(answer) {
-        return parseInt(answer) === captchaAnswer;
     };
     
     // ==========================================
