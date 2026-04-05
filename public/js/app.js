@@ -10192,7 +10192,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentUser) { setTimeout(initFeed, 1500); }
     
     // Handle invite link from URL hash
-    function handleInviteLink() {
+    window.handleInviteLink = function() {
         var hash = window.location.hash;
         if (hash && hash.startsWith('#join/')) {
             var inviteCode = hash.replace('#join/', '').split('?')[0]; // Remove any query params
@@ -10200,7 +10200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 joinGroupByInviteCode(inviteCode);
             }
         }
-    }
+    };
     
     window.joinGroupByInviteCode = function(code) {
         if (!currentUser) {
