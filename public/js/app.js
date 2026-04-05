@@ -1617,7 +1617,11 @@ function loadChats() {
         
         if (chat.isGroup) {
             chatName = chat.groupName || 'Group';
-            chatAvatar = '<i class="fas fa-users"></i>';
+            if (chat.groupAvatar) {
+                chatAvatar = '<img src="' + chat.groupAvatar + '">';
+            } else {
+                chatAvatar = '<i class="fas fa-users"></i>';
+            }
             chatUserId = chat.participants[0] || currentUser.id;
         } else {
             var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
@@ -1852,7 +1856,11 @@ function loadChatsWithUnread() {
         
         if (chat.isGroup) {
             chatName = chat.groupName || 'Group';
-            chatAvatar = '<i class="fas fa-users"></i>';
+            if (chat.groupAvatar) {
+                chatAvatar = '<img src="' + chat.groupAvatar + '">';
+            } else {
+                chatAvatar = '<i class="fas fa-users"></i>';
+            }
             chatUserId = chat.participants[0] || currentUser.id;
         } else {
             var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
