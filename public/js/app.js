@@ -1027,9 +1027,22 @@ let currentReplyTo = null;
 async function login(emailOrUsername, password) {
     console.log('Login attempt:', emailOrUsername);
 
+    // Check for account lockout
+    var lockouts = Storage.get('accountLockouts') || {};
+    var lockout = lockouts[emailOrUsername];
+    if (lockout && lockout.lockedUntil > Date.now()) {
+        var remainingMinutes = Math.ceil((lockout.lockedUntil - Date.now()) / 60000);
+        logSecurityEvent('login_blocked', emailOrUsername, 'Account locked. ' + remainingMinutes + ' minutes remaining.');
+        return { success: false, message: 'Account locked. Try again in ' + remainingMinutes + ' minutes.' };
+    }
+
     // Admin login - preserve existing data
     if (emailOrUsername === 'admin@bsithub.com' || emailOrUsername === 'admin') {
         if (password === 'admin123') {
+            // Clear lockout on successful login
+            delete lockouts[emailOrUsername];
+            Storage.set('accountLockouts', lockouts);
+            
             var users = Storage.get('users') || [];
             var adminIdx = users.findIndex(function(u) { return u.id === 'admin1'; });
             var defaultAdmin = { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: 'admin123', role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, cover: null, blockedUsers: [], twoFactorEnabled: false };
@@ -1042,9 +1055,18 @@ async function login(emailOrUsername, password) {
             Storage.set('users', users);
             currentUser = users[adminIdx !== -1 ? adminIdx : users.length - 1];
             Storage.set('currentUser', { id: 'admin1' });
+            
+            // Track device and log
+            trackDevice();
+            logSecurityEvent('login_success', emailOrUsername, 'Admin login from ' + getDeviceName());
+            sendLoginAlert(currentUser);
+            
             console.log('Admin login successful');
             return { success: true };
         }
+        
+        // Failed admin login
+        handleFailedLogin(emailOrUsername);
         return { success: false, message: 'Invalid credentials' };
     }
 
@@ -1056,21 +1078,37 @@ async function login(emailOrUsername, password) {
     });
     
     if (user) {
-        if (user.status === 'banned') return { success: false, message: 'Your account has been banned' };
+        if (user.status === 'banned') {
+            logSecurityEvent('login_blocked', emailOrUsername, 'Banned account attempted login');
+            return { success: false, message: 'Your account has been banned' };
+        }
+        
+        // Clear failed attempts on successful login
+        delete lockouts[emailOrUsername];
+        Storage.set('accountLockouts', lockouts);
         
         // Check if 2FA is enabled
         if (user.twoFactorEnabled) {
             // Store temp user for 2FA verification
             window.tempLoginUser = user;
+            logSecurityEvent('login_2fa_required', emailOrUsername, '2FA verification required');
             return { success: true, require2FA: true, userId: user.id };
         }
         
         currentUser = user;
         Storage.set('currentUser', { id: user.id });
+        
+        // Track device and log
+        trackDevice();
+        logSecurityEvent('login_success', emailOrUsername, 'Login from ' + getDeviceName());
+        sendLoginAlert(user);
+        
         console.log('Login successful');
         return { success: true };
     }
 
+    // Failed login
+    handleFailedLogin(emailOrUsername);
     return { success: false, message: 'Invalid email/username or password' };
 }
 
@@ -11215,5 +11253,309 @@ document.addEventListener('DOMContentLoaded', function() {
         
         html += '</div>';
         showModal(html);
+    };
+    
+    // ==========================================
+    // Security: Account Lockout
+    // ==========================================
+    window.handleFailedLogin = function(emailOrUsername) {
+        var lockouts = Storage.get('accountLockouts') || {};
+        var now = Date.now();
+        
+        if (!lockouts[emailOrUsername]) {
+            lockouts[emailOrUsername] = {
+                attempts: 1,
+                firstAttempt: now,
+                lockedUntil: null
+            };
+        } else {
+            // Reset if last attempt was more than 15 minutes ago
+            if (now - lockouts[emailOrUsername].firstAttempt > 15 * 60 * 1000) {
+                lockouts[emailOrUsername] = {
+                    attempts: 1,
+                    firstAttempt: now,
+                    lockedUntil: null
+                };
+            } else {
+                lockouts[emailOrUsername].attempts++;
+            }
+        }
+        
+        // Lock account after 5 failed attempts for 15 minutes
+        if (lockouts[emailOrUsername].attempts >= 5) {
+            lockouts[emailOrUsername].lockedUntil = now + (15 * 60 * 1000);
+            logSecurityEvent('account_locked', emailOrUsername, 'Account locked after 5 failed attempts');
+        } else {
+            logSecurityEvent('login_failed', emailOrUsername, 'Failed attempt ' + lockouts[emailOrUsername].attempts + '/5');
+        }
+        
+        Storage.set('accountLockouts', lockouts);
+        addLoginHistory(false, emailOrUsername.includes('@') ? 'email' : 'username');
+    };
+    
+    // ==========================================
+    // Security: Audit Log
+    // ==========================================
+    window.logSecurityEvent = function(eventType, identifier, details) {
+        var auditLog = Storage.get('securityAuditLog') || [];
+        auditLog.unshift({
+            id: generateId(),
+            type: eventType,
+            identifier: identifier,
+            details: details,
+            timestamp: new Date().toISOString(),
+            device: getDeviceName(),
+            browser: getBrowserInfo(),
+            fingerprint: getDeviceFingerprint()
+        });
+        
+        // Keep only last 200 entries
+        if (auditLog.length > 200) {
+            auditLog = auditLog.slice(0, 200);
+        }
+        
+        Storage.set('securityAuditLog', auditLog);
+    };
+    
+    window.getSecurityAuditLog = function() {
+        return Storage.get('securityAuditLog') || [];
+    };
+    
+    window.showSecurityAuditLog = function() {
+        var log = getSecurityAuditLog();
+        var html = '<div class="audit-log-modal"><h3><i class="fas fa-shield-alt"></i> Security Audit Log</h3>';
+        
+        if (log.length === 0) {
+            html += '<p class="audit-empty">No security events recorded</p>';
+        } else {
+            log.slice(0, 50).forEach(function(entry) {
+                var time = new Date(entry.timestamp);
+                var timeStr = time.toLocaleDateString() + ' ' + time.toLocaleTimeString();
+                var iconClass = 'info';
+                var icon = 'info-circle';
+                
+                if (entry.type.includes('success')) { iconClass = 'success'; icon = 'check-circle'; }
+                else if (entry.type.includes('failed') || entry.type.includes('locked')) { iconClass = 'danger'; icon = 'exclamation-circle'; }
+                else if (entry.type.includes('device')) { iconClass = 'warning'; icon = 'laptop'; }
+                
+                html += '<div class="audit-item">';
+                html += '<div class="audit-icon ' + iconClass + '"><i class="fas fa-' + icon + '"></i></div>';
+                html += '<div class="audit-info">';
+                html += '<div class="audit-type">' + entry.type.replace(/_/g, ' ').toUpperCase() + '</div>';
+                html += '<div class="audit-details">' + escapeHtml(entry.details || '') + '</div>';
+                html += '<div class="audit-meta">' + entry.device + ' • ' + entry.browser + '</div>';
+                html += '</div>';
+                html += '<div class="audit-time">' + timeStr + '</div>';
+                html += '</div>';
+            });
+        }
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Security: Device Fingerprinting
+    // ==========================================
+    window.getDeviceFingerprint = function() {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillText('fingerprint', 2, 2);
+        
+        var fingerprint = [
+            navigator.userAgent,
+            navigator.language,
+            screen.width + 'x' + screen.height,
+            screen.colorDepth,
+            new Date().getTimezoneOffset(),
+            canvas.toDataURL(),
+            navigator.platform,
+            navigator.hardwareConcurrency || 'unknown'
+        ].join('|');
+        
+        // Simple hash
+        var hash = 0;
+        for (var i = 0; i < fingerprint.length; i++) {
+            var char = fingerprint.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36);
+    };
+    
+    window.trackDevice = function() {
+        var fingerprint = getDeviceFingerprint();
+        var devices = Storage.get('trustedDevices') || [];
+        var existing = devices.find(function(d) { return d.fingerprint === fingerprint; });
+        
+        if (!existing) {
+            devices.push({
+                fingerprint: fingerprint,
+                name: getDeviceName(),
+                browser: getBrowserInfo(),
+                os: getOSInfo(),
+                firstSeen: new Date().toISOString(),
+                lastSeen: new Date().toISOString()
+            });
+            logSecurityEvent('new_device', fingerprint, 'New device detected: ' + getDeviceName() + ' - ' + getBrowserInfo());
+        } else {
+            existing.lastSeen = new Date().toISOString();
+        }
+        
+        Storage.set('trustedDevices', devices);
+    };
+    
+    window.getTrustedDevices = function() {
+        return Storage.get('trustedDevices') || [];
+    };
+    
+    window.showTrustedDevices = function() {
+        var devices = getTrustedDevices();
+        var html = '<div class="trusted-devices-modal"><h3><i class="fas fa-fingerprint"></i> Trusted Devices</h3>';
+        
+        if (devices.length === 0) {
+            html += '<p class="devices-empty">No trusted devices recorded</p>';
+        } else {
+            devices.forEach(function(device) {
+                var lastSeen = new Date(device.lastSeen);
+                html += '<div class="device-card">';
+                html += '<div class="device-icon"><i class="fas fa-' + (device.name.includes('Mobile') ? 'mobile-alt' : 'laptop') + '"></i></div>';
+                html += '<div class="device-info">';
+                html += '<div class="device-name">' + device.name + '</div>';
+                html += '<div class="device-details">' + device.browser + ' on ' + device.os + '</div>';
+                html += '<div class="device-details">Last seen: ' + lastSeen.toLocaleDateString() + '</div>';
+                html += '</div>';
+                html += '<div class="device-fingerprint">ID: ' + device.fingerprint.substring(0, 8) + '...</div>';
+                html += '</div>';
+            });
+        }
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Security: Login Alerts
+    // ==========================================
+    window.sendLoginAlert = function(user) {
+        if (!user || !user.email) return;
+        
+        var devices = getTrustedDevices();
+        var currentFingerprint = getDeviceFingerprint();
+        var isNewDevice = !devices.some(function(d) { return d.fingerprint === currentFingerprint; });
+        
+        if (isNewDevice) {
+            // In a real app, this would send an email
+            // For now, we'll show a notification
+            logSecurityEvent('login_alert_sent', user.email, 'New device login alert sent for ' + getDeviceName());
+            
+            // Store alert in local notifications
+            var alerts = Storage.get('loginAlerts') || [];
+            alerts.unshift({
+                id: generateId(),
+                userId: user.id,
+                email: user.email,
+                device: getDeviceName(),
+                browser: getBrowserInfo(),
+                timestamp: new Date().toISOString(),
+                read: false
+            });
+            
+            // Keep only last 50 alerts
+            if (alerts.length > 50) alerts = alerts.slice(0, 50);
+            Storage.set('loginAlerts', alerts);
+            
+            showToast('New device detected! Login alert recorded.', 'warning');
+        }
+    };
+    
+    window.getLoginAlerts = function() {
+        return Storage.get('loginAlerts') || [];
+    };
+    
+    window.showLoginAlerts = function() {
+        var alerts = getLoginAlerts();
+        var html = '<div class="login-alerts-modal"><h3><i class="fas fa-bell"></i> Login Alerts</h3>';
+        
+        if (alerts.length === 0) {
+            html += '<p class="alerts-empty">No login alerts</p>';
+        } else {
+            alerts.slice(0, 20).forEach(function(alert) {
+                var time = new Date(alert.timestamp);
+                html += '<div class="alert-item ' + (alert.read ? '' : 'unread') + '">';
+                html += '<div class="alert-icon"><i class="fas fa-exclamation-triangle"></i></div>';
+                html += '<div class="alert-info">';
+                html += '<div class="alert-title">New device login detected</div>';
+                html += '<div class="alert-details">' + alert.device + ' via ' + alert.browser + '</div>';
+                html += '</div>';
+                html += '<div class="alert-time">' + time.toLocaleDateString() + '</div>';
+                html += '</div>';
+            });
+        }
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Security: Enhanced Password Reset
+    // ==========================================
+    window.enhancedPasswordReset = function(email) {
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.email === email; });
+        
+        if (!user) {
+            // Don't reveal if email exists - security best practice
+            logSecurityEvent('password_reset_attempt', email, 'Password reset requested (email may not exist)');
+            return { success: true, message: 'If this email exists, a reset code has been sent.' };
+        }
+        
+        // Generate secure reset token
+        var resetToken = generateId() + '-' + Date.now().toString(36);
+        var resetTokens = Storage.get('resetTokens') || {};
+        resetTokens[email] = {
+            token: resetToken,
+            expires: Date.now() + (30 * 60 * 1000), // 30 minutes
+            attempts: 0
+        };
+        Storage.set('resetTokens', resetTokens);
+        
+        logSecurityEvent('password_reset_sent', email, 'Password reset token generated');
+        
+        // In production, send email with reset link
+        return { success: true, message: 'If this email exists, a reset code has been sent.', token: resetToken };
+    };
+    
+    window.validateResetToken = function(email, token) {
+        var resetTokens = Storage.get('resetTokens') || {};
+        var tokenData = resetTokens[email];
+        
+        if (!tokenData) {
+            logSecurityEvent('password_reset_invalid', email, 'Invalid reset token used');
+            return { valid: false, message: 'Invalid or expired reset token' };
+        }
+        
+        if (Date.now() > tokenData.expires) {
+            delete resetTokens[email];
+            Storage.set('resetTokens', resetTokens);
+            logSecurityEvent('password_reset_expired', email, 'Expired reset token used');
+            return { valid: false, message: 'Reset token has expired' };
+        }
+        
+        if (tokenData.token !== token) {
+            tokenData.attempts++;
+            if (tokenData.attempts >= 3) {
+                delete resetTokens[email];
+                Storage.set('resetTokens', resetTokens);
+                logSecurityEvent('password_reset_locked', email, 'Too many invalid token attempts');
+                return { valid: false, message: 'Too many invalid attempts. Request a new reset code.' };
+            }
+            Storage.set('resetTokens', resetTokens);
+            return { valid: false, message: 'Invalid reset token' };
+        }
+        
+        return { valid: true };
     };
 });
