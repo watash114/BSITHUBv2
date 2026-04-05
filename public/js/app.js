@@ -6803,14 +6803,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Animate progress bar
         var bar = document.getElementById('logout-bar');
-        if (bar) bar.style.width = '100%';
+        if (bar) {
+            bar.style.width = '100%';
+            bar.style.transition = 'none';
+            setTimeout(function() {
+                bar.style.transition = 'width 60s linear';
+                bar.style.width = '0%';
+            }, 50);
+        }
         
         // Countdown timer
         var countdownInterval = setInterval(function() {
             countdown--;
             var el = document.getElementById('logout-countdown');
             if (el) el.textContent = countdown;
-            if (bar) bar.style.width = (countdown / 60 * 100) + '%';
             
             if (countdown <= 10 && el) el.style.color = '#ef4444';
             if (countdown <= 0) clearInterval(countdownInterval);
