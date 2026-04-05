@@ -1935,12 +1935,26 @@ function openChat(chatId, userId) {
     if (chat.isGroup) {
         document.getElementById('chat-user-name').textContent = chat.groupName || 'Group';
         document.getElementById('chat-user-status').textContent = chat.participants.length + ' members';
+        // Set group avatar in header
+        var headerAvatar = document.getElementById('chat-avatar');
+        if (chat.groupAvatar) {
+            headerAvatar.innerHTML = '<img src="' + chat.groupAvatar + '" alt="Group">';
+        } else {
+            headerAvatar.innerHTML = '<i class="fas fa-users"></i>';
+        }
     } else {
         var users = Storage.get('users') || [];
         var otherUser = users.find(function(u) { return u.id === userId; });
         
         if (otherUser) {
             document.getElementById('chat-user-name').textContent = otherUser.name;
+            // Set user avatar in header
+            var headerAvatar = document.getElementById('chat-avatar');
+            if (otherUser.avatar) {
+                headerAvatar.innerHTML = '<img src="' + otherUser.avatar + '" alt="Avatar">';
+            } else {
+                headerAvatar.innerHTML = otherUser.name.charAt(0).toUpperCase();
+            }
             
             // Get user status from Firebase
             var userStatus = getUserStatus(userId);
@@ -2159,6 +2173,17 @@ function renderMessages(chatId) {
         if (dateStr !== lastDate) {
             html += '<div class="date-separator"><span>' + dateStr + '</span></div>';
             lastDate = dateStr;
+        }
+        
+        // System message (group photo/name changes, member joins, etc.)
+        if (msg.isSystem || msg.senderId === 'system') {
+            html += '<div class="message system-message">';
+            html += '<div class="system-message-content">';
+            html += '<i class="fas fa-info-circle"></i>';
+            html += '<span>' + escapeHtml(msg.text) + '</span>';
+            html += '</div>';
+            html += '</div>';
+            return; // Skip the rest of the message rendering
         }
         
         html += '<div class="message ' + (isSent ? 'sent' : 'received') + (msg.pinned ? ' pinned' : '') + '" data-message-id="' + msg.id + '">';
@@ -3944,6 +3969,40 @@ function changeGroupAvatar() {
             if (typeof syncChat === 'function') {
                 syncChat(chats[chatIndex]);
             }
+            
+            // Update header avatar
+            var headerAvatar = document.getElementById('chat-avatar');
+            if (headerAvatar) {
+                headerAvatar.innerHTML = '<img src="' + ev.target.result + '" alt="Group">';
+            }
+            
+            // Add system message
+            var messages = Storage.get('messages') || [];
+            var systemMessage = {
+                id: generateId(),
+                chatId: activeChat.id,
+                senderId: 'system',
+                text: currentUser.name + ' changed the group photo',
+                isSystem: true,
+                timestamp: new Date().toISOString(),
+                read: true,
+                status: 'read',
+                reactions: {},
+                edited: false,
+                starred: false,
+                replyTo: null,
+                forwarded: false
+            };
+            messages.push(systemMessage);
+            Storage.set('messages', messages);
+            
+            if (typeof sendMsgToFirebase === 'function') {
+                sendMsgToFirebase(systemMessage);
+            }
+            
+            // Refresh UI
+            loadChats();
+            if (activeChat) renderMessages(activeChat.id);
             
             showToast('Group photo updated', 'success');
             showGroupInfo();

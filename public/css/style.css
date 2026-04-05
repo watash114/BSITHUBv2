@@ -1789,10 +1789,32 @@ body {
 }
 
 .message.sent {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    align-self: flex-end;
-    border-bottom-right-radius: 6px;
+    justify-content: flex-end;
+}
+
+.message.system-message {
+    justify-content: center;
+}
+
+.system-message-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+    max-width: 80%;
+}
+
+.system-message-content i {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.system-message-content span {
+    text-align: center;
 }
 
 .message.edited {
