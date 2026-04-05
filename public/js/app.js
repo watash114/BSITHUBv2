@@ -2292,7 +2292,14 @@ function renderMessages(chatId) {
         html += '<div class="message-footer">';
         html += '<span class="message-time">' + formatTime(msg.timestamp) + '</span>';
         if (isSent) {
-            var statusIcon = msg.status === 'read' ? '<i class="fas fa-check-double read"></i>' : '<i class="fas fa-check"></i>';
+            var statusIcon = '';
+            if (msg.status === 'read') {
+                statusIcon = '<i class="fas fa-check-double read"></i>';
+            } else if (msg.status === 'delivered') {
+                statusIcon = '<i class="fas fa-check-double"></i>';
+            } else {
+                statusIcon = '<i class="fas fa-check"></i>';
+            }
             html += '<span class="message-status">' + statusIcon + '</span>';
         }
         html += '</div>';
@@ -3670,6 +3677,31 @@ function confirmLeaveGroup() {
     if (chatIndex === -1) return;
     
     var chat = chats[chatIndex];
+    var chatId = chat.id;
+    
+    // Add system message before leaving
+    var systemMsg = {
+        id: generateId(),
+        chatId: chatId,
+        senderId: 'system',
+        text: currentUser.name + ' left the group',
+        isSystem: true,
+        timestamp: new Date().toISOString(),
+        read: true,
+        status: 'read',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    var messages = Storage.get('messages') || [];
+    messages.push(systemMsg);
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(systemMsg);
+    }
     
     // Remove current user from participants
     chat.participants = chat.participants.filter(function(id) { return id !== currentUser.id; });
@@ -3889,8 +3921,35 @@ function saveGroupName() {
     var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
     if (chatIndex === -1) return;
     
+    var oldName = chats[chatIndex].groupName;
     chats[chatIndex].groupName = newName;
     Storage.set('chats', chats);
+    
+    // Add system message if name changed
+    if (oldName !== newName) {
+        var systemMsg = {
+            id: generateId(),
+            chatId: activeChat.id,
+            senderId: 'system',
+            text: currentUser.name + ' changed the group name to "' + newName + '"',
+            isSystem: true,
+            timestamp: new Date().toISOString(),
+            read: true,
+            status: 'read',
+            reactions: {},
+            edited: false,
+            starred: false,
+            replyTo: null,
+            forwarded: false
+        };
+        var messages = Storage.get('messages') || [];
+        messages.push(systemMsg);
+        Storage.set('messages', messages);
+        
+        if (typeof sendMsgToFirebase === 'function') {
+            sendMsgToFirebase(systemMsg);
+        }
+    }
     
     if (typeof syncChat === 'function') {
         syncChat(chats[chatIndex]);
@@ -3899,6 +3958,7 @@ function saveGroupName() {
     document.getElementById('chat-user-name').textContent = newName;
     showToast('Group name updated', 'success');
     showGroupInfo();
+    if (activeChat) renderMessages(activeChat.id);
 }
 
 function editGroupDescription() {
@@ -4115,12 +4175,39 @@ function executeTransferAdmin(newAdminId) {
     chats[chatIndex].admin = newAdminId;
     Storage.set('chats', chats);
     
+    // Add system message
+    var users = Storage.get('users') || [];
+    var newAdmin = users.find(function(u) { return u.id === newAdminId; });
+    var systemMsg = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: 'system',
+        text: currentUser.name + ' transferred ownership to ' + (newAdmin ? newAdmin.name : 'someone'),
+        isSystem: true,
+        timestamp: new Date().toISOString(),
+        read: true,
+        status: 'read',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    var messages = Storage.get('messages') || [];
+    messages.push(systemMsg);
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(systemMsg);
+    }
+    
     if (typeof syncChat === 'function') {
         syncChat(chats[chatIndex]);
     }
     
     showToast('Ownership transferred', 'success');
     showGroupInfo();
+    renderMessages(activeChat.id);
 }
 
 function deleteGroup() {
@@ -4223,6 +4310,32 @@ function addMemberToGroup(userId) {
     chats[chatIndex] = chat;
     Storage.set('chats', chats);
     
+    // Add system message
+    var users = Storage.get('users') || [];
+    var addedUser = users.find(function(u) { return u.id === userId; });
+    var systemMsg = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: 'system',
+        text: currentUser.name + ' added ' + (addedUser ? addedUser.name : 'someone') + ' to the group',
+        isSystem: true,
+        timestamp: new Date().toISOString(),
+        read: true,
+        status: 'read',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    var messages = Storage.get('messages') || [];
+    messages.push(systemMsg);
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(systemMsg);
+    }
+    
     // Sync to Firebase
     if (typeof syncChat === 'function') {
         syncChat(chat);
@@ -4232,6 +4345,7 @@ function addMemberToGroup(userId) {
     
     // Refresh group info
     showGroupInfo();
+    renderMessages(activeChat.id);
 }
 
 function kickMember(userId) {
@@ -4270,6 +4384,32 @@ function kickMember(userId) {
     chats[chatIndex] = chat;
     Storage.set('chats', chats);
     
+    // Add system message
+    var users = Storage.get('users') || [];
+    var kickedUser = users.find(function(u) { return u.id === userId; });
+    var systemMsg = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: 'system',
+        text: currentUser.name + ' removed ' + (kickedUser ? kickedUser.name : 'someone') + ' from the group',
+        isSystem: true,
+        timestamp: new Date().toISOString(),
+        read: true,
+        status: 'read',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    var messages = Storage.get('messages') || [];
+    messages.push(systemMsg);
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(systemMsg);
+    }
+    
     // Sync to Firebase
     if (typeof syncChat === 'function') {
         syncChat(chat);
@@ -4280,6 +4420,7 @@ function kickMember(userId) {
     
     // Show updated group info
     showGroupInfo();
+    renderMessages(activeChat.id);
 }
 
 function toggleMuteChat() {
