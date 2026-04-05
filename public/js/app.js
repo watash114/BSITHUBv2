@@ -2177,10 +2177,23 @@ function renderMessages(chatId) {
         
         // System message (group photo/name changes, member joins, etc.)
         if (msg.isSystem || msg.senderId === 'system') {
+            // Determine icon based on message content
+            var sysIcon = 'fas fa-info-circle';
+            if (msg.text.includes('added')) sysIcon = 'fas fa-user-plus';
+            else if (msg.text.includes('removed')) sysIcon = 'fas fa-user-minus';
+            else if (msg.text.includes('left')) sysIcon = 'fas fa-sign-out-alt';
+            else if (msg.text.includes('photo')) sysIcon = 'fas fa-camera';
+            else if (msg.text.includes('name')) sysIcon = 'fas fa-pen';
+            else if (msg.text.includes('ownership')) sysIcon = 'fas fa-crown';
+            
+            // Highlight names in bold
+            var displayText = escapeHtml(msg.text);
+            displayText = displayText.replace(/(added|removed|left|changed|transferred)/g, '<strong>$1</strong>');
+            
             html += '<div class="message system-message">';
             html += '<div class="system-message-content">';
-            html += '<i class="fas fa-info-circle"></i>';
-            html += '<span>' + escapeHtml(msg.text) + '</span>';
+            html += '<i class="' + sysIcon + '"></i>';
+            html += '<span>' + displayText + '</span>';
             html += '</div>';
             html += '</div>';
             return; // Skip the rest of the message rendering
