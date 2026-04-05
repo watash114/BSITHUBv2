@@ -11558,4 +11558,511 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return { valid: true };
     };
+    
+    // ==========================================
+    // Security: Vulnerability Scanner
+    // ==========================================
+    window.runVulnerabilityScan = function() {
+        var issues = [];
+        var users = Storage.get('users') || [];
+        
+        // Check for weak passwords
+        users.forEach(function(user) {
+            if (user.password && user.password.length < 60) {
+                issues.push({
+                    severity: 'high',
+                    type: 'weak_password',
+                    message: 'User "' + user.username + '" has a weak password',
+                    recommendation: 'Enforce stronger password requirements'
+                });
+            }
+        });
+        
+        // Check for missing 2FA
+        var usersWithout2FA = users.filter(function(u) { return !u.twoFactorEnabled; });
+        if (usersWithout2FA.length > 0) {
+            issues.push({
+                severity: 'medium',
+                type: 'no_2fa',
+                message: usersWithout2FA.length + ' users without 2FA enabled',
+                recommendation: 'Enable 2FA for all accounts'
+            });
+        }
+        
+        // Check for old sessions
+        var lastActivity = window.lastActivity || Date.now();
+        if (Date.now() - lastActivity > 24 * 60 * 60 * 1000) {
+            issues.push({
+                severity: 'low',
+                type: 'old_session',
+                message: 'Session has been active for over 24 hours',
+                recommendation: 'Consider logging out and back in'
+            });
+        }
+        
+        // Check for blocked users without reason
+        var blockedUsers = Storage.get('blockedUsers') || [];
+        if (blockedUsers.length > 10) {
+            issues.push({
+                severity: 'info',
+                type: 'many_blocked',
+                message: blockedUsers.length + ' users are blocked',
+                recommendation: 'Review blocked users list'
+            });
+        }
+        
+        // Check for old login attempts
+        var lockouts = Storage.get('accountLockouts') || {};
+        var oldLockouts = Object.keys(lockouts).filter(function(key) {
+            return lockouts[key].lockedUntil && lockouts[key].lockedUntil < Date.now();
+        });
+        if (oldLockouts.length > 0) {
+            issues.push({
+                severity: 'low',
+                type: 'expired_lockouts',
+                message: oldLockouts.length + ' expired account lockouts found',
+                recommendation: 'Clear expired lockout records'
+            });
+        }
+        
+        // Check audit log for suspicious activity
+        var auditLog = Storage.get('securityAuditLog') || [];
+        var recentFailures = auditLog.filter(function(entry) {
+            return entry.type.includes('failed') && Date.now() - new Date(entry.timestamp).getTime() < 60 * 60 * 1000;
+        });
+        if (recentFailures.length > 10) {
+            issues.push({
+                severity: 'high',
+                type: 'brute_force',
+                message: recentFailures.length + ' failed login attempts in the last hour',
+                recommendation: 'Review IP blocking and rate limiting'
+            });
+        }
+        
+        // Check for missing privacy settings
+        var settings = Storage.get('settings') || {};
+        if (!settings.hasOwnProperty('showOnlineStatus')) {
+            issues.push({
+                severity: 'low',
+                type: 'privacy_default',
+                message: 'Privacy settings not configured',
+                recommendation: 'Review and set privacy preferences'
+            });
+        }
+        
+        return {
+            score: Math.max(0, 100 - (issues.length * 10)),
+            issues: issues,
+            scannedAt: new Date().toISOString()
+        };
+    };
+    
+    window.showVulnerabilityScan = function() {
+        var result = runVulnerabilityScan();
+        var html = '<div class="vuln-scan-modal">';
+        html += '<h3><i class="fas fa-search"></i> Security Scan Results</h3>';
+        html += '<div class="scan-score">';
+        html += '<div class="score-circle ' + (result.score >= 80 ? 'good' : result.score >= 60 ? 'warning' : 'danger') + '">';
+        html += '<span class="score-value">' + result.score + '</span>';
+        html += '<span class="score-label">Security Score</span>';
+        html += '</div>';
+        html += '</div>';
+        
+        if (result.issues.length === 0) {
+            html += '<div class="scan-success"><i class="fas fa-check-circle"></i> No issues found!</div>';
+        } else {
+            html += '<div class="scan-issues">';
+            result.issues.forEach(function(issue) {
+                html += '<div class="scan-issue ' + issue.severity + '">';
+                html += '<div class="issue-icon"><i class="fas fa-' + (issue.severity === 'high' ? 'exclamation-triangle' : issue.severity === 'medium' ? 'exclamation-circle' : 'info-circle') + '"></i></div>';
+                html += '<div class="issue-info">';
+                html += '<div class="issue-message">' + escapeHtml(issue.message) + '</div>';
+                html += '<div class="issue-recommendation">' + escapeHtml(issue.recommendation) + '</div>';
+                html += '</div>';
+                html += '<span class="issue-severity">' + issue.severity.toUpperCase() + '</span>';
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        html += '<button class="btn btn-primary" onclick="closeModal()">Close</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Security: Security Dashboard
+    // ==========================================
+    window.showSecurityDashboard = function() {
+        var users = Storage.get('users') || [];
+        var settings = Storage.get('settings') || {};
+        var auditLog = Storage.get('securityAuditLog') || [];
+        var trustedDevices = getTrustedDevices();
+        
+        // Calculate security score
+        var score = 100;
+        var factors = [];
+        
+        // 2FA
+        var has2FA = currentUser && currentUser.twoFactorEnabled;
+        if (has2FA) {
+            factors.push({ name: '2FA Enabled', status: 'good', points: 20 });
+        } else {
+            factors.push({ name: '2FA Disabled', status: 'warning', points: 0 });
+            score -= 20;
+        }
+        
+        // Strong password (check if hash exists)
+        if (currentUser && currentUser.password && currentUser.password.length > 50) {
+            factors.push({ name: 'Strong Password', status: 'good', points: 20 });
+        } else {
+            factors.push({ name: 'Weak Password', status: 'danger', points: 0 });
+            score -= 20;
+        }
+        
+        // Privacy settings
+        if (settings.showOnlineStatus === false) {
+            factors.push({ name: 'Privacy Mode', status: 'good', points: 10 });
+        } else {
+            factors.push({ name: 'Online Status Visible', status: 'info', points: 5 });
+            score -= 5;
+        }
+        
+        // Trusted devices
+        if (trustedDevices.length > 0) {
+            factors.push({ name: trustedDevices.length + ' Trusted Device(s)', status: 'good', points: 10 });
+        } else {
+            factors.push({ name: 'No Trusted Devices', status: 'info', points: 0 });
+        }
+        
+        // Recent activity
+        var recentActivity = auditLog.filter(function(e) {
+            return Date.now() - new Date(e.timestamp).getTime() < 7 * 24 * 60 * 60 * 1000;
+        });
+        if (recentActivity.length > 0) {
+            factors.push({ name: recentActivity.length + ' Events This Week', status: 'info', points: 10 });
+        }
+        
+        // Login alerts
+        var alerts = getLoginAlerts();
+        var unreadAlerts = alerts.filter(function(a) { return !a.read; });
+        if (unreadAlerts.length === 0) {
+            factors.push({ name: 'No Unread Alerts', status: 'good', points: 10 });
+        } else {
+            factors.push({ name: unreadAlerts.length + ' Unread Alerts', status: 'warning', points: 0 });
+            score -= 10;
+        }
+        
+        score = Math.max(0, Math.min(100, score));
+        
+        var html = '<div class="security-dashboard">';
+        html += '<h3><i class="fas fa-shield-alt"></i> Security Dashboard</h3>';
+        
+        html += '<div class="dashboard-score">';
+        html += '<div class="score-ring ' + (score >= 80 ? 'good' : score >= 60 ? 'warning' : 'danger') + '">';
+        html += '<div class="score-inner">';
+        html += '<span class="score-number">' + score + '</span>';
+        html += '<span class="score-text">Security Score</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        
+        html += '<div class="dashboard-factors">';
+        factors.forEach(function(factor) {
+            html += '<div class="factor-item">';
+            html += '<span class="factor-status ' + factor.status + '"><i class="fas fa-' + (factor.status === 'good' ? 'check-circle' : factor.status === 'warning' ? 'exclamation-circle' : 'info-circle') + '"></i></span>';
+            html += '<span class="factor-name">' + factor.name + '</span>';
+            html += '<span class="factor-points">+' + factor.points + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+        
+        html += '<div class="dashboard-actions">';
+        html += '<button class="btn" onclick="showVulnerabilityScan()"><i class="fas fa-search"></i> Run Scan</button>';
+        html += '<button class="btn" onclick="showSecurityAuditLog()"><i class="fas fa-list"></i> View Log</button>';
+        html += '</div>';
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    // ==========================================
+    // Security: Privacy Settings
+    // ==========================================
+    window.showPrivacySettings = function() {
+        var settings = Storage.get('settings') || {};
+        
+        var html = '<div class="privacy-settings">';
+        html += '<h3><i class="fas fa-eye-slash"></i> Privacy Settings</h3>';
+        
+        html += '<div class="privacy-option">';
+        html += '<div class="privacy-info">';
+        html += '<div class="privacy-label">Show Online Status</div>';
+        html += '<div class="privacy-desc">Let others see when you\'re online</div>';
+        html += '</div>';
+        html += '<label class="toggle">';
+        html += '<input type="checkbox" id="privacy-online" ' + (settings.showOnlineStatus !== false ? 'checked' : '') + '>';
+        html += '<span class="toggle-slider"></span>';
+        html += '</label>';
+        html += '</div>';
+        
+        html += '<div class="privacy-option">';
+        html += '<div class="privacy-info">';
+        html += '<div class="privacy-label">Show Last Seen</div>';
+        html += '<div class="privacy-desc">Let others see when you were last active</div>';
+        html += '</div>';
+        html += '<label class="toggle">';
+        html += '<input type="checkbox" id="privacy-lastseen" ' + (settings.showLastSeen !== false ? 'checked' : '') + '>';
+        html += '<span class="toggle-slider"></span>';
+        html += '</label>';
+        html += '</div>';
+        
+        html += '<div class="privacy-option">';
+        html += '<div class="privacy-info">';
+        html += '<div class="privacy-label">Show Read Receipts</div>';
+        html += '<div class="privacy-desc">Let others see when you read messages</div>';
+        html += '</div>';
+        html += '<label class="toggle">';
+        html += '<input type="checkbox" id="privacy-receipts" ' + (settings.showReadReceipts !== false ? 'checked' : '') + '>';
+        html += '<span class="toggle-slider"></span>';
+        html += '</label>';
+        html += '</div>';
+        
+        html += '<div class="privacy-option">';
+        html += '<div class="privacy-info">';
+        html += '<div class="privacy-label">Show Profile Photo</div>';
+        html += '<div class="privacy-desc">Let others see your profile photo</div>';
+        html += '</div>';
+        html += '<label class="toggle">';
+        html += '<input type="checkbox" id="privacy-photo" ' + (settings.showProfilePhoto !== false ? 'checked' : '') + '>';
+        html += '<span class="toggle-slider"></span>';
+        html += '</label>';
+        html += '</div>';
+        
+        html += '<div class="privacy-option">';
+        html += '<div class="privacy-info">';
+        html += '<div class="privacy-label">Allow Message Forwarding</div>';
+        html += '<div class="privacy-desc">Let others forward your messages</div>';
+        html += '</div>';
+        html += '<label class="toggle">';
+        html += '<input type="checkbox" id="privacy-forward" ' + (settings.allowForwarding !== false ? 'checked' : '') + '>';
+        html += '<span class="toggle-slider"></span>';
+        html += '</label>';
+        html += '</div>';
+        
+        html += '<button class="btn btn-primary" onclick="savePrivacySettings()"><i class="fas fa-save"></i> Save Settings</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.savePrivacySettings = function() {
+        var settings = Storage.get('settings') || {};
+        settings.showOnlineStatus = document.getElementById('privacy-online').checked;
+        settings.showLastSeen = document.getElementById('privacy-lastseen').checked;
+        settings.showReadReceipts = document.getElementById('privacy-receipts').checked;
+        settings.showProfilePhoto = document.getElementById('privacy-photo').checked;
+        settings.allowForwarding = document.getElementById('privacy-forward').checked;
+        Storage.set('settings', settings);
+        showToast('Privacy settings saved', 'success');
+        closeModal();
+    };
+    
+    // ==========================================
+    // Security: IP Blocking
+    // ==========================================
+    window.getBlockedIPs = function() {
+        return Storage.get('blockedIPs') || [];
+    };
+    
+    window.blockIP = function(ip, reason) {
+        var blockedIPs = getBlockedIPs();
+        if (!blockedIPs.find(function(b) { return b.ip === ip; })) {
+            blockedIPs.push({
+                ip: ip,
+                reason: reason || 'Manual block',
+                blockedAt: new Date().toISOString(),
+                blockedBy: currentUser ? currentUser.id : 'system'
+            });
+            Storage.set('blockedIPs', blockedIPs);
+            logSecurityEvent('ip_blocked', ip, 'IP blocked: ' + reason);
+            return true;
+        }
+        return false;
+    };
+    
+    window.unblockIP = function(ip) {
+        var blockedIPs = getBlockedIPs();
+        blockedIPs = blockedIPs.filter(function(b) { return b.ip !== ip; });
+        Storage.set('blockedIPs', blockedIPs);
+        logSecurityEvent('ip_unblocked', ip, 'IP unblocked');
+    };
+    
+    window.showBlockedIPs = function() {
+        var blockedIPs = getBlockedIPs();
+        var html = '<div class="blocked-ips-modal">';
+        html += '<h3><i class="fas fa-ban"></i> Blocked IP Addresses</h3>';
+        
+        if (blockedIPs.length === 0) {
+            html += '<p class="no-blocked">No blocked IP addresses</p>';
+        } else {
+            blockedIPs.forEach(function(entry) {
+                var time = new Date(entry.blockedAt);
+                html += '<div class="blocked-ip-item">';
+                html += '<div class="blocked-ip-info">';
+                html += '<div class="blocked-ip-address">' + entry.ip + '</div>';
+                html += '<div class="blocked-ip-reason">' + escapeHtml(entry.reason) + '</div>';
+                html += '</div>';
+                html += '<div class="blocked-ip-actions">';
+                html += '<span class="blocked-ip-time">' + time.toLocaleDateString() + '</span>';
+                html += '<button class="btn btn-small" onclick="unblockIP(\'' + entry.ip + '\'); showBlockedIPs();">Unblock</button>';
+                html += '</div>';
+                html += '</div>';
+            });
+        }
+        
+        html += '<div class="add-blocked-ip">';
+        html += '<input type="text" id="new-blocked-ip" placeholder="Enter IP address">';
+        html += '<input type="text" id="new-blocked-reason" placeholder="Reason (optional)">';
+        html += '<button class="btn btn-primary" onclick="addBlockedIP()">Block IP</button>';
+        html += '</div>';
+        
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.addBlockedIP = function() {
+        var ip = document.getElementById('new-blocked-ip').value.trim();
+        var reason = document.getElementById('new-blocked-reason').value.trim();
+        if (ip) {
+            if (blockIP(ip, reason || 'Manual block')) {
+                showToast('IP address blocked', 'success');
+                showBlockedIPs();
+            } else {
+                showToast('IP already blocked', 'info');
+            }
+        }
+    };
+    
+    // ==========================================
+    // Security: Security Questions
+    // ==========================================
+    window.securityQuestions = [
+        'What was the name of your first pet?',
+        'What city were you born in?',
+        'What is your mother\'s maiden name?',
+        'What was the name of your first school?',
+        'What is your favorite movie?',
+        'What was your childhood nickname?',
+        'What is the name of your best friend?',
+        'What was your first car?',
+        'What is your favorite book?',
+        'What was the first concert you attended?'
+    ];
+    
+    window.showSecurityQuestions = function() {
+        var userQuestions = (currentUser && currentUser.securityQuestions) || {};
+        
+        var html = '<div class="security-questions">';
+        html += '<h3><i class="fas fa-question-circle"></i> Security Questions</h3>';
+        html += '<p class="questions-desc">Set up security questions to help recover your account</p>';
+        
+        html += '<div class="question-item">';
+        html += '<label>Question 1</label>';
+        html += '<select id="question-1">';
+        html += '<option value="">Select a question...</option>';
+        securityQuestions.forEach(function(q, i) {
+            html += '<option value="' + i + '" ' + (userQuestions.q1 === i ? 'selected' : '') + '>' + q + '</option>';
+        });
+        html += '</select>';
+        html += '<input type="password" id="answer-1" placeholder="Your answer" value="' + (userQuestions.a1 ? '••••••' : '') + '">';
+        html += '</div>';
+        
+        html += '<div class="question-item">';
+        html += '<label>Question 2</label>';
+        html += '<select id="question-2">';
+        html += '<option value="">Select a question...</option>';
+        securityQuestions.forEach(function(q, i) {
+            html += '<option value="' + i + '" ' + (userQuestions.q2 === i ? 'selected' : '') + '>' + q + '</option>';
+        });
+        html += '</select>';
+        html += '<input type="password" id="answer-2" placeholder="Your answer" value="' + (userQuestions.a2 ? '••••••' : '') + '">';
+        html += '</div>';
+        
+        html += '<div class="question-item">';
+        html += '<label>Question 3</label>';
+        html += '<select id="question-3">';
+        html += '<option value="">Select a question...</option>';
+        securityQuestions.forEach(function(q, i) {
+            html += '<option value="' + i + '" ' + (userQuestions.q3 === i ? 'selected' : '') + '>' + q + '</option>';
+        });
+        html += '</select>';
+        html += '<input type="password" id="answer-3" placeholder="Your answer" value="' + (userQuestions.a3 ? '••••••' : '') + '">';
+        html += '</div>';
+        
+        html += '<button class="btn btn-primary" onclick="saveSecurityQuestions()"><i class="fas fa-save"></i> Save Questions</button>';
+        html += '</div>';
+        showModal(html);
+    };
+    
+    window.saveSecurityQuestions = function() {
+        var q1 = parseInt(document.getElementById('question-1').value);
+        var q2 = parseInt(document.getElementById('question-2').value);
+        var q3 = parseInt(document.getElementById('question-3').value);
+        var a1 = document.getElementById('answer-1').value.trim();
+        var a2 = document.getElementById('answer-2').value.trim();
+        var a3 = document.getElementById('answer-3').value.trim();
+        
+        if (isNaN(q1) || isNaN(q2) || isNaN(q3)) {
+            showToast('Please select all questions', 'error');
+            return;
+        }
+        
+        if (!a1 || !a2 || !a3) {
+            showToast('Please provide all answers', 'error');
+            return;
+        }
+        
+        if (q1 === q2 || q1 === q3 || q2 === q3) {
+            showToast('Please select different questions', 'error');
+            return;
+        }
+        
+        // Hash answers for security
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === currentUser.id; });
+        if (userIndex !== -1) {
+            users[userIndex].securityQuestions = {
+                q1: q1,
+                q2: q2,
+                q3: q3,
+                a1: hashPassword(a1.toLowerCase()),
+                a2: hashPassword(a2.toLowerCase()),
+                a3: hashPassword(a3.toLowerCase())
+            };
+            Storage.set('users', users);
+            currentUser = users[userIndex];
+            
+            logSecurityEvent('security_questions_set', currentUser.email, 'Security questions configured');
+            showToast('Security questions saved', 'success');
+            closeModal();
+        }
+    };
+    
+    window.verifySecurityQuestions = function(email, answers) {
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.email === email; });
+        
+        if (!user || !user.securityQuestions) {
+            return { valid: false, message: 'No security questions set' };
+        }
+        
+        var q = user.securityQuestions;
+        if (hashPassword(answers.a1.toLowerCase()) !== q.a1 ||
+            hashPassword(answers.a2.toLowerCase()) !== q.a2 ||
+            hashPassword(answers.a3.toLowerCase()) !== q.a3) {
+            return { valid: false, message: 'Incorrect answers' };
+        }
+        
+        return { valid: true };
+    };
 });
