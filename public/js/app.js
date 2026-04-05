@@ -975,7 +975,7 @@ async function login(emailOrUsername, password) {
     return { success: false, message: 'Invalid email/username or password' };
 }
 
-function socialLogin(provider) {
+window.socialLogin = function(provider) {
     // Prevent multiple clicks
     if (window.socialLoginInProgress) {
         showToast('Please wait...', 'info');
