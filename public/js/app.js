@@ -1948,6 +1948,12 @@ function openChat(chatId, userId) {
     // Render current messages
     renderMessages(chatId);
     
+    // Apply compact mode if enabled
+    if (typeof applyCompactMode === 'function') applyCompactMode();
+    
+    // Update read-only UI for groups
+    if (typeof updateReadOnlyUI === 'function') updateReadOnlyUI();
+    
     // Load messages from Firebase and start listening
     if (typeof loadChatMessages === 'function') {
         loadChatMessages(chatId).then(function(fbMessages) {
@@ -2168,9 +2174,18 @@ function renderMessages(chatId) {
             html += '<span class="file-name">' + escapeHtml(msg.fileName || 'file') + '</span>';
             html += '</a></div>';
         }
-        // Regular text
+        // Check for sticker
+        else if (msg.stickerUrl) {
+            html += '<div class="message-sticker"><img src="' + msg.stickerUrl + '" alt="Sticker"></div>';
+        }
+        // Regular text (with spoiler support)
         else {
-            html += '<div class="message-text">' + escapeHtml(msg.text) + '</div>';
+            var textContent = escapeHtml(msg.text);
+            if (msg.isSpoiler) {
+                html += '<div class="spoiler-text hidden" onclick="toggleSpoiler(this)">' + textContent + '</div>';
+            } else {
+                html += '<div class="message-text">' + textContent + '</div>';
+            }
         }
         
         // Reactions
@@ -3662,7 +3677,10 @@ function showGroupInfo() {
     html += '<h4>Actions</h4>';
     html += '<div class="group-action-buttons">';
     html += '<button class="btn btn-primary" onclick="showAddMembers()"><i class="fas fa-user-plus"></i> Add Members</button>';
-    if (isAdmin) html += '<button class="btn" onclick="showTransferAdmin()"><i class="fas fa-crown"></i> Transfer Ownership</button>';
+    if (isAdmin) {
+        html += '<button class="btn" onclick="toggleReadOnly()"><i class="fas fa-' + (chat.readOnly ? 'unlock' : 'lock') + '"></i> ' + (chat.readOnly ? 'Disable' : 'Enable') + ' Read-Only</button>';
+        html += '<button class="btn" onclick="showTransferAdmin()"><i class="fas fa-crown"></i> Transfer Ownership</button>';
+    }
     html += '<button class="btn" onclick="leaveGroup()"><i class="fas fa-sign-out-alt"></i> Leave Group</button>';
     if (isAdmin) html += '<button class="btn danger" onclick="deleteGroup()"><i class="fas fa-trash"></i> Delete Group</button>';
     html += '</div>';
@@ -3690,13 +3708,15 @@ function showGroupInfo() {
         }
         
         var userAvatar = user.avatar ? '<img src="' + user.avatar + '">' : user.name.charAt(0).toUpperCase();
-        var isGroupAdmin = chat.admin === userId;
+        var memberRole = getMemberRole(chat, userId);
+        var isGroupAdmin = memberRole === 'owner';
+        var isModerator = memberRole === 'moderator';
         
         html += '<div class="group-member">';
         html += '<div class="member-avatar">' + userAvatar + '</div>';
         html += '<div class="member-info">';
         html += '<span class="member-name">' + escapeHtml(user.name);
-        if (isGroupAdmin) html += ' <span class="admin-badge"><i class="fas fa-crown"></i> Admin</span>';
+        html += getRoleBadge(chat, userId);
         if (userId === currentUser.id) html += ' <span class="you-badge">You</span>';
         html += '</span>';
         html += '<span class="member-username">@' + escapeHtml(user.username) + '</span>';
@@ -3704,6 +3724,11 @@ function showGroupInfo() {
         
         if (isAdmin && userId !== currentUser.id && !isGroupAdmin) {
             html += '<div class="member-actions">';
+            html += '<select class="role-selector" onchange="updateMemberRole(\'' + userId + '\', this.value)">';
+            html += '<option value="member"' + (memberRole === 'member' ? ' selected' : '') + '>Member</option>';
+            html += '<option value="moderator"' + (memberRole === 'moderator' ? ' selected' : '') + '>Moderator</option>';
+            html += '<option value="admin"' + (memberRole === 'admin' ? ' selected' : '') + '>Admin</option>';
+            html += '</select>';
             html += '<button class="btn-icon" onclick="kickMember(\'' + userId + '\')" title="Remove"><i class="fas fa-user-minus"></i></button>';
             html += '</div>';
         }
@@ -9674,6 +9699,306 @@ document.addEventListener('DOMContentLoaded', function() {
         if (diffDay < 7) return diffDay + 'd ago';
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
+
+    // ==========================================
+    // Compact Mode
+    // ==========================================
+    window.toggleCompactMode = function() {
+        var messagesContainer = document.getElementById('chat-messages');
+        if (!messagesContainer) return;
+        
+        messagesContainer.classList.toggle('compact');
+        var isCompact = messagesContainer.classList.contains('compact');
+        Storage.set('compactMode', isCompact);
+        showToast(isCompact ? 'Compact mode enabled' : 'Compact mode disabled', 'info');
+    };
+
+    window.applyCompactMode = function() {
+        var messagesContainer = document.getElementById('chat-messages');
+        if (!messagesContainer) return;
+        
+        var isCompact = Storage.get('compactMode') || false;
+        if (isCompact) {
+            messagesContainer.classList.add('compact');
+        } else {
+            messagesContainer.classList.remove('compact');
+        }
+    };
+
+    // ==========================================
+    // Message Spoilers
+    // ==========================================
+    window.toggleSpoiler = function(el) {
+        el.classList.remove('hidden');
+        el.classList.add('revealed');
+    };
+
+    window.sendSpoilerMessage = function(text) {
+        if (!activeChat || !text.trim()) return;
+        
+        var messages = Storage.get('messages') || [];
+        var newMessage = {
+            id: generateId(),
+            chatId: activeChat.id,
+            senderId: currentUser.id,
+            text: text,
+            isSpoiler: true,
+            timestamp: new Date().toISOString(),
+            read: false,
+            status: 'sent',
+            reactions: {},
+            edited: false,
+            starred: false,
+            replyTo: null,
+            forwarded: false
+        };
+        
+        messages.push(newMessage);
+        Storage.set('messages', messages);
+        renderMessages(activeChat.id);
+        
+        if (typeof sendMsgToFirebase === 'function') {
+            sendMsgToFirebase(newMessage);
+        }
+        
+        showToast('Spoiler sent', 'info');
+    };
+
+    // ==========================================
+    // Animated Stickers
+    // ==========================================
+    var stickerPacks = {
+        'smileys': [
+            { id: 's1', url: 'https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif', name: 'Happy' },
+            { id: 's2', url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif', name: 'Love' },
+            { id: 's3', url: 'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif', name: 'Sad' },
+            { id: 's4', url: 'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif', name: 'Wow' },
+            { id: 's5', url: 'https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif', name: 'Angry' },
+            { id: 's6', url: 'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif', name: 'Cool' },
+            { id: 's7', url: 'https://media.giphy.com/media/3o7aCTfyhYawOoxb0Q/giphy.gif', name: 'Laugh' },
+            { id: 's8', url: 'https://media.giphy.com/media/26Ff517dQJYTDkLpS/giphy.gif', name: 'Think' }
+        ],
+        'animals': [
+            { id: 'a1', url: 'https://media.giphy.com/media/mCRJDo24UvJMA/giphy.gif', name: 'Cat' },
+            { id: 'a2', url: 'https://media.giphy.com/media/4Zo41lhzKt6iZ8xff9/giphy.gif', name: 'Dog' },
+            { id: 'a3', url: 'https://media.giphy.com/media/GeimqsH0TLDt4tScGw/giphy.gif', name: 'Bunny' },
+            { id: 'a4', url: 'https://media.giphy.com/media/mlvseq9yvZhba/giphy.gif', name: 'Panda' },
+            { id: 'a5', url: 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif', name: 'Bear' },
+            { id: 'a6', url: 'https://media.giphy.com/media/KHmMzBRERVyOk/giphy.gif', name: 'Frog' },
+            { id: 'a7', url: 'https://media.giphy.com/media/l2JhIUyUs8KDCCf3W/giphy.gif', name: 'Penguin' },
+            { id: 'a8', url: 'https://media.giphy.com/media/Ma3t2DAHk4Qi4/giphy.gif', name: 'Hamster' }
+        ],
+        'reactions': [
+            { id: 'r1', url: 'https://media.giphy.com/media/l0MYC0LajbaPoEADu/giphy.gif', name: 'Thumbs Up' },
+            { id: 'r2', url: 'https://media.giphy.com/media/3o7TKDEhacrNCODMf6/giphy.gif', name: 'Clap' },
+            { id: 'r3', url: 'https://media.giphy.com/media/26u4cqiYI30juCOGY/giphy.gif', name: 'Fire' },
+            { id: 'r4', url: 'https://media.giphy.com/media/3oEjHV07LkLzZSyRWU/giphy.gif', name: 'Heart' },
+            { id: 'r5', url: 'https://media.giphy.com/media/26gsjCZpPolPr3sBy/giphy.gif', name: 'Party' },
+            { id: 'r6', url: 'https://media.giphy.com/media/3o7TKz2eMXx7dn95FS/giphy.gif', name: 'Star' },
+            { id: 'r7', url: 'https://media.giphy.com/media/l0MYAs5E2oIDCq9So/giphy.gif', name: 'Mind Blown' },
+            { id: 'r8', url: 'https://media.giphy.com/media/3o7aCTqGgHJfAB4mGI/giphy.gif', name: 'Applause' }
+        ]
+    };
+
+    window.showStickerPicker = function() {
+        // Remove existing picker
+        var existing = document.querySelector('.sticker-picker');
+        if (existing) { existing.remove(); return; }
+        
+        var picker = document.createElement('div');
+        picker.className = 'sticker-picker';
+        
+        var html = '<div class="sticker-picker-header">';
+        html += '<button class="sticker-tab active" onclick="switchStickerPack(\'smileys\', this)">😀</button>';
+        html += '<button class="sticker-tab" onclick="switchStickerPack(\'animals\', this)">🐱</button>';
+        html += '<button class="sticker-tab" onclick="switchStickerPack(\'reactions\', this)">👍</button>';
+        html += '</div>';
+        html += '<div class="sticker-grid" id="sticker-grid">';
+        
+        stickerPacks['smileys'].forEach(function(sticker) {
+            html += '<div class="sticker-item" onclick="sendSticker(\'' + sticker.url + '\')"><img src="' + sticker.url + '" alt="' + sticker.name + '"></div>';
+        });
+        
+        html += '</div>';
+        picker.innerHTML = html;
+        
+        // Position picker
+        var inputArea = document.querySelector('.chat-input-area');
+        if (inputArea) {
+            inputArea.style.position = 'relative';
+            inputArea.appendChild(picker);
+        }
+    };
+
+    window.switchStickerPack = function(packName, btn) {
+        // Update active tab
+        document.querySelectorAll('.sticker-tab').forEach(function(tab) {
+            tab.classList.remove('active');
+        });
+        btn.classList.add('active');
+        
+        // Update grid
+        var grid = document.getElementById('sticker-grid');
+        if (!grid) return;
+        
+        var html = '';
+        stickerPacks[packName].forEach(function(sticker) {
+            html += '<div class="sticker-item" onclick="sendSticker(\'' + sticker.url + '\')"><img src="' + sticker.url + '" alt="' + sticker.name + '"></div>';
+        });
+        grid.innerHTML = html;
+    };
+
+    window.sendSticker = function(stickerUrl) {
+        if (!activeChat) return;
+        
+        // Close picker
+        var picker = document.querySelector('.sticker-picker');
+        if (picker) picker.remove();
+        
+        var messages = Storage.get('messages') || [];
+        var newMessage = {
+            id: generateId(),
+            chatId: activeChat.id,
+            senderId: currentUser.id,
+            text: '',
+            stickerUrl: stickerUrl,
+            timestamp: new Date().toISOString(),
+            read: false,
+            status: 'sent',
+            reactions: {},
+            edited: false,
+            starred: false,
+            replyTo: null,
+            forwarded: false
+        };
+        
+        messages.push(newMessage);
+        Storage.set('messages', messages);
+        renderMessages(activeChat.id);
+        
+        if (typeof sendMsgToFirebase === 'function') {
+            sendMsgToFirebase(newMessage);
+        }
+    };
+
+    // ==========================================
+    // Admin Roles
+    // ==========================================
+    window.getMemberRole = function(chat, userId) {
+        if (!chat || !chat.isGroup) return null;
+        if (chat.admin === userId) return 'owner';
+        if (chat.admins && chat.admins.indexOf(userId) !== -1) return 'admin';
+        if (chat.moderators && chat.moderators.indexOf(userId) !== -1) return 'moderator';
+        return 'member';
+    };
+
+    window.getRoleBadge = function(chat, userId) {
+        var role = getMemberRole(chat, userId);
+        if (!role || role === 'member') return '';
+        return '<span class="role-badge ' + role + '">' + role + '</span>';
+    };
+
+    window.updateMemberRole = function(userId, newRole) {
+        if (!activeChat || !activeChat.isGroup) return;
+        if (activeChat.admin !== currentUser.id) {
+            showToast('Only the owner can change roles', 'error');
+            return;
+        }
+        if (userId === currentUser.id) {
+            showToast('Cannot change your own role', 'error');
+            return;
+        }
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        if (chatIndex === -1) return;
+        
+        if (!chats[chatIndex].admins) chats[chatIndex].admins = [];
+        if (!chats[chatIndex].moderators) chats[chatIndex].moderators = [];
+        
+        // Remove from all roles first
+        chats[chatIndex].admins = chats[chatIndex].admins.filter(function(id) { return id !== userId; });
+        chats[chatIndex].moderators = chats[chatIndex].moderators.filter(function(id) { return id !== userId; });
+        
+        // Add to new role
+        if (newRole === 'admin') {
+            chats[chatIndex].admins.push(userId);
+        } else if (newRole === 'moderator') {
+            chats[chatIndex].moderators.push(userId);
+        }
+        
+        Storage.set('chats', chats);
+        activeChat = chats[chatIndex];
+        
+        if (typeof syncChat === 'function') {
+            syncChat(chats[chatIndex]);
+        }
+        
+        showToast('Role updated', 'success');
+        showGroupInfo();
+    };
+
+    // ==========================================
+    // Read-Only Chats
+    // ==========================================
+    window.toggleReadOnly = function() {
+        if (!activeChat || !activeChat.isGroup) {
+            showToast('Not a group chat', 'error');
+            return;
+        }
+        
+        var userRole = getMemberRole(activeChat, currentUser.id);
+        if (userRole !== 'owner' && userRole !== 'admin') {
+            showToast('Only admins can toggle read-only mode', 'error');
+            return;
+        }
+        
+        var chats = Storage.get('chats') || [];
+        var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+        if (chatIndex === -1) return;
+        
+        chats[chatIndex].readOnly = !chats[chatIndex].readOnly;
+        Storage.set('chats', chats);
+        activeChat = chats[chatIndex];
+        
+        if (typeof syncChat === 'function') {
+            syncChat(chats[chatIndex]);
+        }
+        
+        showToast(chats[chatIndex].readOnly ? 'Read-only mode enabled' : 'Read-only mode disabled', 'success');
+        updateReadOnlyUI();
+    };
+
+    window.canSendMessage = function(chat) {
+        if (!chat || !chat.isGroup) return true;
+        if (!chat.readOnly) return true;
+        var role = getMemberRole(chat, currentUser.id);
+        return role === 'owner' || role === 'admin' || role === 'moderator';
+    };
+
+    window.updateReadOnlyUI = function() {
+        var inputArea = document.querySelector('.chat-input-area');
+        if (!inputArea || !activeChat) return;
+        
+        var existingBanner = inputArea.querySelector('.read-only-banner');
+        if (existingBanner) existingBanner.remove();
+        
+        if (!canSendMessage(activeChat)) {
+            // Hide input elements
+            var inputElements = inputArea.querySelectorAll('.chat-input-wrapper, .chat-input-actions');
+            inputElements.forEach(function(el) { el.style.display = 'none'; });
+            
+            // Add banner
+            var banner = document.createElement('div');
+            banner.className = 'read-only-banner';
+            banner.innerHTML = '<i class="fas fa-lock"></i> This group is read-only. Only admins can send messages.';
+            inputArea.appendChild(banner);
+        } else {
+            // Show input elements
+            var inputElements = inputArea.querySelectorAll('.chat-input-wrapper, .chat-input-actions');
+            inputElements.forEach(function(el) { el.style.display = ''; });
+        }
+    };
 
     // Init feed when nav is clicked
     var feedNav = document.querySelector('.nav-item[data-section="feed"]');
