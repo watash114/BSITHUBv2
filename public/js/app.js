@@ -1718,39 +1718,58 @@ function initSwipeActions() {
     wrappers.forEach(function(wrapper) {
         var item = wrapper.querySelector('.chat-item');
         var startX = 0;
+        var startY = 0;
         var currentX = 0;
         var isDragging = false;
+        var hasMoved = false;
         
         item.addEventListener('touchstart', function(e) {
             startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
             isDragging = true;
+            hasMoved = false;
             item.style.transition = 'none';
         }, { passive: true });
         
         item.addEventListener('touchmove', function(e) {
             if (!isDragging) return;
             currentX = e.touches[0].clientX;
-            var diff = startX - currentX;
+            var currentY = e.touches[0].clientY;
+            var diffX = startX - currentX;
+            var diffY = startY - currentY;
             
-            // Only allow left swipe (negative diff)
-            if (diff > 0 && diff < 140) {
-                item.style.transform = 'translateX(-' + diff + 'px)';
+            // Only consider it a swipe if horizontal movement is greater than vertical
+            if (Math.abs(diffX) > 10 && Math.abs(diffX) > Math.abs(diffY)) {
+                hasMoved = true;
+                // Only allow left swipe
+                if (diffX > 0 && diffX < 140) {
+                    item.style.transform = 'translateX(-' + diffX + 'px)';
+                }
             }
         }, { passive: true });
         
-        item.addEventListener('touchend', function() {
+        item.addEventListener('touchend', function(e) {
             isDragging = false;
             item.style.transition = 'transform 0.2s ease';
             
-            var diff = startX - currentX;
-            if (diff > 60) {
-                // Snap open
-                item.style.transform = 'translateX(-140px)';
-                wrapper.classList.add('swiped');
+            if (hasMoved) {
+                var diff = startX - currentX;
+                if (diff > 60) {
+                    // Snap open
+                    item.style.transform = 'translateX(-140px)';
+                    wrapper.classList.add('swiped');
+                } else {
+                    // Snap closed
+                    item.style.transform = 'translateX(0)';
+                    wrapper.classList.remove('swiped');
+                }
             } else {
-                // Snap closed
-                item.style.transform = 'translateX(0)';
-                wrapper.classList.remove('swiped');
+                // It was a tap, not a swipe - trigger click
+                var chatId = wrapper.dataset.chatId;
+                var userId = item.dataset.userId;
+                if (chatId && userId) {
+                    openChat(chatId, userId);
+                }
             }
         }, { passive: true });
     });
