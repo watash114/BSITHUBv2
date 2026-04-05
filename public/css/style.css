@@ -1789,11 +1789,18 @@ body {
 }
 
 .message.sent {
-    justify-content: flex-end;
+    background: var(--primary);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 6px;
 }
 
 .message.system-message {
-    justify-content: center;
+    background: transparent;
+    box-shadow: none;
+    align-self: center;
+    max-width: 90%;
+    padding: 4px 0;
 }
 
 .system-message-content {
