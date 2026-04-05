@@ -5574,7 +5574,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var AUTO_LOGOUT_TIME = 15 * 60 * 1000; // 15 minutes
     var AUTO_LOGOUT_WARNING = 14 * 60 * 1000; // 14 minutes (1 min warning)
     
-    function resetAutoLogoutTimer() {
+    window.resetAutoLogoutTimer = function() {
         if (!currentUser) return;
         
         clearTimeout(autoLogoutTimer);
@@ -5587,7 +5587,7 @@ document.addEventListener('DOMContentLoaded', function() {
         autoLogoutTimer = setTimeout(function() {
             showAutoLogoutWarning();
         }, AUTO_LOGOUT_WARNING);
-    }
+    };
     
     function showAutoLogoutWarning() {
         if (autoLogoutWarningShown) return;
