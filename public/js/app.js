@@ -3667,9 +3667,11 @@ function showGroupInfo() {
     html += '<h4>Invite Link</h4>';
     html += '<p class="group-section-desc">Share this link with people you want to invite</p>';
     html += '<div class="invite-link-card">';
-    html += '<div class="invite-code-display"><i class="fas fa-link"></i><span id="invite-code-text">' + (chat.inviteCode || 'Not generated') + '</span></div>';
+    var inviteUrl = chat.inviteCode ? window.location.origin + '/join/' + chat.inviteCode : 'Not generated';
+    html += '<div class="invite-code-display"><i class="fas fa-link"></i><span id="invite-code-text">' + inviteUrl + '</span></div>';
     html += '<div class="invite-actions">';
     html += '<button class="invite-btn copy" onclick="copyInviteLink()" title="Copy link"><i class="fas fa-copy"></i><span>Copy</span></button>';
+    if (chat.inviteCode) html += '<a class="invite-btn share" href="https://wa.me/?text=' + encodeURIComponent('Join my group chat: ' + inviteUrl) + '" target="_blank" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i><span>Share</span></a>';
     if (isAdmin) html += '<button class="invite-btn refresh" onclick="generateInviteLink()" title="Generate new link"><i class="fas fa-sync"></i><span>New</span></button>';
     html += '</div>';
     html += '</div>';
@@ -3907,9 +3909,9 @@ function generateInviteLink() {
     }
     
     var linkText = document.getElementById('invite-code-text');
-    if (linkText) linkText.textContent = code;
+    if (linkText) linkText.textContent = window.location.origin + '/join/' + code;
     
-    showToast('New invite code generated', 'success');
+    showToast('New invite link generated', 'success');
 }
 
 function copyInviteLink() {

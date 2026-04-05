@@ -10783,6 +10783,17 @@ body {
     color: white;
 }
 
+.invite-btn.share {
+    border-color: #25D366;
+    color: #25D366;
+    text-decoration: none;
+}
+
+.invite-btn.share:hover {
+    background: #25D366;
+    color: white;
+}
+
 .invite-btn.refresh:hover {
     border-color: var(--info);
     color: var(--info);
