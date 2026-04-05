@@ -10606,8 +10606,6 @@ body {
 /* Group Info Modal */
 .group-info-modal {
     max-width: 480px;
-    max-height: 85vh;
-    overflow-y: auto;
 }
 
 .group-info-header {
