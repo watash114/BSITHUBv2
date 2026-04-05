@@ -10722,6 +10722,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .invite-code-display {
@@ -10733,6 +10734,8 @@ body {
     background: var(--bg-primary);
     border-radius: var(--radius-sm);
     border: 1px dashed var(--border);
+    overflow: hidden;
+    min-width: 0;
 }
 
 .invite-code-display i {
@@ -10742,15 +10745,18 @@ body {
 
 .invite-code-display span {
     font-family: 'SF Mono', 'Consolas', monospace;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
-    letter-spacing: 2px;
     color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .invite-actions {
     display: flex;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .invite-btn {
@@ -11336,4 +11342,24 @@ body {
 
 .group-action-item.danger:hover {
     background: rgba(239, 68, 68, 0.1);
+}
+
+@media (max-width: 480px) {
+    .invite-link-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .invite-code-display {
+        width: 100%;
+    }
+    
+    .invite-actions {
+        justify-content: center;
+    }
+    
+    .invite-btn {
+        flex: 1;
+        justify-content: center;
+    }
 }
