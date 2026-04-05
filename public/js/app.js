@@ -495,6 +495,19 @@ function addNotification(type, actorId, actorName, actorAvatar, content, postId,
     saveNotifications(notifications);
     updateNotificationBadge();
     renderNotifications();
+    
+    // Send browser notification
+    if (typeof sendBrowserNotification === 'function') {
+        var typeLabels = {
+            'like': 'liked your post',
+            'comment': 'commented on your post',
+            'reaction': 'reacted to your post',
+            'mention': 'mentioned you',
+            'message': 'sent you a message'
+        };
+        var body = actorName + ' ' + (typeLabels[type] || content);
+        sendBrowserNotification('BSITCHAT', body);
+    }
 }
 
 function markNotificationAsRead(notifId) {
@@ -744,6 +757,90 @@ function initNotifications() {
     });
     
     updateNotificationBadge();
+    
+    // Register Service Worker for Push Notifications
+    initPushNotifications();
+}
+
+function initPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log('Push notifications not supported');
+        return;
+    }
+    
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+        console.log('Service Worker registered');
+    }).catch(function(err) {
+        console.log('Service Worker registration failed:', err);
+    });
+}
+
+function requestPushPermission() {
+    if (!('Notification' in window)) {
+        showToast('Push notifications not supported', 'error');
+        return;
+    }
+    
+    Notification.requestPermission().then(function(permission) {
+        if (permission === 'granted') {
+            showToast('Push notifications enabled!', 'success');
+            subscribeToPush();
+        } else {
+            showToast('Push notifications denied', 'info');
+        }
+    });
+}
+
+function subscribeToPush() {
+    navigator.serviceWorker.ready.then(function(reg) {
+        return reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array('BEl62iUYgUivxIkv69yViEuiBIa-Ip-yTFaMnpcVdT4QovIYoRnk3VxVPCximwTBsETLFhKYjck-swmjOOJnlFs')
+        });
+    }).then(function(sub) {
+        var endpoint = sub.endpoint;
+        var subData = Storage.get('pushSubscription') || {};
+        subData.endpoint = endpoint;
+        subData.subscription = JSON.stringify(sub);
+        Storage.set('pushSubscription', subData);
+        console.log('Push subscribed:', endpoint.substring(0, 50) + '...');
+    }).catch(function(err) {
+        console.log('Push subscribe failed:', err);
+    });
+}
+
+function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var rawData = window.atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function sendBrowserNotification(title, body, url) {
+    if (Notification.permission !== 'granted') return;
+    
+    var options = {
+        body: body,
+        icon: '/icon-192.png',
+        tag: 'bsitchat-' + Date.now(),
+        data: { url: url }
+    };
+    
+    try {
+        var n = new Notification(title, options);
+        n.onclick = function() {
+            window.focus();
+            n.close();
+            if (url) window.location.href = url;
+        };
+        setTimeout(n.close.bind(n), 5000);
+    } catch (e) {
+        console.log('Notification error:', e);
+    }
 }
 
 // ==========================================
@@ -1756,6 +1853,9 @@ function openChat(chatId, userId) {
                 if (msg.senderId !== currentUser.id) {
                     playReceiveSound();
                     addNotification('message', msg.senderId, msg.senderName || 'Someone', null, msg.text.substring(0, 100), null, chatId);
+                    // Hide typing indicator when message arrives
+                    var typingEl = document.getElementById('typing-indicator');
+                    if (typingEl) typingEl.style.display = 'none';
                 }
                 
                 renderMessages(chatId);
@@ -1765,6 +1865,26 @@ function openChat(chatId, userId) {
                 localMessages[idx] = msg;
                 Storage.set('messages', localMessages);
                 renderMessages(chatId);
+            }
+        });
+    }
+    
+    // Listen for typing indicator
+    if (typeof listenTyping === 'function') {
+        listenTyping(chatId, currentUser.id, function(uid) {
+            var users = Storage.get('users') || [];
+            var typingUser = users.find(function(u) { return u.id === uid; });
+            if (typingUser) {
+                var typingEl = document.getElementById('typing-indicator');
+                if (typingEl) {
+                    typingEl.style.display = 'flex';
+                    typingEl.querySelector('span').textContent = typingUser.name + ' is typing';
+                    // Auto-hide after 3 seconds
+                    clearTimeout(window.typingHideTimer);
+                    window.typingHideTimer = setTimeout(function() {
+                        if (typingEl) typingEl.style.display = 'none';
+                    }, 3000);
+                }
             }
         });
     }
@@ -7888,7 +8008,43 @@ document.addEventListener('DOMContentLoaded', function() {
         closeModal();
         showToast('Report submitted', 'success');
     };
-    
+
+    window.reportPost = function(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post) return;
+
+        var reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Scam', 'Other'];
+        var html = '<div class="report-modal"><h3>Report Post</h3>';
+        html += '<p style="color: var(--text-muted); margin-bottom: 12px;">Why are you reporting this post?</p>';
+        reasons.forEach(function(reason) {
+            html += '<button class="btn" style="width: 100%; margin-bottom: 8px;" onclick="submitPostReport(\'' + postId + '\', \'' + reason + '\')">' + reason + '</button>';
+        });
+        html += '</div>';
+        showModal(html);
+    };
+
+    window.submitPostReport = function(postId, reason) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        var reports = Storage.get('reports') || [];
+        reports.push({
+            id: generateId(),
+            type: 'post',
+            postId: postId,
+            postContent: post ? post.content.substring(0, 100) : '',
+            postAuthor: post ? post.userName : '',
+            reason: reason,
+            reporterId: currentUser.id,
+            reporterName: currentUser.name,
+            timestamp: new Date().toISOString(),
+            resolved: false
+        });
+        Storage.set('reports', reports);
+        closeModal();
+        showToast('Report submitted. Admin will review it.', 'success');
+    };
+
     // ==========================================
     // Global Announcement
     // ==========================================
@@ -8547,7 +8703,7 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '<div style="position:relative;">';
             html += '<button class="post-menu-btn" data-post-id="' + post.id + '"><i class="fas fa-ellipsis-h"></i></button>';
             html += '<div class="post-context-menu" id="menu-' + post.id + '" style="display:none;">';
-            html += '<button onclick="showToast(\'Post reported\',\'info\')"><i class="fas fa-flag"></i> Report Post</button>';
+            html += '<button onclick="reportPost(\'' + post.id + '\')"><i class="fas fa-flag"></i> Report Post</button>';
             html += '</div></div>';
         }
         html += '</div>';

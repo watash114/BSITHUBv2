@@ -178,6 +178,32 @@ function listenTyping(chatId, myUserId, callback) {
     tryListen();
 }
 
+function sendTypingStatus(chatId, userId, isTyping) {
+    function trySend() {
+        if (!firebaseDb) { setTimeout(trySend, 500); return; }
+        if (isTyping) {
+            firebaseDb.ref('typing/' + chatId + '/' + userId).set({
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            firebaseDb.ref('typing/' + chatId + '/' + userId).onDisconnect().remove();
+            // Auto-remove after 3 seconds
+            setTimeout(function() {
+                firebaseDb.ref('typing/' + chatId + '/' + userId).once('value').then(function(snap) {
+                    if (snap.exists()) {
+                        var data = snap.val();
+                        if (data.timestamp && Date.now() - data.timestamp > 2500) {
+                            firebaseDb.ref('typing/' + chatId + '/' + userId).remove();
+                        }
+                    }
+                });
+            }, 3000);
+        } else {
+            firebaseDb.ref('typing/' + chatId + '/' + userId).remove();
+        }
+    }
+    trySend();
+}
+
 function goOnline(userId) {
     if (!firebaseDb) return;
     
