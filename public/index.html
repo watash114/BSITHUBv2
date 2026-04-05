@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
 <body>
     <!-- Login/Register Page -->
@@ -99,15 +100,10 @@
                         </div>
                     </div>
                     
-                    <!-- Simple Captcha -->
+                    <!-- hCaptcha -->
                     <div class="form-group captcha-group">
-                        <label for="captcha-input">
-                            <i class="fas fa-shield-alt"></i> Security Check
-                        </label>
-                        <div class="captcha-container">
-                            <span class="captcha-question" id="captcha-question"></span>
-                            <button type="button" class="captcha-refresh" onclick="generateCaptcha()" title="New question"><i class="fas fa-sync"></i></button>
-                            <input type="text" id="captcha-input" placeholder="Answer" required="" autocomplete="off">
+                        <div class="hcaptcha-container">
+                            <div class="h-captcha" data-sitekey="10000000-ffff-ffff-ffff-000000000001" data-theme="light"></div>
                         </div>
                     </div>
                     

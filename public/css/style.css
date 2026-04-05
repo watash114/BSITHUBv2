@@ -11561,6 +11561,11 @@ body {
 }
 
 /* Captcha */
+.hcaptcha-container {
+    display: flex;
+    justify-content: center;
+}
+
 .captcha-group {
     margin-top: 10px;
 }

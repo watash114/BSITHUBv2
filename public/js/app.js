@@ -6730,17 +6730,24 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Login form submitted');
         var email = document.getElementById('login-email').value;
         var password = document.getElementById('login-password').value;
-        var captchaAnswer = document.getElementById('captcha-input').value;
         console.log('Email/Username:', email);
         
         // Get submit button reference
         var submitBtn = this.querySelector('button[type="submit"]');
         var originalText = submitBtn.innerHTML;
         
-        // Validate captcha
-        if (!validateCaptcha(captchaAnswer)) {
-            document.getElementById('login-error').textContent = 'Incorrect security answer. Please try again.';
+        // Validate hCaptcha
+        var hcaptchaResponse = null;
+        if (typeof hcaptcha !== 'undefined') {
+            hcaptchaResponse = hcaptcha.getResponse();
+        }
+        if (!hcaptchaResponse) {
+            document.getElementById('login-error').textContent = 'Please complete the captcha verification.';
             document.getElementById('login-error').style.display = 'block';
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            return false;
+        }
             generateCaptcha();
             document.getElementById('captcha-input').value = '';
             submitBtn.innerHTML = originalText;
@@ -6781,8 +6788,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             document.getElementById('login-error').textContent = result.message;
             document.getElementById('login-error').style.display = 'block';
-            generateCaptcha();
-            document.getElementById('captcha-input').value = '';
+            if (typeof hcaptcha !== 'undefined') {
+                hcaptcha.reset();
+            }
         }
         return false;
     };
