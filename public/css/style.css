@@ -11559,3 +11559,155 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Captcha */
+.captcha-group {
+    margin-top: 10px;
+}
+
+.captcha-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.captcha-question {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--bg-tertiary);
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    min-width: 80px;
+    text-align: center;
+}
+
+.captcha-refresh {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 8px;
+    font-size: 14px;
+}
+
+.captcha-refresh:hover {
+    color: var(--primary);
+}
+
+.captcha-container input {
+    flex: 1;
+}
+
+/* 2FA Modal */
+.twofa-modal {
+    text-align: center;
+    padding: 30px 20px;
+}
+
+.twofa-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 32px;
+    color: white;
+}
+
+.twofa-modal h3 {
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.twofa-modal p {
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.twofa-code-display {
+    background: var(--bg-tertiary);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.twofa-code-display span {
+    font-family: monospace;
+    font-size: 18px;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.twofa-modal .code-inputs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.twofa-modal .code-input {
+    width: 45px;
+    height: 55px;
+    font-size: 20px;
+}
+
+/* Privacy Policy Modal */
+.privacy-policy-modal {
+    max-height: 70vh;
+    padding: 20px;
+}
+
+.privacy-policy-modal h3 {
+    font-size: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.privacy-policy-modal h3 i {
+    color: var(--primary);
+}
+
+.policy-content {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-bottom: 20px;
+}
+
+.policy-content h4 {
+    font-size: 15px;
+    margin: 16px 0 8px;
+    color: var(--text-primary);
+}
+
+.policy-content p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+/* Auth Footer */
+.auth-footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.auth-footer a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}

@@ -925,41 +925,54 @@ let currentReplyTo = null;
 // ==========================================
 // Authentication
 // ==========================================
-async function login(email, password) {
-    console.log('Login attempt:', email);
+async function login(emailOrUsername, password) {
+    console.log('Login attempt:', emailOrUsername);
 
     // Admin login - preserve existing data
-    if (email === 'admin@bsithub.com' && password === 'admin123') {
-        var users = Storage.get('users') || [];
-        var adminIdx = users.findIndex(function(u) { return u.id === 'admin1'; });
-        var defaultAdmin = { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: 'admin123', role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, cover: null, blockedUsers: [] };
-        if (adminIdx === -1) {
-            users.push(defaultAdmin);
-        } else {
-            // Merge defaults with existing data - preserve avatar, cover, bio, etc.
-            users[adminIdx] = Object.assign({}, defaultAdmin, users[adminIdx], { password: 'admin123', role: 'admin', status: 'active' });
+    if (emailOrUsername === 'admin@bsithub.com' || emailOrUsername === 'admin') {
+        if (password === 'admin123') {
+            var users = Storage.get('users') || [];
+            var adminIdx = users.findIndex(function(u) { return u.id === 'admin1'; });
+            var defaultAdmin = { id: 'admin1', name: 'Admin User', username: 'admin', email: 'admin@bsithub.com', password: 'admin123', role: 'admin', status: 'active', bio: 'System Administrator', phone: '+1234567890', location: 'New York', createdAt: '2024-01-01T00:00:00.000Z', avatar: null, cover: null, blockedUsers: [], twoFactorEnabled: false };
+            if (adminIdx === -1) {
+                users.push(defaultAdmin);
+            } else {
+                // Merge defaults with existing data - preserve avatar, cover, bio, etc.
+                users[adminIdx] = Object.assign({}, defaultAdmin, users[adminIdx], { password: 'admin123', role: 'admin', status: 'active' });
+            }
+            Storage.set('users', users);
+            currentUser = users[adminIdx !== -1 ? adminIdx : users.length - 1];
+            Storage.set('currentUser', { id: 'admin1' });
+            console.log('Admin login successful');
+            return { success: true };
         }
-        Storage.set('users', users);
-        currentUser = users[adminIdx !== -1 ? adminIdx : users.length - 1];
-        Storage.set('currentUser', { id: 'admin1' });
-        console.log('Admin login successful');
-        return { success: true };
+        return { success: false, message: 'Invalid credentials' };
     }
 
-    // Regular users
+    // Regular users - support both email and username
     var users = Storage.get('users') || [];
     var hashedPassword = hashPassword(password);
-    var user = users.find(function(u) { return u.email === email && u.password === hashedPassword; });
+    var user = users.find(function(u) {
+        return (u.email === emailOrUsername || u.username === emailOrUsername) && u.password === hashedPassword;
+    });
     
     if (user) {
         if (user.status === 'banned') return { success: false, message: 'Your account has been banned' };
+        
+        // Check if 2FA is enabled
+        if (user.twoFactorEnabled) {
+            // Store temp user for 2FA verification
+            window.tempLoginUser = user;
+            return { success: true, require2FA: true, userId: user.id };
+        }
+        
         currentUser = user;
         Storage.set('currentUser', { id: user.id });
         console.log('Login successful');
         return { success: true };
     }
 
-    return { success: false, message: 'Invalid email or password' };
+    return { success: false, message: 'Invalid email/username or password' };
 }
 
 function socialLogin(provider) {
@@ -6524,6 +6537,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize Firebase immediately
     initFirebase();
     
+    // Generate captcha
+    generateCaptcha();
+    
     // Auth tabs
     document.querySelectorAll('.auth-tab').forEach(function(tab) {
         tab.onclick = function() {
@@ -6576,7 +6592,19 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Login form submitted');
         var email = document.getElementById('login-email').value;
         var password = document.getElementById('login-password').value;
-        console.log('Email:', email);
+        var captchaAnswer = document.getElementById('captcha-input').value;
+        console.log('Email/Username:', email);
+        
+        // Validate captcha
+        if (!validateCaptcha(captchaAnswer)) {
+            document.getElementById('login-error').textContent = 'Incorrect security answer. Please try again.';
+            document.getElementById('login-error').style.display = 'block';
+            generateCaptcha();
+            document.getElementById('captcha-input').value = '';
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            return false;
+        }
         
         // Handle remember me
         var rememberMe = document.getElementById('remember-me');
@@ -6599,11 +6627,17 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = false;
         
         if (result.success) {
-            showToast('Welcome back!', 'success');
-            showApp();
+            if (result.require2FA) {
+                show2FAModal();
+            } else {
+                showToast('Welcome back!', 'success');
+                showApp();
+            }
         } else {
             document.getElementById('login-error').textContent = result.message;
             document.getElementById('login-error').style.display = 'block';
+            generateCaptcha();
+            document.getElementById('captcha-input').value = '';
         }
         return false;
     };
@@ -10702,5 +10736,122 @@ document.addEventListener('DOMContentLoaded', function() {
         options.headers = options.headers || {};
         options.headers['X-CSRF-Token'] = window.csrfToken;
         return originalFetch.call(this, url, options);
+    };
+    
+    // ==========================================
+    // Captcha System
+    // ==========================================
+    var captchaAnswer = 0;
+    
+    window.generateCaptcha = function() {
+        var num1 = Math.floor(Math.random() * 10) + 1;
+        var num2 = Math.floor(Math.random() * 10) + 1;
+        captchaAnswer = num1 + num2;
+        var question = document.getElementById('captcha-question');
+        if (question) {
+            question.textContent = num1 + ' + ' + num2 + ' = ?';
+        }
+    };
+    
+    window.validateCaptcha = function(answer) {
+        return parseInt(answer) === captchaAnswer;
+    };
+    
+    // ==========================================
+    // Two-Factor Authentication
+    // ==========================================
+    window.twoFactorCode = null;
+    
+    window.show2FAModal = function() {
+        // Generate a 6-digit code
+        window.twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        var html = '<div class="twofa-modal">';
+        html += '<div class="twofa-icon"><i class="fas fa-shield-alt"></i></div>';
+        html += '<h3>Two-Factor Authentication</h3>';
+        html += '<p>Enter the 6-digit code sent to your email</p>';
+        html += '<div class="twofa-code-display"><span>Demo Code: ' + window.twoFactorCode + '</span></div>';
+        html += '<div class="code-inputs">';
+        for (var i = 0; i < 6; i++) {
+            html += '<input type="text" maxlength="1" class="code-input twofa-input" data-index="' + i + '">';
+        }
+        html += '</div>';
+        html += '<button class="btn btn-primary" id="verify-2fa-btn" onclick="verify2FACode()"><i class="fas fa-check"></i> Verify</button>';
+        html += '<button class="btn" onclick="cancel2FA()">Cancel</button>';
+        html += '</div>';
+        showModal(html);
+        
+        // Setup code inputs
+        setTimeout(function() {
+            var inputs = document.querySelectorAll('.twofa-input');
+            inputs.forEach(function(input, index) {
+                input.addEventListener('input', function(e) {
+                    if (this.value && index < 5) {
+                        inputs[index + 1].focus();
+                    }
+                });
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && !this.value && index > 0) {
+                        inputs[index - 1].focus();
+                    }
+                });
+            });
+            if (inputs[0]) inputs[0].focus();
+        }, 100);
+    };
+    
+    window.verify2FACode = function() {
+        var inputs = document.querySelectorAll('.twofa-input');
+        var enteredCode = '';
+        inputs.forEach(function(input) {
+            enteredCode += input.value;
+        });
+        
+        if (enteredCode === window.twoFactorCode) {
+            // Success - login the user
+            if (window.tempLoginUser) {
+                currentUser = window.tempLoginUser;
+                Storage.set('currentUser', { id: currentUser.id });
+                window.tempLoginUser = null;
+            }
+            closeModal();
+            showToast('Verification successful!', 'success');
+            showApp();
+        } else {
+            showToast('Invalid code. Please try again.', 'error');
+            inputs.forEach(function(input) { input.value = ''; });
+            if (inputs[0]) inputs[0].focus();
+        }
+    };
+    
+    window.cancel2FA = function() {
+        window.tempLoginUser = null;
+        window.twoFactorCode = null;
+        closeModal();
+    };
+    
+    // ==========================================
+    // Privacy Policy
+    // ==========================================
+    window.showPrivacyPolicy = function() {
+        var html = '<div class="privacy-policy-modal">';
+        html += '<h3><i class="fas fa-shield-alt"></i> Privacy Policy</h3>';
+        html += '<div class="policy-content">';
+        html += '<h4>1. Information We Collect</h4>';
+        html += '<p>We collect information you provide directly to us, such as when you create an account, send messages, or contact us for support.</p>';
+        html += '<h4>2. How We Use Your Information</h4>';
+        html += '<p>We use the information we collect to provide, maintain, and improve our services, and to communicate with you.</p>';
+        html += '<h4>3. Information Sharing</h4>';
+        html += '<p>We do not share your personal information with third parties except as described in this policy.</p>';
+        html += '<h4>4. Data Security</h4>';
+        html += '<p>We implement appropriate security measures to protect your personal information.</p>';
+        html += '<h4>5. Your Rights</h4>';
+        html += '<p>You have the right to access, update, or delete your personal information at any time.</p>';
+        html += '<h4>6. Contact Us</h4>';
+        html += '<p>If you have any questions about this Privacy Policy, please contact us at support@bsithub.com.</p>';
+        html += '</div>';
+        html += '<button class="btn btn-primary" onclick="closeModal()">I Understand</button>';
+        html += '</div>';
+        showModal(html);
     };
 });
