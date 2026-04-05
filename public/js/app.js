@@ -1206,6 +1206,11 @@ function showApp() {
     // Initialize Sidebar Status
     updateSidebarStatus();
     
+    // Handle invite links (hash-based)
+    setTimeout(function() {
+        handleInviteLink();
+    }, 2000);
+    
     // Initialize Socket.IO for real-time presence
     if (currentUser && typeof initSocket === 'function') {
         initSocket(currentUser.id);
@@ -3667,7 +3672,7 @@ function showGroupInfo() {
     html += '<h4>Invite Link</h4>';
     html += '<p class="group-section-desc">Share this link with people you want to invite</p>';
     html += '<div class="invite-link-card">';
-    var inviteUrl = chat.inviteCode ? window.location.origin + '/join/' + chat.inviteCode : 'Not generated';
+    var inviteUrl = chat.inviteCode ? window.location.origin + '/#join/' + chat.inviteCode : 'Not generated';
     html += '<div class="invite-code-display"><i class="fas fa-link"></i><span id="invite-code-text">' + inviteUrl + '</span></div>';
     html += '<div class="invite-actions">';
     html += '<button class="invite-btn copy" onclick="copyInviteLink()" title="Copy link"><i class="fas fa-copy"></i><span>Copy</span></button>';
@@ -3909,7 +3914,7 @@ function generateInviteLink() {
     }
     
     var linkText = document.getElementById('invite-code-text');
-    if (linkText) linkText.textContent = window.location.origin + '/join/' + code;
+    if (linkText) linkText.textContent = window.location.origin + '/#join/' + code;
     
     showToast('New invite link generated', 'success');
 }
@@ -10060,4 +10065,53 @@ document.addEventListener('DOMContentLoaded', function() {
         feedNav.addEventListener('click', function() { setTimeout(initFeed, 100); });
     }
     if (currentUser) { setTimeout(initFeed, 1500); }
+    
+    // Handle invite link from URL hash
+    function handleInviteLink() {
+        var hash = window.location.hash;
+        if (hash && hash.startsWith('#join/')) {
+            var inviteCode = hash.replace('#join/', '').split('?')[0]; // Remove any query params
+            if (inviteCode && currentUser) {
+                joinGroupByInviteCode(inviteCode);
+            }
+        }
+    }
+    
+    window.joinGroupByInviteCode = function(code) {
+        if (!currentUser) {
+            showToast('Please log in to join the group', 'info');
+            return;
+        }
+        
+        var chats = Storage.get('chats') || [];
+        var chat = chats.find(function(c) { return c.inviteCode === code; });
+        
+        if (!chat) {
+            showToast('Invalid invite link', 'error');
+            window.location.hash = '';
+            return;
+        }
+        
+        if (chat.participants.indexOf(currentUser.id) !== -1) {
+            showToast('You are already in this group', 'info');
+            openChat(chat.id, currentUser.id);
+            window.location.hash = '';
+            return;
+        }
+        
+        // Join the group
+        chat.participants.push(currentUser.id);
+        var chatIndex = chats.findIndex(function(c) { return c.id === chat.id; });
+        chats[chatIndex] = chat;
+        Storage.set('chats', chats);
+        
+        if (typeof syncChat === 'function') {
+            syncChat(chat);
+        }
+        
+        showToast('You joined ' + (chat.groupName || 'the group') + '!', 'success');
+        openChat(chat.id, currentUser.id);
+        loadChats();
+        window.location.hash = '';
+    };
 });
