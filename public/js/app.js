@@ -12442,4 +12442,241 @@ document.addEventListener('DOMContentLoaded', function() {
         var dropdown = document.getElementById('post-mentions-dropdown');
         if (dropdown) dropdown.style.display = 'none';
     }
+
+    // ==========================================
+    // Stories / Status (24-hour disappearing)
+    // ==========================================
+    window.createStory = function() {
+        if (!currentUser) return;
+        
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*,video/*';
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var stories = Storage.get('stories') || [];
+                var story = {
+                    id: generateId(),
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    userAvatar: currentUser.avatar,
+                    mediaUrl: ev.target.result,
+                    mediaType: file.type.startsWith('video') ? 'video' : 'image',
+                    createdAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    viewers: []
+                };
+                stories.unshift(story);
+                Storage.set('stories', stories);
+                renderStories();
+                showToast('Story posted!', 'success');
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    };
+
+    window.getActiveStories = function() {
+        var stories = Storage.get('stories') || [];
+        var now = new Date();
+        
+        // Filter out expired stories
+        stories = stories.filter(function(s) {
+            return new Date(s.expiresAt) > now;
+        });
+        Storage.set('stories', stories);
+        
+        // Group by user
+        var grouped = {};
+        stories.forEach(function(story) {
+            if (!grouped[story.userId]) {
+                grouped[story.userId] = {
+                    userId: story.userId,
+                    userName: story.userName,
+                    userAvatar: story.userAvatar,
+                    stories: []
+                };
+            }
+            grouped[story.userId].stories.push(story);
+        });
+        
+        return Object.values(grouped);
+    };
+
+    window.renderStories = function() {
+        var bar = document.getElementById('stories-bar');
+        if (!bar) return;
+        
+        var userStories = getActiveStories();
+        var html = '<div class="story-add" onclick="createStory()">';
+        html += '<div class="story-avatar"><div class="initial">+</div></div>';
+        html += '<span class="story-name">Add Story</span>';
+        html += '</div>';
+        
+        userStories.forEach(function(user) {
+            var viewedAll = user.stories.every(function(s) {
+                return s.viewers && s.viewers.indexOf(currentUser.id) !== -1;
+            });
+            
+            html += '<div class="story-item" onclick="viewStory(\'' + user.userId + '\')">';
+            html += '<div class="story-avatar' + (viewedAll ? ' viewed' : '') + '">';
+            if (user.userAvatar) {
+                html += '<img src="' + user.userAvatar + '" alt="">';
+            } else {
+                html += '<div class="initial">' + (user.userName || 'U').charAt(0).toUpperCase() + '</div>';
+            }
+            html += '</div>';
+            html += '<span class="story-name">' + escapeHtml(user.userName || 'User') + '</span>';
+            html += '</div>';
+        });
+        
+        bar.innerHTML = html;
+    };
+
+    var currentStoryIndex = 0;
+    var currentUserStories = [];
+    var storyTimer = null;
+
+    window.viewStory = function(userId) {
+        var stories = Storage.get('stories') || [];
+        currentUserStories = stories.filter(function(s) {
+            return s.userId === userId && new Date(s.expiresAt) > new Date();
+        });
+        
+        if (currentUserStories.length === 0) return;
+        
+        currentStoryIndex = 0;
+        showStoryViewer();
+    };
+
+    function showStoryViewer() {
+        var story = currentUserStories[currentStoryIndex];
+        if (!story) {
+            closeStoryViewer();
+            return;
+        }
+        
+        // Mark as viewed
+        var allStories = Storage.get('stories') || [];
+        var storyIndex = allStories.findIndex(function(s) { return s.id === story.id; });
+        if (storyIndex !== -1) {
+            if (!allStories[storyIndex].viewers) allStories[storyIndex].viewers = [];
+            if (allStories[storyIndex].viewers.indexOf(currentUser.id) === -1) {
+                allStories[storyIndex].viewers.push(currentUser.id);
+                Storage.set('stories', allStories);
+            }
+        }
+        
+        var avatarHtml = story.userAvatar 
+            ? '<img src="' + story.userAvatar + '" class="story-user-avatar">'
+            : '<div class="story-user-avatar" style="background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;">' + (story.userName || 'U').charAt(0) + '</div>';
+        
+        var contentHtml = story.mediaType === 'video'
+            ? '<video src="' + story.mediaUrl + '" autoplay style="max-width:100%;max-height:100%;"></video>'
+            : '<img src="' + story.mediaUrl + '" alt="Story">';
+        
+        var html = '<div class="story-viewer">';
+        html += '<div class="story-viewer-header">';
+        html += '<div class="story-progress">';
+        currentUserStories.forEach(function(s, i) {
+            html += '<div class="story-progress-bar"><div class="story-progress-fill" id="story-progress-' + i + '"></div></div>';
+        });
+        html += '</div>';
+        html += '<div class="story-user-info">';
+        html += avatarHtml;
+        html += '<div><div class="story-user-name">' + escapeHtml(story.userName) + '</div>';
+        html += '<div class="story-user-time">' + getTimeAgo(story.createdAt) + '</div></div>';
+        html += '</div></div>';
+        html += '<button class="story-close-btn" onclick="closeStoryViewer()"><i class="fas fa-times"></i></button>';
+        html += '<div class="story-content">' + contentHtml + '</div>';
+        if (currentStoryIndex > 0) {
+            html += '<button class="story-nav prev" onclick="prevStory()"><i class="fas fa-chevron-left"></i></button>';
+        }
+        if (currentStoryIndex < currentUserStories.length - 1) {
+            html += '<button class="story-nav next" onclick="nextStory()"><i class="fas fa-chevron-right"></i></button>';
+        }
+        html += '</div>';
+        
+        showModal(html);
+        startStoryTimer();
+    }
+
+    function startStoryTimer() {
+        var fill = document.getElementById('story-progress-' + currentStoryIndex);
+        if (!fill) return;
+        
+        var progress = 0;
+        clearInterval(storyTimer);
+        storyTimer = setInterval(function() {
+            progress += 2;
+            fill.style.width = progress + '%';
+            if (progress >= 100) {
+                clearInterval(storyTimer);
+                nextStory();
+            }
+        }, 100);
+    }
+
+    window.nextStory = function() {
+        clearInterval(storyTimer);
+        if (currentStoryIndex < currentUserStories.length - 1) {
+            currentStoryIndex++;
+            closeModal();
+            showStoryViewer();
+        } else {
+            closeStoryViewer();
+        }
+    };
+
+    window.prevStory = function() {
+        clearInterval(storyTimer);
+        if (currentStoryIndex > 0) {
+            currentStoryIndex--;
+            closeModal();
+            showStoryViewer();
+        }
+    };
+
+    window.closeStoryViewer = function() {
+        clearInterval(storyTimer);
+        closeModal();
+        renderStories();
+    };
+
+    // ==========================================
+    // Verified Badge
+    // ==========================================
+    window.getVerifiedBadge = function(user) {
+        if (!user || !user.verified) return '';
+        var type = user.verifiedType || 'blue';
+        return '<span class="verified-badge ' + type + '"><i class="fas fa-check"></i></span>';
+    };
+
+    window.toggleUserVerification = function(userId) {
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === userId; });
+        if (userIndex === -1) return;
+        
+        users[userIndex].verified = !users[userIndex].verified;
+        if (users[userIndex].verified) {
+            users[userIndex].verifiedType = 'blue';
+        } else {
+            delete users[userIndex].verifiedType;
+        }
+        
+        Storage.set('users', users);
+        showToast(users[userIndex].verified ? 'User verified' : 'Verification removed', 'success');
+        
+        // Refresh admin table if visible
+        if (typeof loadAdminData === 'function') loadAdminData();
+    };
+
+    // Initialize stories on load
+    if (typeof renderStories === 'function') {
+        setTimeout(renderStories, 1000);
+    }
 });
