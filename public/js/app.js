@@ -1890,6 +1890,12 @@ function loadChatsWithUnread() {
 }
 
 function openChat(chatId, userId) {
+    // Clear any existing polling/listening for previous chat
+    if (window.chatPollInterval) {
+        clearInterval(window.chatPollInterval);
+        window.chatPollInterval = null;
+    }
+    
     console.log('openChat called:', chatId, userId);
     var chats = Storage.get('chats') || [];
     var chat = chats.find(function(c) { return c.id === chatId; });
@@ -1962,6 +1968,7 @@ function openChat(chatId, userId) {
     // Load messages from Firebase and start listening
     if (typeof loadChatMessages === 'function') {
         loadChatMessages(chatId).then(function(fbMessages) {
+            if (activeChat && activeChat.id !== chatId) return; // Chat changed while loading
             console.log('Loaded', fbMessages.length, 'messages from Firebase');
             
             // Merge with local messages
@@ -1978,9 +1985,14 @@ function openChat(chatId, userId) {
         });
     }
     
+    // Debounce render to prevent excessive re-renders
+    var renderDebounce = null;
+    
     // Listen for NEW messages in real-time
     if (typeof listenChat === 'function') {
         listenChat(chatId, function(msg) {
+            if (activeChat && activeChat.id !== chatId) return; // Different chat
+            
             var localMessages = Storage.get('messages') || [];
             var idx = localMessages.findIndex(function(m) { return m.id === msg.id; });
             
@@ -1998,13 +2010,21 @@ function openChat(chatId, userId) {
                     if (typingEl) typingEl.style.display = 'none';
                 }
                 
-                renderMessages(chatId);
-                loadChats();
+                // Debounce render
+                clearTimeout(renderDebounce);
+                renderDebounce = setTimeout(function() {
+                    renderMessages(chatId);
+                    loadChats();
+                }, 100);
             } else {
                 // Update existing
                 localMessages[idx] = msg;
                 Storage.set('messages', localMessages);
-                renderMessages(chatId);
+                
+                clearTimeout(renderDebounce);
+                renderDebounce = setTimeout(function() {
+                    renderMessages(chatId);
+                }, 100);
             }
         });
     }
@@ -2107,6 +2127,11 @@ function renderMessages(chatId) {
     
     // Update unread badge
     updateUnreadBadge();
+    
+    // Limit to last 100 messages for performance
+    if (chatMessages.length > 100) {
+        chatMessages = chatMessages.slice(-100);
+    }
     
     var html = '';
     var lastDate = null;
@@ -2252,8 +2277,11 @@ function renderMessages(chatId) {
         html += '</div>';
     });
     
-    messagesContainer.innerHTML = html;
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // Use requestAnimationFrame for smoother rendering
+    requestAnimationFrame(function() {
+        messagesContainer.innerHTML = html;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
 }
 
 function viewImage(src) {
