@@ -1844,36 +1844,87 @@ body {
 }
 
 .message-actions {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
-    gap: 4px;
-    margin-top: 8px;
+    gap: 2px;
     opacity: 0;
-    transition: opacity 0.2s;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    background: var(--bg-primary);
+    border-radius: 20px;
+    padding: 4px 6px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    border: 1px solid var(--border);
+    z-index: 10;
 }
 
 .message:hover .message-actions {
     opacity: 1;
+    pointer-events: auto;
+}
+
+.message.sent .message-actions {
+    right: calc(100% + 8px);
+}
+
+.message.received .message-actions {
+    left: calc(100% + 8px);
 }
 
 .message-action-btn {
     background: transparent;
     border: none;
-    color: inherit;
-    opacity: 0.7;
+    color: var(--text-secondary);
     cursor: pointer;
-    font-size: 12px;
-    padding: 4px;
+    font-size: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
 }
 
 .message-action-btn:hover {
-    opacity: 1;
+    background: var(--bg-tertiary);
+    color: var(--primary);
+}
+
+.message-action-btn.delete-btn:hover {
+    background: rgba(239,68,68,0.1);
+    color: #ef4444;
 }
 
 .message-reactions {
     display: flex;
-    gap: 4px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 6px;
     flex-wrap: wrap;
+}
+
+.reaction-badge {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.reaction-badge:hover {
+    transform: scale(1.08);
+}
+
+.reaction-badge.active {
+    background: rgba(99,102,241,0.15);
+    border-color: var(--primary);
 }
 
 .message-reaction {
@@ -1919,7 +1970,22 @@ body {
 }
 
 .message-status {
-    font-size: 10px;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 2px;
+}
+
+.message-status .fa-check {
+    font-size: 11px;
+}
+
+.message-status .fa-check-double {
+    font-size: 11px;
+}
+
+.message-status .fa-check-double.read {
+    color: #4fc3f7;
 }
 
 .message.sent .message-time {

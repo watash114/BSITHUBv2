@@ -1446,7 +1446,7 @@ function renderMessages(chatId) {
         if (msg.pinned) {
             html += '<div class="pinned-badge"><i class="fas fa-thumbtack"></i> Pinned</div>';
         }
-        
+
         // Show reply quote if replying to a message
         if (msg.replyTo) {
             html += '<div class="message-reply-quote" onclick="scrollToMessage(\'' + msg.replyTo.id + '\')">';
@@ -1512,7 +1512,8 @@ function renderMessages(chatId) {
             Object.entries(reactionGroups).forEach(function(entry) {
                 var emoji = entry[0];
                 var userIds = entry[1];
-                html += '<span class="reaction-badge" title="Click to see who reacted">' + emoji + ' ' + userIds.length + '</span>';
+                var isActive = currentUser && userIds.indexOf(currentUser.id) !== -1;
+                html += '<span class="reaction-badge' + (isActive ? ' active' : '') + '" title="Click to see who reacted">' + emoji + ' ' + userIds.length + '</span>';
             });
             
             html += '</div>';
@@ -1526,25 +1527,24 @@ function renderMessages(chatId) {
         html += '<div class="message-footer">';
         html += '<span class="message-time">' + formatTime(msg.timestamp) + '</span>';
         if (isSent) {
-            var statusClass = msg.status === 'read' ? ' read' : '';
-            html += '<span class="message-status' + statusClass + '">' + (msg.status === 'read' ? '✓✓' : '✓') + '</span>';
+            var statusIcon = msg.status === 'read' ? '<i class="fas fa-check-double read"></i>' : '<i class="fas fa-check"></i>';
+            html += '<span class="message-status">' + statusIcon + '</span>';
         }
         html += '</div>';
         
-        // Check if message can be edited (only text messages)
+        // Action buttons (floating toolbar on hover)
         var canEdit = isSent && !msg.gifUrl && !msg.fileData && !msg.audioData;
         
-        // Action buttons
         html += '<div class="message-actions">';
         html += '<button class="message-action-btn" onclick="replyToMessage(\'' + msg.id + '\')" title="Reply"><i class="fas fa-reply"></i></button>';
-        html += '<button class="message-action-btn" onclick="showReactionPicker(\'' + msg.id + '\')" title="React">😀</button>';
+        html += '<button class="message-action-btn" onclick="showReactionPicker(\'' + msg.id + '\')" title="React"><i class="far fa-smile"></i></button>';
         html += '<button class="message-action-btn" onclick="forwardMessage(\'' + msg.id + '\')" title="Forward"><i class="fas fa-share"></i></button>';
-        html += '<button class="message-action-btn ' + (msg.pinned ? 'pin-message-btn' : '') + '" onclick="pinMessage(\'' + msg.id + '\')" title="' + (msg.pinned ? 'Unpin' : 'Pin') + '"><i class="fas fa-thumbtack"></i></button>';
+        html += '<button class="message-action-btn" onclick="pinMessage(\'' + msg.id + '\')" title="' + (msg.pinned ? 'Unpin' : 'Pin') + '"><i class="fas fa-thumbtack' + (msg.pinned ? '' : '') + '"></i></button>';
         if (canEdit) {
-            html += '<button class="message-action-btn" onclick="editMessage(\'' + msg.id + '\')" title="Edit"><i class="fas fa-edit"></i></button>';
+            html += '<button class="message-action-btn" onclick="editMessage(\'' + msg.id + '\')" title="Edit"><i class="fas fa-pen"></i></button>';
         }
         if (isSent) {
-            html += '<button class="message-action-btn" onclick="deleteMessage(\'' + msg.id + '\')" title="Delete"><i class="fas fa-trash"></i></button>';
+            html += '<button class="message-action-btn delete-btn" onclick="deleteMessage(\'' + msg.id + '\')" title="Delete"><i class="fas fa-trash"></i></button>';
         }
         html += '</div>';
         html += '</div>';

@@ -234,23 +234,25 @@ const DB = {
 
         try {
             // Check if already liked
-            const { data: existing } = await this.client()
+            const { data: existing, error: selectErr } = await this.client()
                 .from('post_likes')
                 .select('id')
                 .eq('post_id', postId)
                 .eq('user_id', userId)
-                .single();
+                .maybeSingle();
+
+            if (selectErr) return { success: false };
 
             if (existing) {
                 // Unlike
-                await this.client().from('post_likes').delete().eq('id', existing.id);
+                await this.client().from('post_likes').delete().eq('id', existing.id).throwOnError();
             } else {
                 // Like
                 await this.client().from('post_likes').insert({
                     post_id: postId,
                     user_id: userId,
                     reaction: 'like'
-                });
+                }).throwOnError();
             }
 
             return { success: true, liked: !existing };
@@ -263,11 +265,12 @@ const DB = {
         if (!this.isReady()) return [];
 
         try {
-            const { data } = await this.client()
+            const { data, error } = await this.client()
                 .from('post_likes')
                 .select('user_id, reaction')
                 .eq('post_id', postId);
 
+            if (error) return [];
             return data || [];
         } catch {
             return [];
