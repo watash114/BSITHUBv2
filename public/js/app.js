@@ -8334,7 +8334,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Sync old likes format
         if (post.likes) delete post.likes;
         Storage.set('posts', posts);
-        renderFeed();
+        updateSinglePost(postId);
         if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/reactions').set(post.reactions); }
     }
 
@@ -8487,6 +8487,25 @@ document.addEventListener('DOMContentLoaded', function() {
         posts.forEach(function(post) { html += renderPostCard(post); });
         feedList.innerHTML = html;
         bindPostEvents();
+    }
+
+    function updateSinglePost(postId) {
+        var posts = Storage.get('posts') || [];
+        var post = posts.find(function(p) { return p.id === postId; });
+        if (!post) return;
+        var postEl = document.querySelector('.post-card[data-post-id="' + postId + '"]');
+        if (!postEl) {
+            renderFeed();
+            return;
+        }
+        var newHtml = renderPostCard(post);
+        var tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newHtml;
+        var newPostEl = tempDiv.querySelector('.post-card');
+        if (newPostEl) {
+            postEl.replaceWith(newPostEl);
+            bindPostEvents();
+        }
     }
 
     function renderPostCard(post) {
@@ -8951,7 +8970,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (post.likes) delete post.likes;
         Storage.set('posts', posts);
-        renderFeed();
+        updateSinglePost(postId);
         if (DB.isReady()) { DB.toggleLike(postId, currentUser.id); }
         if (firebaseDb) { firebaseDb.ref('posts/' + postId + '/reactions').set(post.reactions); }
     }
@@ -8965,7 +8984,7 @@ document.addEventListener('DOMContentLoaded', function() {
         post.comments.push(comment);
         Storage.set('posts', posts);
         currentCommentsPostId = postId;
-        renderFeed();
+        updateSinglePost(postId);
         var section = document.getElementById('comments-' + postId);
         if (section) section.style.display = 'block';
         if (post.userId !== currentUser.id) {
