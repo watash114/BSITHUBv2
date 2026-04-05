@@ -407,6 +407,105 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Input Sanitization
+function sanitizeInput(input) {
+    if (typeof input !== 'string') return input;
+    // Remove script tags and dangerous content
+    return input
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+\s*=/gi, '')
+        .replace(/data:/gi, '')
+        .trim();
+}
+
+function sanitizeForStorage(data) {
+    if (typeof data === 'string') {
+        return sanitizeInput(data);
+    }
+    if (typeof data === 'object' && data !== null) {
+        var sanitized = {};
+        for (var key in data) {
+            if (data.hasOwnProperty(key)) {
+                sanitized[key] = sanitizeForStorage(data[key]);
+            }
+        }
+        return sanitized;
+    }
+    return data;
+}
+
+// Data Encryption (Simple XOR-based for local storage)
+function encryptData(data, key) {
+    var jsonStr = JSON.stringify(data);
+    var encrypted = '';
+    for (var i = 0; i < jsonStr.length; i++) {
+        encrypted += String.fromCharCode(jsonStr.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return btoa(encrypted);
+}
+
+function decryptData(encrypted, key) {
+    try {
+        var decoded = atob(encrypted);
+        var decrypted = '';
+        for (var i = 0; i < decoded.length; i++) {
+            decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+        return JSON.parse(decrypted);
+    } catch {
+        return null;
+    }
+}
+
+// Screenshot Blocking
+function enableScreenshotBlocking() {
+    // Disable print screen
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'PrintScreen' || 
+            (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+            (e.ctrlKey && e.key === 'u') ||
+            (e.ctrlKey && e.key === 's')) {
+            e.preventDefault();
+            showToast('Screenshots are disabled in this chat', 'warning');
+            return false;
+        }
+    });
+    
+    // Disable right-click in chat
+    var chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        chatMessages.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+    }
+    
+    // Add CSS to prevent selection
+    var style = document.createElement('style');
+    style.textContent = `
+        .chat-messages.screenshot-blocked {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function toggleScreenshotBlocking(enabled) {
+    var chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        if (enabled) {
+            chatMessages.classList.add('screenshot-blocked');
+        } else {
+            chatMessages.classList.remove('screenshot-blocked');
+        }
+    }
+}
+
 function getFileIcon(fileName) {
     var ext = fileName.split('.').pop().toLowerCase();
     var icons = {
@@ -4716,13 +4815,16 @@ function searchGifs(query) {
 function sendMessage(text) {
     if (!activeChat || !text.trim()) return;
     
+    // Sanitize input
+    var sanitizedText = sanitizeInput(text.trim());
+    
     var messages = Storage.get('messages') || [];
     var newMessage = {
         id: generateId(),
         chatId: activeChat.id,
         senderId: currentUser.id,
         senderName: currentUser.name,
-        text: text.trim(),
+        text: sanitizedText,
         timestamp: new Date().toISOString(),
         read: false,
         status: 'sent',
