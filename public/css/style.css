@@ -782,36 +782,88 @@ body {
 .social-login {
     display: flex;
     justify-content: center;
-    gap: 15px;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .social-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+    width: auto;
+    min-width: 100px;
+    padding: 10px 18px;
+    border-radius: 10px;
     border: 2px solid var(--border);
     background: var(--bg-primary);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    transition: all 0.3s;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.social-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .social-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.social-btn.google { color: #DB4437; }
-.social-btn.google:hover { background: #DB4437; color: white; border-color: #DB4437; }
+.social-btn:active {
+    transform: translateY(0);
+}
 
-.social-btn.facebook { color: #4267B2; }
-.social-btn.facebook:hover { background: #4267B2; color: white; border-color: #4267B2; }
+.social-btn i {
+    font-size: 18px;
+    z-index: 1;
+}
 
-.social-btn.github { color: #333; }
-.social-btn.github:hover { background: #333; color: white; border-color: #333; }
+.social-btn span {
+    font-size: 13px;
+    z-index: 1;
+}
+
+.social-btn.google { color: #DB4437; border-color: #DB4437; }
+.social-btn.google::before { background: #DB4437; }
+.social-btn.google:hover { color: white; }
+.social-btn.google:hover::before { opacity: 1; }
+
+.social-btn.facebook { color: #4267B2; border-color: #4267B2; }
+.social-btn.facebook::before { background: #4267B2; }
+.social-btn.facebook:hover { color: white; }
+.social-btn.facebook:hover::before { opacity: 1; }
+
+.social-btn.github { color: #333; border-color: #333; }
+.social-btn.github::before { background: #333; }
+.social-btn.github:hover { color: white; }
+.social-btn.github:hover::before { opacity: 1; }
+
+@media (max-width: 480px) {
+    .social-btn {
+        min-width: 80px;
+        padding: 8px 12px;
+    }
+    
+    .social-btn span {
+        display: none;
+    }
+    
+    .social-btn i {
+        font-size: 20px;
+    }
+}
 
 /* Verification Modal */
 .verification-modal {
