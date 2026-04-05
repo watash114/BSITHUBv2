@@ -5614,8 +5614,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         var warning = document.createElement('div');
         warning.className = 'auto-logout-warning';
-        warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>You will be logged out in 1 minute due to inactivity</span> <button onclick="resetAutoLogoutTimer()">Stay Active</button>';
+        warning.id = 'auto-logout-warning';
+        warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>You will be logged out in 1 minute due to inactivity</span> <button id="stay-active-btn">Stay Active</button>';
+        
+        // Prevent clicks from propagating to document
+        warning.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
         document.body.appendChild(warning);
+        
+        // Add event listener to button
+        document.getElementById('stay-active-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            resetAutoLogoutTimer();
+        });
         
         // Auto logout after 1 more minute
         setTimeout(function() {
@@ -5627,7 +5641,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Track user activity
     ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(function(event) {
-        document.addEventListener(event, function() {
+        document.addEventListener(event, function(e) {
+            // Don't reset timer if clicking inside auto-logout warning
+            if (e && e.target && e.target.closest('#auto-logout-warning')) return;
             if (currentUser) resetAutoLogoutTimer();
         }, { passive: true });
     });

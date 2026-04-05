@@ -6700,6 +6700,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var countdown = 60;
         var warning = document.createElement('div');
         warning.className = 'auto-logout-warning';
+        warning.id = 'auto-logout-warning';
         warning.innerHTML = '<div class="auto-logout-content">' +
             '<div class="auto-logout-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
             '<div class="auto-logout-text">' +
@@ -6708,11 +6709,30 @@ document.addEventListener('DOMContentLoaded', function() {
             '<div class="auto-logout-progress"><div class="auto-logout-bar" id="logout-bar"></div></div>' +
             '</div>' +
             '<div class="auto-logout-actions">' +
-            '<button class="btn btn-primary" onclick="resetAutoLogoutTimer()">Stay Active</button>' +
-            '<button class="btn" onclick="logout()">Logout Now</button>' +
+            '<button class="btn btn-primary" id="stay-active-btn">Stay Active</button>' +
+            '<button class="btn" id="logout-now-btn">Logout Now</button>' +
             '</div>' +
             '</div>';
+        
+        // Prevent clicks from propagating to document
+        warning.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
         document.body.appendChild(warning);
+        
+        // Add event listeners to buttons
+        document.getElementById('stay-active-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            resetAutoLogoutTimer();
+        });
+        
+        document.getElementById('logout-now-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            logout();
+        });
         
         // Animate progress bar
         var bar = document.getElementById('logout-bar');
@@ -6740,7 +6760,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Track user activity
     ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(function(event) {
-        document.addEventListener(event, function() {
+        document.addEventListener(event, function(e) {
+            // Don't reset timer if clicking inside auto-logout warning
+            if (e && e.target && e.target.closest('#auto-logout-warning')) return;
             if (currentUser) resetAutoLogoutTimer();
         }, { passive: true });
     });
