@@ -7309,8 +7309,19 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('Posting published!', 'success');
     }
 
+    var lastFeedHash = '';
+
+    function hashFeedPosts(posts) {
+        // Create a hash based on post IDs, content, and comment counts (not reactions)
+        return posts.map(function(p) {
+            return p.id + ':' + (p.content || '').length + ':' + (p.comments ? p.comments.length : 0);
+        }).join('|');
+    }
+
     function loadFeed() {
         renderFeed();
+        var posts = Storage.get('posts') || [];
+        lastFeedHash = hashFeedPosts(posts);
 
         // Load from Supabase database
         if (DB.isReady()) {
@@ -7333,7 +7344,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     var localPosts = Storage.get('posts') || [];
                     var merged = mergePosts(localPosts, mapped);
                     Storage.set('posts', merged);
-                    renderFeed();
+                    var newHash = hashFeedPosts(merged);
+                    if (newHash !== lastFeedHash) {
+                        lastFeedHash = newHash;
+                        renderFeed();
+                    }
                 }
             });
         }
@@ -7352,7 +7367,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 var localPosts = Storage.get('posts') || [];
                 var merged = mergePosts(localPosts, fbPosts);
                 Storage.set('posts', merged);
-                renderFeed();
+                // Only re-render if post structure changed (new/removed/edited posts or comments), not on reaction updates
+                var newHash = hashFeedPosts(merged);
+                if (newHash !== lastFeedHash) {
+                    lastFeedHash = newHash;
+                    renderFeed();
+                }
             });
         }
     }
