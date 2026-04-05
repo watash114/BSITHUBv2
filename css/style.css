@@ -1410,6 +1410,51 @@ body {
     display: inline-block;
 }
 
+/* Swipe Actions */
+.chat-item-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-item-wrapper .chat-item {
+    position: relative;
+    z-index: 1;
+    background: var(--bg-primary);
+    transition: transform 0.2s ease;
+}
+
+.chat-item-wrapper .swipe-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    z-index: 0;
+}
+
+.chat-item-wrapper .swipe-action {
+    width: 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    gap: 4px;
+}
+
+.chat-item-wrapper .swipe-action.archive {
+    background: var(--info);
+}
+
+.chat-item-wrapper .swipe-action.delete {
+    background: var(--danger);
+}
+
+.chat-item-wrapper .swipe-action i {
+    font-size: 18px;
+}
+
 /* Chat Main */
 .chat-main {
     flex: 1;

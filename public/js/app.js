@@ -1641,6 +1641,7 @@ function loadChats() {
             }
         }
         
+        html += '<div class="chat-item-wrapper" data-chat-id="' + chat.id + '">';
         html += '<div class="chat-item ' + (isActive ? 'active' : '') + (chat.pinned ? ' pinned' : '') + '" data-chat-id="' + chat.id + '" data-user-id="' + chatUserId + '">';
         html += '<div class="chat-item-avatar-wrapper">';
         html += '<div class="chat-item-avatar">' + chatAvatar + '</div>';
@@ -1658,15 +1659,24 @@ function loadChats() {
         html += '<div class="chat-item-meta"><div class="chat-item-time">' + (lastMessage ? formatTime(lastMessage.timestamp) : '') + '</div>';
         if (unreadCount > 0) html += '<span class="chat-item-badge">' + unreadCount + '</span>';
         html += '</div></div>';
+        html += '<div class="swipe-actions">';
+        html += '<div class="swipe-action archive" onclick="archiveChatFromSwipe(\'' + chat.id + '\')"><i class="fas fa-archive"></i><span>Archive</span></div>';
+        html += '<div class="swipe-action delete" onclick="deleteChatFromSwipe(\'' + chat.id + '\')"><i class="fas fa-trash"></i><span>Delete</span></div>';
+        html += '</div></div>';
     });
     
     chatList.innerHTML = html;
     
     chatList.querySelectorAll('.chat-item').forEach(function(item) {
         item.onclick = function() {
-            openChat(item.dataset.chatId, item.dataset.userId);
+            if (!item.closest('.chat-item-wrapper').classList.contains('swiped')) {
+                openChat(item.dataset.chatId, item.dataset.userId);
+            }
         };
     });
+    
+    // Initialize swipe actions for mobile
+    initSwipeActions();
     
     // Update total unread badge in sidebar
     updateUnreadBadge();
@@ -1690,7 +1700,107 @@ function updateUnreadBadge() {
         badge.textContent = totalUnread;
         badge.style.display = totalUnread > 0 ? 'inline' : 'none';
     }
+    
+    // Update browser tab title with unread count
+    if (totalUnread > 0) {
+        document.title = '(' + totalUnread + ') BSITHUB';
+    } else {
+        document.title = 'BSITHUB v2.5.0 - Connect & Chat';
+    }
 }
+
+// ==========================================
+// Mobile Swipe Actions
+// ==========================================
+function initSwipeActions() {
+    var wrappers = document.querySelectorAll('.chat-item-wrapper');
+    
+    wrappers.forEach(function(wrapper) {
+        var item = wrapper.querySelector('.chat-item');
+        var startX = 0;
+        var currentX = 0;
+        var isDragging = false;
+        
+        item.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+            item.style.transition = 'none';
+        }, { passive: true });
+        
+        item.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+            currentX = e.touches[0].clientX;
+            var diff = startX - currentX;
+            
+            // Only allow left swipe (negative diff)
+            if (diff > 0 && diff < 140) {
+                item.style.transform = 'translateX(-' + diff + 'px)';
+            }
+        }, { passive: true });
+        
+        item.addEventListener('touchend', function() {
+            isDragging = false;
+            item.style.transition = 'transform 0.2s ease';
+            
+            var diff = startX - currentX;
+            if (diff > 60) {
+                // Snap open
+                item.style.transform = 'translateX(-140px)';
+                wrapper.classList.add('swiped');
+            } else {
+                // Snap closed
+                item.style.transform = 'translateX(0)';
+                wrapper.classList.remove('swiped');
+            }
+        }, { passive: true });
+    });
+    
+    // Close swiped items when tapping elsewhere
+    document.addEventListener('touchstart', function(e) {
+        if (!e.target.closest('.chat-item-wrapper')) {
+            wrappers.forEach(function(wrapper) {
+                var item = wrapper.querySelector('.chat-item');
+                item.style.transition = 'transform 0.2s ease';
+                item.style.transform = 'translateX(0)';
+                wrapper.classList.remove('swiped');
+            });
+        }
+    }, { passive: true });
+}
+
+window.archiveChatFromSwipe = function(chatId) {
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex !== -1) {
+        chats[chatIndex].archived = true;
+        Storage.set('chats', chats);
+        showToast('Chat archived', 'success');
+        loadChats();
+    }
+};
+
+window.deleteChatFromSwipe = function(chatId) {
+    if (confirm('Delete this chat? This cannot be undone.')) {
+        var chats = Storage.get('chats') || [];
+        chats = chats.filter(function(c) { return c.id !== chatId; });
+        Storage.set('chats', chats);
+        
+        // Also delete messages
+        var messages = Storage.get('messages') || [];
+        messages = messages.filter(function(m) { return m.chatId !== chatId; });
+        Storage.set('messages', messages);
+        
+        showToast('Chat deleted', 'success');
+        loadChats();
+        
+        // Clear active chat if it was deleted
+        if (activeChat && activeChat.id === chatId) {
+            activeChat = null;
+            document.getElementById('chat-placeholder').style.display = 'flex';
+            document.getElementById('chat-active').style.display = 'none';
+        }
+    }
+};
 
 function loadChatsWithUnread() {
     var chatList = document.getElementById('chat-list');
