@@ -788,80 +788,48 @@ body {
 
 .social-btn {
     width: auto;
-    min-width: 100px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    border: 2px solid var(--border);
-    background: var(--bg-primary);
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-tertiary);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.social-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: all 0.15s ease;
+    color: var(--text-primary);
 }
 
 .social-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.social-btn:active {
-    transform: translateY(0);
+    background: var(--border);
 }
 
 .social-btn i {
-    font-size: 18px;
-    z-index: 1;
+    font-size: 16px;
 }
 
 .social-btn span {
     font-size: 13px;
-    z-index: 1;
 }
 
-.social-btn.google { color: #DB4437; border-color: #DB4437; }
-.social-btn.google::before { background: #DB4437; }
-.social-btn.google:hover { color: white; }
-.social-btn.google:hover::before { opacity: 1; }
-
-.social-btn.facebook { color: #4267B2; border-color: #4267B2; }
-.social-btn.facebook::before { background: #4267B2; }
-.social-btn.facebook:hover { color: white; }
-.social-btn.facebook:hover::before { opacity: 1; }
-
-.social-btn.github { color: #333; border-color: #333; }
-.social-btn.github::before { background: #333; }
-.social-btn.github:hover { color: white; }
-.social-btn.github:hover::before { opacity: 1; }
+.social-btn.google:hover { color: #DB4437; }
+.social-btn.facebook:hover { color: #4267B2; }
+.social-btn.github:hover { color: #333; }
 
 @media (max-width: 480px) {
-    .social-btn {
-        min-width: 80px;
-        padding: 8px 12px;
-    }
-    
     .social-btn span {
         display: none;
     }
     
+    .social-btn {
+        padding: 10px 14px;
+    }
+    
     .social-btn i {
-        font-size: 20px;
+        font-size: 18px;
     }
 }
 
