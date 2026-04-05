@@ -963,6 +963,9 @@ body {
 .sidebar-nav {
     flex: 1;
     padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .nav-item {
@@ -973,28 +976,70 @@ body {
     color: var(--text-secondary);
     text-decoration: none;
     border-radius: var(--radius-sm);
-    transition: var(--transition);
-    margin-bottom: 4px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--primary);
+    border-radius: 0 3px 3px 0;
+    transition: height 0.2s ease;
 }
 
 .nav-item:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
+    transform: translateX(4px);
+}
+
+.nav-item:hover::before {
+    height: 60%;
 }
 
 .nav-item.active {
     background: rgba(99, 102, 241, 0.1);
     color: var(--primary);
+    box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.05);
+}
+
+.nav-item.active::before {
+    height: 70%;
+}
+
+.nav-item.active i {
+    filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.4));
 }
 
 .nav-item i {
     font-size: 18px;
     width: 24px;
+    transition: transform 0.2s ease;
+}
+
+.nav-item:hover i {
+    transform: scale(1.1);
 }
 
 .nav-item span {
     flex: 1;
     font-weight: 500;
+}
+
+.nav-item .badge {
+    animation: none;
+    transition: transform 0.2s ease;
+}
+
+.nav-item:hover .badge {
+    transform: scale(1.1);
 }
 
 .badge {
