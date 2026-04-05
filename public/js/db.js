@@ -247,16 +247,20 @@ const DB = {
                 // Unlike
                 await this.client().from('post_likes').delete().eq('id', existing.id).throwOnError();
             } else {
-                // Like
-                await this.client().from('post_likes').insert({
+                // Like - use upsert to handle conflicts gracefully
+                await this.client().from('post_likes').upsert({
                     post_id: postId,
                     user_id: userId,
                     reaction: 'like'
-                }).throwOnError();
+                }, { onConflict: 'post_id, user_id', ignoreDuplicates: true });
             }
 
             return { success: true, liked: !existing };
-        } catch {
+        } catch (err) {
+            // Silently ignore 409 Conflict errors (already liked)
+            if (err?.code === '23505' || err?.status === 409) {
+                return { success: true, liked: true };
+            }
             return { success: false };
         }
     },
