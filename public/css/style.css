@@ -11116,3 +11116,133 @@ body {
     outline: none;
     border-color: var(--primary);
 }
+
+/* Enhanced Group Actions */
+.group-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.group-action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.group-action-card:hover {
+    background: var(--border);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.group-action-card:active {
+    transform: translateY(0);
+}
+
+.group-action-card .action-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    font-size: 18px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.group-action-card:hover .action-icon {
+    background: var(--primary);
+    color: white;
+}
+
+.group-action-card.primary .action-icon {
+    background: var(--primary);
+    color: white;
+}
+
+.group-action-card.primary:hover .action-icon {
+    background: var(--primary-dark);
+}
+
+.group-actions-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0 12px;
+}
+
+.group-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.group-action-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-primary);
+    font-size: 14px;
+    width: 100%;
+    text-align: left;
+}
+
+.group-action-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.group-action-item i:first-child {
+    width: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.group-action-item span {
+    flex: 1;
+}
+
+.group-action-item i:last-child {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0;
+    transform: translateX(-5px);
+    transition: all 0.15s ease;
+}
+
+.group-action-item:hover i:last-child {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.group-action-item.danger {
+    color: var(--danger);
+}
+
+.group-action-item.danger i:first-child {
+    color: var(--danger);
+}
+
+.group-action-item.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}

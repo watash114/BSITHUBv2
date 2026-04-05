@@ -3675,14 +3675,36 @@ function showGroupInfo() {
     // Actions
     html += '<div class="group-section">';
     html += '<h4>Actions</h4>';
-    html += '<div class="group-action-buttons">';
-    html += '<button class="btn btn-primary" onclick="showAddMembers()"><i class="fas fa-user-plus"></i> Add Members</button>';
+    html += '<div class="group-actions-grid">';
+    html += '<button class="group-action-card primary" onclick="showAddMembers()">';
+    html += '<div class="action-icon"><i class="fas fa-user-plus"></i></div>';
+    html += '<span>Add Members</span>';
+    html += '</button>';
     if (isAdmin) {
-        html += '<button class="btn" onclick="toggleReadOnly()"><i class="fas fa-' + (chat.readOnly ? 'unlock' : 'lock') + '"></i> ' + (chat.readOnly ? 'Disable' : 'Enable') + ' Read-Only</button>';
-        html += '<button class="btn" onclick="showTransferAdmin()"><i class="fas fa-crown"></i> Transfer Ownership</button>';
+        html += '<button class="group-action-card" onclick="toggleReadOnly()">';
+        html += '<div class="action-icon"><i class="fas fa-' + (chat.readOnly ? 'unlock' : 'lock') + '"></i></div>';
+        html += '<span>' + (chat.readOnly ? 'Disable' : 'Enable') + ' Read-Only</span>';
+        html += '</button>';
+        html += '<button class="group-action-card" onclick="showTransferAdmin()">';
+        html += '<div class="action-icon"><i class="fas fa-crown"></i></div>';
+        html += '<span>Transfer Ownership</span>';
+        html += '</button>';
     }
-    html += '<button class="btn" onclick="leaveGroup()"><i class="fas fa-sign-out-alt"></i> Leave Group</button>';
-    if (isAdmin) html += '<button class="btn danger" onclick="deleteGroup()"><i class="fas fa-trash"></i> Delete Group</button>';
+    html += '</div>';
+    html += '<div class="group-actions-divider"></div>';
+    html += '<div class="group-actions-list">';
+    html += '<button class="group-action-item" onclick="leaveGroup()">';
+    html += '<i class="fas fa-sign-out-alt"></i>';
+    html += '<span>Leave Group</span>';
+    html += '<i class="fas fa-chevron-right"></i>';
+    html += '</button>';
+    if (isAdmin) {
+        html += '<button class="group-action-item danger" onclick="deleteGroup()">';
+        html += '<i class="fas fa-trash"></i>';
+        html += '<span>Delete Group</span>';
+        html += '<i class="fas fa-chevron-right"></i>';
+        html += '</button>';
+    }
     html += '</div>';
     html += '</div>';
     
