@@ -1647,6 +1647,32 @@ function initializeApp() {
                 }
             }
         });
+        
+        // Listen for user profile updates (avatar, name, etc.)
+        firebaseDb.ref('users').on('child_changed', function(snap) {
+            var updatedUser = snap.val();
+            if (!updatedUser) return;
+            
+            var users = Storage.get('users') || [];
+            var idx = users.findIndex(function(u) { return u.id === updatedUser.id; });
+            if (idx !== -1) {
+                users[idx] = Object.assign({}, users[idx], updatedUser);
+                Storage.set('users', users);
+                console.log('User updated from Firebase:', updatedUser.username);
+                
+                // If it's the current user, update local currentUser and UI
+                if (updatedUser.id === currentUser.id) {
+                    currentUser = users[idx];
+                    Storage.set('currentUser', { id: currentUser.id });
+                    if (updatedUser.avatar) updateAvatarDisplay(updatedUser.avatar);
+                    if (updatedUser.cover) updateProfileCover(updatedUser.cover);
+                }
+                
+                // Reload chats to show updated avatars
+                loadChats();
+                if (typeof renderStories === 'function') renderStories();
+            }
+        });
     }
     
     // Listen for online status changes (global)
@@ -5459,6 +5485,19 @@ function updateAvatarDisplay(avatarData) {
     if (headerAvatar) {
         headerAvatar.innerHTML = '<img src="' + avatarData + '" alt="Avatar">';
     }
+    
+    // Update composer avatar
+    var composerAvatar = document.getElementById('composer-avatar');
+    if (composerAvatar) {
+        composerAvatar.innerHTML = '<img src="' + avatarData + '" alt="Avatar">';
+    }
+    var composerAvatar2 = document.getElementById('composer-avatar-2');
+    if (composerAvatar2) {
+        composerAvatar2.innerHTML = '<img src="' + avatarData + '" alt="Avatar">';
+    }
+    
+    // Update stories bar
+    if (typeof renderStories === 'function') renderStories();
 }
 
 // Cover Upload Functions
