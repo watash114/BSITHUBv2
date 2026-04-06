@@ -70,6 +70,46 @@ app.get('/api/gifs/search', async (req, res) => {
     }
 });
 
+// ==========================================
+// News API Proxy (NewsAPI.org)
+// ==========================================
+const NEWS_API_KEY = process.env.NEWS_API_KEY || 'demo';
+
+app.get('/api/news', async (req, res) => {
+    try {
+        const category = req.query.category || 'general';
+        const url = `https://newsapi.org/v2/top-headlines?country=us&category=${category}&apiKey=${NEWS_API_KEY}`;
+        const data = await fetchJSON(url);
+        res.json(data);
+    } catch (error) {
+        console.error('News error:', error);
+        // Return demo news on error
+        res.json({
+            articles: [
+                { title: 'Welcome to BSITHUB News', description: 'Configure your NewsAPI key for real news', source: { name: 'BSITHUB' }, publishedAt: new Date().toISOString() }
+            ]
+        });
+    }
+});
+
+// ==========================================
+// Weather API Proxy (OpenWeatherMap)
+// ==========================================
+const WEATHER_API_KEY = process.env.WEATHER_API_KEY || 'demo';
+
+app.get('/api/weather', async (req, res) => {
+    try {
+        const lat = req.query.lat || 0;
+        const lon = req.query.lon || 0;
+        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${WEATHER_API_KEY}`;
+        const data = await fetchJSON(url);
+        res.json(data);
+    } catch (error) {
+        console.error('Weather error:', error);
+        res.status(500).json({ error: 'Failed to fetch weather' });
+    }
+});
+
 // Store online users
 let onlineUsers = {};
 
