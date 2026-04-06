@@ -2340,9 +2340,12 @@ function renderMessages(chatId) {
     // Update unread badge
     updateUnreadBadge();
     
-    // Limit to last 100 messages for performance
-    if (chatMessages.length > 100) {
-        chatMessages = chatMessages.slice(-100);
+    // Limit messages based on device (more aggressive on mobile)
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    var maxMessages = isMobile ? 50 : 100;
+    
+    if (chatMessages.length > maxMessages) {
+        chatMessages = chatMessages.slice(-maxMessages);
     }
     
     var html = '';

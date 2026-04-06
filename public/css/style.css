@@ -14207,6 +14207,64 @@ body {
     --safe-area-right: env(safe-area-inset-right, 0px);
 }
 
+/* Mobile Performance Optimizations */
+@media (max-width: 768px) {
+    /* GPU Acceleration for smooth scrolling */
+    .chat-messages,
+    .chats-list,
+    .feed-list,
+    .modal-content {
+        -webkit-overflow-scrolling: touch;
+        will-change: scroll-position;
+        transform: translateZ(0);
+    }
+    
+    /* Contain layout for better performance */
+    .chat-item,
+    .post-card,
+    .message,
+    .setting-item {
+        contain: layout style;
+    }
+    
+    /* Reduce shadow complexity */
+    * {
+        box-shadow: none !important;
+    }
+    
+    .sidebar,
+    .modal-content {
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Disable expensive effects */
+    .message:hover,
+    .post-card:hover,
+    .chat-item:hover {
+        transform: none;
+    }
+    
+    /* Simplify animations */
+    * {
+        transition-duration: 0.1s !important;
+        animation-duration: 0.1s !important;
+    }
+    
+    .message {
+        animation: none;
+    }
+    
+    /* Reduce blur effects */
+    .toast {
+        backdrop-filter: none;
+    }
+    
+    /* Lazy load images */
+    img {
+        content-visibility: auto;
+    }
+}
+
 /* Mobile Bottom Navigation */
 @media (max-width: 768px) {
     .sidebar {
