@@ -1044,6 +1044,30 @@
         </div>
     </div>
 
+    <!-- Pull to Refresh -->
+    <div class="pull-to-refresh" id="pull-to-refresh">
+        <i class="fas fa-sync-alt"></i>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" id="fab-btn" onclick="toggleFabMenu()">
+        <i class="fas fa-plus"></i>
+    </button>
+    <div class="fab-menu" id="fab-menu">
+        <div class="fab-menu-item" onclick="showNewChat(); toggleFabMenu();">
+            <i class="fas fa-comment"></i>
+            <span>New Chat</span>
+        </div>
+        <div class="fab-menu-item" onclick="showNewGroup(); toggleFabMenu();">
+            <i class="fas fa-users"></i>
+            <span>New Group</span>
+        </div>
+        <div class="fab-menu-item" onclick="expandComposer(); toggleFabMenu();">
+            <i class="fas fa-pen"></i>
+            <span>New Post</span>
+        </div>
+    </div>
+
     <!-- Toast Notifications -->
     <div class="toast-container" id="toast-container"></div>
 

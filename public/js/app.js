@@ -13820,4 +13820,120 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Invalid JSON data. Please paste the correct QR code data.', 'error');
         }
     };
+
+    // ==========================================
+    // Mobile UX Functions
+    // ==========================================
+    
+    // FAB Menu Toggle
+    window.toggleFabMenu = function() {
+        var menu = document.getElementById('fab-menu');
+        var btn = document.getElementById('fab-btn');
+        if (menu && btn) {
+            menu.classList.toggle('active');
+            var icon = btn.querySelector('i');
+            if (menu.classList.contains('active')) {
+                icon.className = 'fas fa-times';
+            } else {
+                icon.className = 'fas fa-plus';
+            }
+        }
+    };
+
+    // Close FAB menu when clicking outside
+    document.addEventListener('click', function(e) {
+        var menu = document.getElementById('fab-menu');
+        var btn = document.getElementById('fab-btn');
+        if (menu && btn && menu.classList.contains('active')) {
+            if (!e.target.closest('#fab-btn') && !e.target.closest('#fab-menu')) {
+                menu.classList.remove('active');
+                btn.querySelector('i').className = 'fas fa-plus';
+            }
+        }
+    });
+
+    // Pull to Refresh
+    var pullStartY = 0;
+    var pullMoveY = 0;
+    var isPulling = false;
+
+    function initPullToRefresh() {
+        var container = document.querySelector('.main-content');
+        var indicator = document.getElementById('pull-to-refresh');
+        
+        if (!container || !indicator) return;
+
+        container.addEventListener('touchstart', function(e) {
+            if (container.scrollTop === 0) {
+                pullStartY = e.touches[0].clientY;
+                isPulling = true;
+            }
+        }, { passive: true });
+
+        container.addEventListener('touchmove', function(e) {
+            if (!isPulling) return;
+            pullMoveY = e.touches[0].clientY;
+            var pullDistance = pullMoveY - pullStartY;
+            
+            if (pullDistance > 0 && pullDistance < 150) {
+                indicator.style.transform = 'translateY(' + (pullDistance - 60) + 'px)';
+            }
+        }, { passive: true });
+
+        container.addEventListener('touchend', function() {
+            if (!isPulling) return;
+            var pullDistance = pullMoveY - pullStartY;
+            
+            if (pullDistance > 80) {
+                indicator.classList.add('active');
+                indicator.style.transform = 'translateY(0)';
+                
+                // Refresh content
+                setTimeout(function() {
+                    var activeSection = document.querySelector('.content-section.active');
+                    if (activeSection) {
+                        var sectionId = activeSection.id;
+                        if (sectionId === 'chats-section') {
+                            loadChats();
+                        } else if (sectionId === 'feed-section') {
+                            if (typeof loadFeed === 'function') loadFeed();
+                        }
+                    }
+                    indicator.classList.remove('active');
+                    indicator.style.transform = 'translateY(-100%)';
+                    showToast('Refreshed!', 'info');
+                }, 1000);
+            } else {
+                indicator.style.transform = 'translateY(-100%)';
+            }
+            
+            isPulling = false;
+            pullStartY = 0;
+            pullMoveY = 0;
+        }, { passive: true });
+    }
+
+    // Keyboard handling
+    function initKeyboardHandling() {
+        if (typeof visualViewport !== 'undefined') {
+            visualViewport.addEventListener('resize', function() {
+                var isKeyboardOpen = visualViewport.height < window.innerHeight * 0.75;
+                document.body.classList.toggle('keyboard-open', isKeyboardOpen);
+                
+                if (isKeyboardOpen) {
+                    // Scroll chat messages to bottom when keyboard opens
+                    var messages = document.getElementById('chat-messages');
+                    if (messages) {
+                        setTimeout(function() {
+                            messages.scrollTop = messages.scrollHeight;
+                        }, 100);
+                    }
+                }
+            });
+        }
+    }
+
+    // Initialize mobile features
+    initPullToRefresh();
+    initKeyboardHandling();
 });
