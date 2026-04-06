@@ -13452,122 +13452,180 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     // News Feed (using NewsAPI.org free tier)
     // ==========================================
-    var NEWS_API_KEY = 'YOUR_NEWSAPI_KEY'; // Get free key from newsapi.org
-    
     window.showNewsFeed = function() {
         var html = '<div class="news-feed-modal">';
-        html += '<h3><i class="fas fa-newspaper"></i> News Feed</h3>';
+        html += '<div class="news-header">';
+        html += '<div class="news-icon"><i class="fas fa-newspaper"></i></div>';
+        html += '<h3>News Feed</h3>';
+        html += '<p>Stay updated with latest news</p>';
+        html += '</div>';
         html += '<div class="news-categories">';
-        html += '<button class="news-cat-btn active" onclick="loadNews(\'general\')">General</button>';
-        html += '<button class="news-cat-btn" onclick="loadNews(\'technology\')">Tech</button>';
-        html += '<button class="news-cat-btn" onclick="loadNews(\'sports\')">Sports</button>';
-        html += '<button class="news-cat-btn" onclick="loadNews(\'entertainment\')">Entertainment</button>';
-        html += '<button class="news-cat-btn" onclick="loadNews(\'business\')">Business</button>';
+        html += '<button class="news-cat-btn active" data-category="general" onclick="loadNews(\'general\', this)"><i class="fas fa-globe"></i> General</button>';
+        html += '<button class="news-cat-btn" data-category="technology" onclick="loadNews(\'technology\', this)"><i class="fas fa-microchip"></i> Tech</button>';
+        html += '<button class="news-cat-btn" data-category="sports" onclick="loadNews(\'sports\', this)"><i class="fas fa-futbol"></i> Sports</button>';
+        html += '<button class="news-cat-btn" data-category="entertainment" onclick="loadNews(\'entertainment\', this)"><i class="fas fa-film"></i> Entertainment</button>';
+        html += '<button class="news-cat-btn" data-category="business" onclick="loadNews(\'business\', this)"><i class="fas fa-chart-line"></i> Business</button>';
+        html += '<button class="news-cat-btn" data-category="health" onclick="loadNews(\'health\', this)"><i class="fas fa-heartbeat"></i> Health</button>';
         html += '</div>';
         html += '<div class="news-list" id="news-list">';
-        html += '<div class="news-loading"><i class="fas fa-spinner fa-spin"></i> Loading news...</div>';
+        html += '<div class="news-loading"><div class="loading-pulse"></div><span>Loading news...</span></div>';
         html += '</div>';
         html += '</div>';
         showModal(html);
         loadNews('general');
     };
 
-    window.loadNews = function(category) {
+    window.loadNews = function(category, btn) {
         var list = document.getElementById('news-list');
-        list.innerHTML = '<div class="news-loading"><i class="fas fa-spinner fa-spin"></i> Loading news...</div>';
+        list.innerHTML = '<div class="news-loading"><div class="loading-pulse"></div><span>Loading news...</span></div>';
         
-        // Update active category
-        document.querySelectorAll('.news-cat-btn').forEach(function(btn) {
-            btn.classList.remove('active');
-            if (btn.textContent.toLowerCase().includes(category.substring(0, 4))) {
-                btn.classList.add('active');
-            }
+        // Update active category button
+        document.querySelectorAll('.news-cat-btn').forEach(function(b) {
+            b.classList.remove('active');
         });
+        if (btn) {
+            btn.classList.add('active');
+        } else {
+            var activeBtn = document.querySelector('.news-cat-btn[data-category="' + category + '"]');
+            if (activeBtn) activeBtn.classList.add('active');
+        }
         
-        // Use backend proxy to avoid CORS
         fetch('/api/news?category=' + category)
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 if (data.articles && data.articles.length > 0) {
                     renderNews(data.articles);
                 } else {
-                    list.innerHTML = '<div class="news-empty">No news available</div>';
+                    list.innerHTML = '<div class="news-empty"><i class="fas fa-newspaper"></i><p>No news available</p></div>';
                 }
             })
             .catch(function(err) {
                 console.error('News error:', err);
-                // Show demo news if API fails
-                renderDemoNews(category);
+                list.innerHTML = '<div class="news-empty"><i class="fas fa-exclamation-circle"></i><p>Could not load news</p><small>Check your internet connection</small></div>';
             });
     };
 
     function renderNews(articles) {
         var list = document.getElementById('news-list');
         var html = '';
-        articles.slice(0, 10).forEach(function(article) {
-            html += '<div class="news-item" onclick="window.open(\'' + (article.url || '#') + '\', \'_blank\')">';
-            if (article.urlToImage) {
-                html += '<div class="news-image"><img src="' + article.urlToImage + '" alt="" onerror="this.style.display=\'none\'"></div>';
+        articles.slice(0, 15).forEach(function(article) {
+            if (!article.title || article.title === '[Removed]') return;
+            
+            var imageUrl = article.urlToImage || '';
+            var source = article.source ? article.source.name : 'Unknown';
+            var time = article.publishedAt ? getTimeAgo(article.publishedAt) : '';
+            var desc = article.description || '';
+            if (desc.length > 120) desc = desc.substring(0, 120) + '...';
+            
+            html += '<div class="news-card" onclick="window.open(\'' + escapeHtml(article.url || '#') + '\', \'_blank\')">';
+            if (imageUrl) {
+                html += '<div class="news-card-image"><img src="' + imageUrl + '" alt="" loading="lazy" onerror="this.parentElement.style.display=\'none\'"></div>';
             }
-            html += '<div class="news-content">';
-            html += '<div class="news-title">' + escapeHtml(article.title || 'Untitled') + '</div>';
-            html += '<div class="news-desc">' + escapeHtml((article.description || '').substring(0, 100)) + '...</div>';
-            html += '<div class="news-meta"><span>' + (article.source ? article.source.name : 'Unknown') + '</span><span>' + getTimeAgo(article.publishedAt) + '</span></div>';
+            html += '<div class="news-card-content">';
+            html += '<h4 class="news-card-title">' + escapeHtml(article.title) + '</h4>';
+            if (desc) html += '<p class="news-card-desc">' + escapeHtml(desc) + '</p>';
+            html += '<div class="news-card-meta">';
+            html += '<span class="news-source"><i class="fas fa-newspaper"></i> ' + escapeHtml(source) + '</span>';
+            if (time) html += '<span class="news-time"><i class="fas fa-clock"></i> ' + time + '</span>';
+            html += '</div>';
             html += '</div>';
             html += '</div>';
         });
+        
+        if (!html) {
+            html = '<div class="news-empty"><i class="fas fa-newspaper"></i><p>No articles found</p></div>';
+        }
         list.innerHTML = html;
-    }
-
-    function renderDemoNews(category) {
-        var demoArticles = [
-            { title: 'Welcome to BSITHUB News', description: 'Get your NewsAPI key from newsapi.org for real news feeds', source: { name: 'BSITHUB' }, publishedAt: new Date().toISOString() },
-            { title: 'Stay Connected', description: 'Chat with friends and share news articles', source: { name: 'BSITHUB' }, publishedAt: new Date().toISOString() }
-        ];
-        renderNews(demoArticles);
     }
 
     // ==========================================
     // Weather in Status (using OpenWeatherMap free API)
     // ==========================================
-    var WEATHER_API_KEY = 'YOUR_OPENWEATHERMAP_KEY'; // Get free key from openweathermap.org
-    
     window.showWeatherStatus = function() {
+        var html = '<div class="weather-modal">';
+        html += '<div class="weather-header">';
+        html += '<div class="weather-icon-large"><i class="fas fa-cloud-sun"></i></div>';
+        html += '<h3>Weather Status</h3>';
+        html += '<p>Set current weather as your status</p>';
+        html += '</div>';
+        html += '<div class="weather-content" id="weather-content">';
+        html += '<div class="weather-loading"><div class="loading-pulse"></div><span>Getting your location...</span></div>';
+        html += '</div>';
+        html += '<div class="weather-actions">';
+        html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+        html += '<button class="btn btn-primary" id="set-weather-btn" onclick="setWeatherAsStatus()" disabled><i class="fas fa-check"></i> Set as Status</button>';
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+        
         if (!navigator.geolocation) {
-            showToast('Geolocation not supported', 'error');
+            document.getElementById('weather-content').innerHTML = '<div class="weather-error"><i class="fas fa-exclamation-triangle"></i><p>Geolocation not supported</p></div>';
             return;
         }
         
         navigator.geolocation.getCurrentPosition(function(position) {
-            var lat = position.coords.latitude;
-            var lon = position.coords.longitude;
-            fetchWeather(lat, lon);
-        }, function() {
-            showToast('Could not get location', 'error');
+            fetchWeatherData(position.coords.latitude, position.coords.longitude);
+        }, function(error) {
+            document.getElementById('weather-content').innerHTML = '<div class="weather-error"><i class="fas fa-location-crosshairs"></i><p>Could not get location</p><small>Please allow location access</small></div>';
         });
     };
 
-    function fetchWeather(lat, lon) {
-        // Use backend proxy to avoid CORS
+    var currentWeatherData = null;
+
+    function fetchWeatherData(lat, lon) {
         fetch('/api/weather?lat=' + lat + '&lon=' + lon)
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                if (data.main) {
-                    var temp = Math.round(data.main.temp);
-                    var desc = data.weather ? data.weather[0].description : '';
-                    var icon = getWeatherEmoji(data.weather ? data.weather[0].main : '');
-                    var status = icon + ' ' + temp + '°C - ' + desc;
-                    
-                    // Set as status message
-                    setUserStatus('online', status);
-                    showToast('Weather status updated!', 'success');
+                if (data.main && data.weather) {
+                    currentWeatherData = data;
+                    renderWeatherData(data);
+                    document.getElementById('set-weather-btn').disabled = false;
+                } else {
+                    document.getElementById('weather-content').innerHTML = '<div class="weather-error"><i class="fas fa-exclamation-circle"></i><p>Could not fetch weather</p></div>';
                 }
             })
             .catch(function(err) {
                 console.error('Weather error:', err);
-                showToast('Could not fetch weather', 'error');
+                document.getElementById('weather-content').innerHTML = '<div class="weather-error"><i class="fas fa-wifi"></i><p>Network error</p><small>Check your connection</small></div>';
             });
     }
+
+    function renderWeatherData(data) {
+        var temp = Math.round(data.main.temp);
+        var feelsLike = Math.round(data.main.feels_like);
+        var humidity = data.main.humidity;
+        var desc = data.weather[0].description;
+        var main = data.weather[0].main;
+        var icon = getWeatherEmoji(main);
+        var city = data.name || 'Unknown';
+        var country = data.sys ? data.sys.country : '';
+        
+        var html = '<div class="weather-display">';
+        html += '<div class="weather-temp">' + icon + ' ' + temp + '°C</div>';
+        html += '<div class="weather-desc">' + escapeHtml(desc) + '</div>';
+        html += '<div class="weather-location"><i class="fas fa-map-marker-alt"></i> ' + escapeHtml(city) + (country ? ', ' + country : '') + '</div>';
+        html += '<div class="weather-details">';
+        html += '<div class="weather-detail"><i class="fas fa-thermometer-half"></i> Feels like ' + feelsLike + '°C</div>';
+        html += '<div class="weather-detail"><i class="fas fa-tint"></i> Humidity ' + humidity + '%</div>';
+        html += '</div>';
+        html += '</div>';
+        
+        document.getElementById('weather-content').innerHTML = html;
+    }
+
+    window.setWeatherAsStatus = function() {
+        if (!currentWeatherData) return;
+        
+        var temp = Math.round(currentWeatherData.main.temp);
+        var desc = currentWeatherData.weather[0].description;
+        var icon = getWeatherEmoji(currentWeatherData.weather[0].main);
+        var city = currentWeatherData.name || '';
+        
+        var status = icon + ' ' + temp + '°C - ' + desc;
+        setUserStatus('online', status);
+        closeModal();
+        showToast('Weather status updated!', 'success');
+    };
 
     function getWeatherEmoji(weather) {
         var emojis = {
@@ -13579,7 +13637,10 @@ document.addEventListener('DOMContentLoaded', function() {
             'Snow': '❄️',
             'Mist': '🌫️',
             'Fog': '🌫️',
-            'Haze': '🌫️'
+            'Haze': '🌫️',
+            'Smoke': '🌫️',
+            'Dust': '🌫️',
+            'Tornado': '🌪️'
         };
         return emojis[weather] || '🌡️';
     }
@@ -13588,40 +13649,49 @@ document.addEventListener('DOMContentLoaded', function() {
     // Message Reactions Animations
     // ==========================================
     window.animateReaction = function(element, emoji) {
-        // Create floating emoji animation
-        var float = document.createElement('span');
-        float.className = 'floating-reaction';
-        float.textContent = emoji;
-        float.style.cssText = 'position:absolute;font-size:24px;pointer-events:none;z-index:1000;';
+        if (!element || !emoji) return;
         
-        var rect = element.getBoundingClientRect();
-        float.style.left = rect.left + rect.width / 2 + 'px';
-        float.style.top = rect.top + 'px';
-        
-        document.body.appendChild(float);
-        
-        // Animate up and fade out
-        var startY = rect.top;
-        var startTime = Date.now();
-        var duration = 800;
-        
-        function animate() {
-            var elapsed = Date.now() - startTime;
-            var progress = elapsed / duration;
-            
-            if (progress >= 1) {
-                float.remove();
-                return;
-            }
-            
-            float.style.top = (startY - progress * 60) + 'px';
-            float.style.opacity = 1 - progress;
-            float.style.transform = 'scale(' + (1 + progress * 0.5) + ')';
-            
-            requestAnimationFrame(animate);
+        // Create multiple floating emojis for better effect
+        for (var i = 0; i < 3; i++) {
+            (function(index) {
+                setTimeout(function() {
+                    var float = document.createElement('span');
+                    float.className = 'floating-reaction';
+                    float.textContent = emoji;
+                    
+                    var rect = element.getBoundingClientRect();
+                    var offsetX = (Math.random() - 0.5) * 30;
+                    float.style.left = (rect.left + rect.width / 2 + offsetX) + 'px';
+                    float.style.top = rect.top + 'px';
+                    
+                    document.body.appendChild(float);
+                    
+                    var startY = rect.top;
+                    var startTime = Date.now();
+                    var duration = 600 + Math.random() * 400;
+                    
+                    function animate() {
+                        var elapsed = Date.now() - startTime;
+                        var progress = elapsed / duration;
+                        
+                        if (progress >= 1) {
+                            float.remove();
+                            return;
+                        }
+                        
+                        var easeOut = 1 - Math.pow(1 - progress, 3);
+                        float.style.top = (startY - easeOut * 80) + 'px';
+                        float.style.left = (parseFloat(float.style.left) + Math.sin(progress * Math.PI * 2) * 0.5) + 'px';
+                        float.style.opacity = 1 - progress;
+                        float.style.transform = 'scale(' + (1 + progress * 0.3) + ') rotate(' + (Math.random() * 20 - 10) + 'deg)';
+                        
+                        requestAnimationFrame(animate);
+                    }
+                    
+                    requestAnimationFrame(animate);
+                }, index * 100);
+            })(i);
         }
-        
-        requestAnimationFrame(animate);
         
         // Add pop animation to the button
         element.classList.add('reaction-pop');
@@ -13629,20 +13699,6 @@ document.addEventListener('DOMContentLoaded', function() {
             element.classList.remove('reaction-pop');
         }, 300);
     };
-
-    // Override addReaction to include animation
-    var originalAddReaction = window.addReaction;
-    if (originalAddReaction) {
-        window.addReaction = function(messageId, emoji) {
-            originalAddReaction(messageId, emoji);
-            
-            // Find the button and animate it
-            var btn = document.querySelector('[data-message-id="' + messageId + '"] .reaction-btn');
-            if (btn) {
-                animateReaction(btn, emoji);
-            }
-        };
-    }
 
     // ==========================================
     // QR Code Login
@@ -13653,50 +13709,82 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Generate QR code with user session data
         var qrData = JSON.stringify({
             type: 'bsithub_login',
             userId: currentUser.id,
+            username: currentUser.username,
             token: generateId(),
             timestamp: Date.now()
         });
         
         var html = '<div class="qr-login-modal">';
-        html += '<h3><i class="fas fa-qrcode"></i> QR Code Login</h3>';
-        html += '<p>Scan this code with another device to login</p>';
+        html += '<div class="qr-header">';
+        html += '<div class="qr-icon"><i class="fas fa-qrcode"></i></div>';
+        html += '<h3>QR Code Login</h3>';
+        html += '<p>Scan this code with another device</p>';
+        html += '</div>';
         html += '<div class="qr-container" id="qr-code"></div>';
         html += '<div class="qr-info">';
-        html += '<div class="qr-user">' + escapeHtml(currentUser.name) + '</div>';
-        html += '<div class="qr-note">Code expires in 5 minutes</div>';
+        html += '<div class="qr-user-name">' + escapeHtml(currentUser.name) + '</div>';
+        html += '<div class="qr-user-handle">@' + escapeHtml(currentUser.username || 'user') + '</div>';
+        html += '<div class="qr-expiry"><i class="fas fa-clock"></i> Expires in 5 minutes</div>';
         html += '</div>';
-        html += '<button class="btn" onclick="closeModal()">Close</button>';
+        html += '<div class="qr-actions">';
+        html += '<button class="btn" onclick="copyQRData()"><i class="fas fa-copy"></i> Copy Data</button>';
+        html += '<button class="btn btn-primary" onclick="closeModal()">Done</button>';
+        html += '</div>';
         html += '</div>';
         showModal(html);
         
-        // Generate QR code
+        // Store QR data for copying
+        window.currentQRData = qrData;
+        
         setTimeout(function() {
             var qrContainer = document.getElementById('qr-code');
             if (qrContainer && typeof QRCode !== 'undefined') {
                 new QRCode(qrContainer, {
                     text: qrData,
-                    width: 200,
-                    height: 200,
+                    width: 180,
+                    height: 180,
                     colorDark: '#1e293b',
                     colorLight: '#ffffff',
                     correctLevel: QRCode.CorrectLevel.M
                 });
+            } else if (qrContainer) {
+                qrContainer.innerHTML = '<div class="qr-error">QR library not loaded</div>';
             }
         }, 100);
     };
 
+    window.copyQRData = function() {
+        if (window.currentQRData) {
+            navigator.clipboard.writeText(window.currentQRData).then(function() {
+                showToast('QR data copied to clipboard!', 'success');
+            }).catch(function() {
+                showToast('Could not copy', 'error');
+            });
+        }
+    };
+
     window.showQRScanner = function() {
         var html = '<div class="qr-scanner-modal">';
-        html += '<h3><i class="fas fa-camera"></i> Scan QR Code</h3>';
-        html += '<p>Enter the QR code data to login</p>';
-        html += '<textarea id="qr-input" placeholder="Paste QR code data here..." rows="4"></textarea>';
+        html += '<div class="qr-header">';
+        html += '<div class="qr-icon"><i class="fas fa-camera"></i></div>';
+        html += '<h3>Scan QR Code</h3>';
+        html += '<p>Paste the QR code data to login</p>';
+        html += '</div>';
+        html += '<textarea id="qr-input" placeholder=\'Paste the JSON data from QR code here...\n\nExample: {"type":"bsithub_login","userId":"..."}\' rows="5"></textarea>';
+        html += '<div class="qr-instructions">';
+        html += '<p><i class="fas fa-info-circle"></i> On the other device:</p>';
+        html += '<ol><li>Open BSITHUB</li><li>Go to Settings → QR Code Login</li><li>Click "Copy Data"</li><li>Paste it here</li></ol>';
+        html += '</div>';
+        html += '<div class="qr-actions">';
+        html += '<button class="btn" onclick="closeModal()">Cancel</button>';
         html += '<button class="btn btn-primary" onclick="processQRLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>';
         html += '</div>';
+        html += '</div>';
         showModal(html);
+        setTimeout(function() { document.getElementById('qr-input').focus(); }, 100);
     };
 
     window.processQRLogin = function() {
@@ -13713,24 +13801,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 var user = users.find(function(u) { return u.id === data.userId; });
                 
                 if (user) {
-                    // Check if QR code is not expired (5 minutes)
                     if (Date.now() - data.timestamp < 5 * 60 * 1000) {
                         currentUser = user;
                         Storage.set('currentUser', { id: user.id });
                         closeModal();
-                        showToast('Login successful!', 'success');
+                        showToast('Login successful! Welcome ' + user.name, 'success');
                         showApp();
                     } else {
-                        showToast('QR code expired', 'error');
+                        showToast('QR code expired. Please generate a new one.', 'error');
                     }
                 } else {
-                    showToast('User not found', 'error');
+                    showToast('User not found. The account may have been deleted.', 'error');
                 }
             } else {
-                showToast('Invalid QR code', 'error');
+                showToast('Invalid QR code format', 'error');
             }
         } catch (e) {
-            showToast('Invalid QR code format', 'error');
+            showToast('Invalid JSON data. Please paste the correct QR code data.', 'error');
         }
     };
 });

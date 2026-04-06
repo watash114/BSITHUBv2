@@ -13763,39 +13763,66 @@ body {
    News Feed
    ========================================== */
 .news-feed-modal {
-    padding: 20px;
     max-width: 500px;
-    max-height: 80vh;
+    max-height: 85vh;
 }
 
-.news-feed-modal h3 {
-    font-size: 20px;
-    margin-bottom: 16px;
+.news-header {
+    text-align: center;
+    padding: 24px 20px 16px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+}
+
+.news-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #8b5cf6);
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    margin: 0 auto 12px;
+    color: white;
+    font-size: 24px;
 }
 
-.news-feed-modal h3 i {
-    color: var(--primary);
+.news-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.news-header p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 .news-categories {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
+    padding: 12px 16px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+}
+
+.news-categories::-webkit-scrollbar {
+    height: 0;
 }
 
 .news-cat-btn {
-    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
     border: 1px solid var(--border);
     border-radius: 20px;
     background: var(--bg-tertiary);
     color: var(--text-secondary);
     cursor: pointer;
     font-size: 13px;
-    transition: var(--transition);
+    white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
 .news-cat-btn:hover, .news-cat-btn.active {
@@ -13804,70 +13831,215 @@ body {
     border-color: var(--primary);
 }
 
+.news-cat-btn i {
+    font-size: 12px;
+}
+
 .news-list {
-    max-height: 400px;
+    max-height: 450px;
     overflow-y: auto;
+    padding: 8px;
 }
 
 .news-loading, .news-empty {
-    text-align: center;
-    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 20px;
     color: var(--text-muted);
 }
 
-.news-item {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.15s ease;
+.news-loading .loading-pulse {
+    width: 40px;
+    height: 40px;
 }
 
-.news-item:hover {
+.news-empty i {
+    font-size: 48px;
+    opacity: 0.4;
+}
+
+.news-empty small {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.news-card {
     background: var(--bg-tertiary);
-}
-
-.news-image {
-    width: 80px;
-    height: 60px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
     overflow: hidden;
-    flex-shrink: 0;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.news-image img {
+.news-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.news-card-image {
+    width: 100%;
+    height: 140px;
+    overflow: hidden;
+}
+
+.news-card-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.news-content {
-    flex: 1;
+.news-card-content {
+    padding: 12px;
 }
 
-.news-title {
-    font-weight: 600;
+.news-card-title {
     font-size: 14px;
+    font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    line-height: 1.4;
 }
 
-.news-desc {
+.news-card-desc {
     font-size: 12px;
     color: var(--text-secondary);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.news-card-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.news-source, .news-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ==========================================
+   Weather Status
+   ========================================== */
+.weather-modal {
+    max-width: 400px;
+}
+
+.weather-header {
+    text-align: center;
+    padding: 24px 20px 16px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 165, 233, 0.1));
+}
+
+.weather-icon-large {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    color: white;
+    font-size: 28px;
+}
+
+.weather-header h3 {
+    font-size: 20px;
+    font-weight: 700;
     margin-bottom: 4px;
 }
 
-.news-meta {
+.weather-header p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.weather-content {
+    padding: 20px;
+    min-height: 150px;
+}
+
+.weather-loading, .weather-error {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 12px;
-    font-size: 11px;
+    padding: 30px;
     color: var(--text-muted);
+}
+
+.weather-error i {
+    font-size: 40px;
+    color: var(--danger);
+}
+
+.weather-error small {
+    font-size: 12px;
+}
+
+.weather-display {
+    text-align: center;
+}
+
+.weather-temp {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.weather-desc {
+    font-size: 16px;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+    margin-bottom: 8px;
+}
+
+.weather-location {
+    font-size: 14px;
+    color: var(--primary);
+    margin-bottom: 16px;
+}
+
+.weather-location i {
+    margin-right: 4px;
+}
+
+.weather-details {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+}
+
+.weather-detail {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.weather-detail i {
+    margin-right: 6px;
+    color: var(--primary);
+}
+
+.weather-actions {
+    display: flex;
+    gap: 10px;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    justify-content: flex-end;
 }
 
 /* ==========================================
@@ -13875,88 +14047,153 @@ body {
    ========================================== */
 .floating-reaction {
     position: fixed;
-    font-size: 24px;
+    font-size: 28px;
     pointer-events: none;
     z-index: 10000;
-    animation: floatUp 0.8s ease-out forwards;
-}
-
-@keyframes floatUp {
-    0% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(1.5) translateY(-60px);
-    }
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 .reaction-pop {
-    animation: popScale 0.3s ease;
+    animation: popScale 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 @keyframes popScale {
     0% { transform: scale(1); }
-    50% { transform: scale(1.3); }
+    50% { transform: scale(1.4); }
     100% { transform: scale(1); }
 }
 
 /* ==========================================
    QR Code Login
    ========================================== */
-.qr-login-modal {
-    text-align: center;
-    padding: 30px 20px;
-    max-width: 350px;
+.qr-login-modal, .qr-scanner-modal {
+    max-width: 380px;
 }
 
-.qr-login-modal h3 {
-    font-size: 22px;
-    margin-bottom: 8px;
+.qr-header {
+    text-align: center;
+    padding: 24px 20px 16px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+}
+
+.qr-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    margin: 0 auto 12px;
+    color: white;
+    font-size: 24px;
 }
 
-.qr-login-modal h3 i {
-    color: var(--primary);
+.qr-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
 }
 
-.qr-login-modal > p {
+.qr-header p {
+    font-size: 13px;
     color: var(--text-secondary);
-    margin-bottom: 24px;
-    font-size: 14px;
+    margin: 0;
 }
 
 .qr-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
-    padding: 16px;
+    padding: 20px;
     background: white;
+    margin: 16px;
     border-radius: var(--radius);
     border: 2px solid var(--border);
 }
 
-.qr-container img, .qr-container canvas {
+.qr-container canvas, .qr-container img {
     border-radius: 8px;
 }
 
 .qr-info {
-    margin-bottom: 20px;
+    text-align: center;
+    padding: 0 20px 16px;
 }
 
-.qr-user {
+.qr-user-name {
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 4px;
 }
 
-.qr-note {
+.qr-user-handle {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.qr-expiry {
     font-size: 12px;
+    color: var(--warning);
+}
+
+.qr-expiry i {
+    margin-right: 4px;
+}
+
+.qr-actions {
+    display: flex;
+    gap: 10px;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    justify-content: flex-end;
+}
+
+.qr-scanner-modal textarea {
+    width: calc(100% - 32px);
+    margin: 0 16px;
+    padding: 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    resize: none;
+    font-family: monospace;
+}
+
+.qr-scanner-modal textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.qr-instructions {
+    padding: 16px;
+    margin: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.qr-instructions p {
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.qr-instructions i {
+    color: var(--primary);
+    margin-right: 4px;
+}
+
+.qr-instructions ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.qr-instructions li {
+    margin-bottom: 4px;
+}
     color: var(--text-muted);
 }
 
