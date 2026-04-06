@@ -4768,11 +4768,7 @@ function searchGifs(query) {
     var grid = document.getElementById('gif-grid');
     grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
     
-    // Use Tenor API v1
-    var apiKey = 'LIVDSRZULELA';
-    var url = 'https://g.tenor.com/v1/search?q=' + encodeURIComponent(query) + '&key=' + apiKey + '&limit=24&media_filter=minimal';
-    
-    fetch(url)
+    fetch('/api/gifs/search?q=' + encodeURIComponent(query) + '&limit=24')
         .then(function(response) { return response.json(); })
         .then(function(data) {
             grid.innerHTML = '';
@@ -4807,11 +4803,7 @@ function populateGifPicker(type) {
     var grid = document.getElementById('gif-grid');
     grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Loading GIFs...</div>';
     
-    // Use Tenor API v1
-    var apiKey = 'LIVDSRZULELA';
-    var url = 'https://g.tenor.com/v1/trending?key=' + apiKey + '&limit=24&media_filter=minimal';
-    
-    fetch(url)
+    fetch('/api/gifs/trending?limit=24')
         .then(function(response) { return response.json(); })
         .then(function(data) {
             grid.innerHTML = '';
@@ -9256,6 +9248,14 @@ document.addEventListener('DOMContentLoaded', function() {
             createPost(content, feedPostImageData, privacy, feedPostGifUrl);
         };
 
+        // GIF button for posts
+        var postGifBtn = document.getElementById('post-gif-btn');
+        if (postGifBtn) {
+            postGifBtn.onclick = function() {
+                showPostGifPicker();
+            };
+        }
+
         // Privacy button for posts
         var postPrivacyBtn = document.getElementById('post-privacy-btn');
         if (postPrivacyBtn) {
@@ -12285,15 +12285,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function loadTenorTrending() {
         var grid = document.getElementById('post-gif-grid');
-        var url = 'https://g.tenor.com/v1/trending?key=' + TENOR_API_KEY + '&limit=20&media_filter=minimal';
         
-        fetch(url)
+        fetch('/api/gifs/trending?limit=20')
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 renderTenorGifs(data.results || []);
             })
             .catch(function(err) {
-                console.error('Tenor error:', err);
+                console.error('GIF error:', err);
                 grid.innerHTML = '<div class="gif-no-results">Could not load GIFs. Try searching instead.</div>';
             });
     }
@@ -12315,15 +12314,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        var url = 'https://g.tenor.com/v1/search?q=' + encodeURIComponent(query) + '&key=' + TENOR_API_KEY + '&limit=20&media_filter=minimal';
-        
-        fetch(url)
+        fetch('/api/gifs/search?q=' + encodeURIComponent(query) + '&limit=20')
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 renderTenorGifs(data.results || []);
             })
             .catch(function(err) {
-                console.error('Tenor search error:', err);
+                console.error('GIF search error:', err);
                 grid.innerHTML = '<div class="gif-no-results">Search failed. Please try again.</div>';
             });
     };
