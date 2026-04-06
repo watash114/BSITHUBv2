@@ -13858,66 +13858,98 @@ document.addEventListener('DOMContentLoaded', function() {
     var isPulling = false;
 
     function initPullToRefresh() {
-        var container = document.querySelector('.main-content');
+        var containers = document.querySelectorAll('.main-content, .chats-list, .feed-list');
         var indicator = document.getElementById('pull-to-refresh');
         
-        if (!container || !indicator) return;
+        if (!indicator) return;
 
-        container.addEventListener('touchstart', function(e) {
-            if (container.scrollTop === 0) {
-                pullStartY = e.touches[0].clientY;
-                isPulling = true;
-            }
-        }, { passive: true });
-
-        container.addEventListener('touchmove', function(e) {
-            if (!isPulling) return;
-            pullMoveY = e.touches[0].clientY;
-            var pullDistance = pullMoveY - pullStartY;
+        containers.forEach(function(container) {
+            if (!container) return;
             
-            if (pullDistance > 0 && pullDistance < 150) {
-                indicator.style.transform = 'translateY(' + (pullDistance - 60) + 'px)';
-            }
-        }, { passive: true });
+            var pullStartY = 0;
+            var pullMoveY = 0;
+            var isPulling = false;
 
-        container.addEventListener('touchend', function() {
-            if (!isPulling) return;
-            var pullDistance = pullMoveY - pullStartY;
-            
-            if (pullDistance > 80) {
-                indicator.classList.add('active');
-                indicator.style.transform = 'translateY(0)';
+            container.addEventListener('touchstart', function(e) {
+                if (container.scrollTop <= 0) {
+                    pullStartY = e.touches[0].clientY;
+                    isPulling = true;
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchmove', function(e) {
+                if (!isPulling) return;
+                pullMoveY = e.touches[0].clientY;
+                var pullDistance = pullMoveY - pullStartY;
                 
-                // Refresh content
-                setTimeout(function() {
-                    var activeSection = document.querySelector('.content-section.active');
-                    if (activeSection) {
-                        var sectionId = activeSection.id;
-                        if (sectionId === 'chats-section') {
-                            loadChats();
-                        } else if (sectionId === 'feed-section') {
-                            if (typeof loadFeed === 'function') loadFeed();
-                        }
+                if (pullDistance > 0 && container.scrollTop <= 0) {
+                    var progress = Math.min(pullDistance / 100, 1);
+                    indicator.style.transform = 'translateY(' + (pullDistance * 0.5 - 60) + 'px)';
+                    indicator.style.opacity = progress;
+                    
+                    var icon = indicator.querySelector('i');
+                    if (icon && pullDistance > 80) {
+                        icon.style.color = 'var(--primary)';
+                    } else if (icon) {
+                        icon.style.color = 'var(--text-muted)';
                     }
-                    indicator.classList.remove('active');
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchend', function() {
+                if (!isPulling) return;
+                var pullDistance = pullMoveY - pullStartY;
+                
+                if (pullDistance > 80) {
+                    indicator.classList.add('active');
+                    indicator.style.transform = 'translateY(0)';
+                    indicator.style.opacity = '1';
+                    
+                    // Haptic feedback if available
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                    
+                    // Refresh content
+                    setTimeout(function() {
+                        var activeSection = document.querySelector('.content-section.active');
+                        if (activeSection) {
+                            var sectionId = activeSection.id;
+                            if (sectionId === 'chats-section') {
+                                loadChats();
+                            } else if (sectionId === 'feed-section') {
+                                if (typeof loadFeed === 'function') loadFeed();
+                            } else if (sectionId === 'starred-section') {
+                                if (typeof loadStarredMessages === 'function') loadStarredMessages();
+                            }
+                        }
+                        
+                        indicator.classList.remove('active');
+                        indicator.style.transform = 'translateY(-100%)';
+                        indicator.style.opacity = '0';
+                        showToast('Refreshed!', 'info');
+                    }, 800);
+                } else {
                     indicator.style.transform = 'translateY(-100%)';
-                    showToast('Refreshed!', 'info');
-                }, 1000);
-            } else {
-                indicator.style.transform = 'translateY(-100%)';
-            }
-            
-            isPulling = false;
-            pullStartY = 0;
-            pullMoveY = 0;
-        }, { passive: true });
+                    indicator.style.opacity = '0';
+                }
+                
+                isPulling = false;
+                pullStartY = 0;
+                pullMoveY = 0;
+            }, { passive: true });
+        });
     }
 
-    // Keyboard handling
+    // Keyboard handling with visual viewport
     function initKeyboardHandling() {
         if (typeof visualViewport !== 'undefined') {
+            var lastHeight = visualViewport.height;
+            
             visualViewport.addEventListener('resize', function() {
-                var isKeyboardOpen = visualViewport.height < window.innerHeight * 0.75;
+                var currentHeight = visualViewport.height;
+                var isKeyboardOpen = currentHeight < window.innerHeight * 0.75;
+                
                 document.body.classList.toggle('keyboard-open', isKeyboardOpen);
                 
                 if (isKeyboardOpen) {
@@ -13926,14 +13958,85 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (messages) {
                         setTimeout(function() {
                             messages.scrollTop = messages.scrollHeight;
-                        }, 100);
+                        }, 150);
                     }
                 }
+                
+                lastHeight = currentHeight;
             });
         }
+        
+        // iOS specific keyboard handling
+        document.addEventListener('focusin', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                setTimeout(function() {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
     }
+
+    // Chat back button for mobile
+    window.closeMobileChat = function() {
+        var chatMain = document.querySelector('.chat-main');
+        if (chatMain) {
+            chatMain.classList.remove('active');
+        }
+        
+        // Clear active chat after animation
+        setTimeout(function() {
+            activeChat = null;
+            document.getElementById('chat-placeholder').style.display = 'flex';
+            document.getElementById('chat-active').style.display = 'none';
+        }, 300);
+    };
+
+    // Double tap to zoom images
+    var lastTap = 0;
+    document.addEventListener('touchend', function(e) {
+        var now = Date.now();
+        if (now - lastTap < 300) {
+            // Double tap detected
+            if (e.target.tagName === 'IMG' && e.target.closest('.message-media')) {
+                e.preventDefault();
+                openLightbox(e.target.src);
+            }
+        }
+        lastTap = now;
+    }, { passive: false });
+
+    // Swipe to go back (from left edge)
+    var swipeStartX = 0;
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches[0].clientX < 20) {
+            swipeStartX = e.touches[0].clientX;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function(e) {
+        if (swipeStartX > 0) {
+            var endX = e.changedTouches[0].clientX;
+            if (endX - swipeStartX > 100) {
+                // Swipe right from left edge - go back
+                var chatMain = document.querySelector('.chat-main.active');
+                if (chatMain) {
+                    closeMobileChat();
+                }
+            }
+            swipeStartX = 0;
+        }
+    }, { passive: true });
+
+    // Smooth scroll behavior for mobile
+    document.querySelectorAll('.chats-list, .feed-list, .chat-messages').forEach(function(el) {
+        el.style.webkitOverflowScrolling = 'touch';
+    });
 
     // Initialize mobile features
     initPullToRefresh();
     initKeyboardHandling();
+    
+    // Log mobile detection
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    console.log('Mobile device:', isMobile);
 });
