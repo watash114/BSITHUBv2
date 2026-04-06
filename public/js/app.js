@@ -9256,14 +9256,6 @@ document.addEventListener('DOMContentLoaded', function() {
             createPost(content, feedPostImageData, privacy, feedPostGifUrl);
         };
 
-        // GIF button for posts
-        var postGifBtn = document.getElementById('post-gif-btn');
-        if (postGifBtn) {
-            postGifBtn.onclick = function() {
-                showPostGifPicker();
-            };
-        }
-
         // Privacy button for posts
         var postPrivacyBtn = document.getElementById('post-privacy-btn');
         if (postPrivacyBtn) {
