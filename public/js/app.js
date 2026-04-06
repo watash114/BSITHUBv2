@@ -4768,27 +4768,25 @@ function searchGifs(query) {
     var grid = document.getElementById('gif-grid');
     grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
     
-    // Use Tenor API
-    var apiKey = 'AIzaSyDqCLKvwD3j9z_EQCzHrtcGXOpYgXPm3yw';
-    var url = 'https://tenor.googleapis.com/v2/search?q=' + encodeURIComponent(query) + '&key=' + apiKey + '&client_key=bsithub&limit=24&media_filter=tinygif,gif';
+    // Use Giphy API
+    var apiKey = 'dc6zaTOxFJmzC';
+    var url = 'https://api.giphy.com/v1/gifs/search?api_key=' + apiKey + '&q=' + encodeURIComponent(query) + '&limit=24&rating=g';
     
     fetch(url)
         .then(function(response) { return response.json(); })
         .then(function(data) {
             grid.innerHTML = '';
-            if (data.results && data.results.length > 0) {
-                data.results.forEach(function(gif) {
-                    var gifUrl = gif.media_formats.gif ? gif.media_formats.gif.url : (gif.media_formats.tinygif ? gif.media_formats.tinygif.url : '');
-                    if (!gifUrl) return;
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(function(gif) {
                     var item = document.createElement('div');
                     item.className = 'gif-item';
                     var img = document.createElement('img');
-                    img.src = gif.media_formats.tinygif ? gif.media_formats.tinygif.url : gifUrl;
-                    img.alt = gif.content_description || 'GIF';
+                    img.src = gif.images.fixed_height_small.url;
+                    img.alt = gif.title || 'GIF';
                     img.loading = 'lazy';
                     item.appendChild(img);
                     item.onclick = function() {
-                        sendGif(gifUrl);
+                        sendGif(gif.images.fixed_height.url);
                     };
                     grid.appendChild(item);
                 });
@@ -4806,27 +4804,25 @@ function populateGifPicker(type) {
     var grid = document.getElementById('gif-grid');
     grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Loading GIFs...</div>';
     
-    // Use Tenor API for GIFs
-    var apiKey = 'AIzaSyDqCLKvwD3j9z_EQCzHrtcGXOpYgXPm3yw';
-    var url = 'https://tenor.googleapis.com/v2/featured?key=' + apiKey + '&client_key=bsithub&limit=24&media_filter=tinygif,gif';
+    // Use Giphy API for GIFs
+    var apiKey = 'dc6zaTOxFJmzC';
+    var url = 'https://api.giphy.com/v1/gifs/trending?api_key=' + apiKey + '&limit=24&rating=g';
     
     fetch(url)
         .then(function(response) { return response.json(); })
         .then(function(data) {
             grid.innerHTML = '';
-            if (data.results && data.results.length > 0) {
-                data.results.forEach(function(gif) {
-                    var gifUrl = gif.media_formats.gif ? gif.media_formats.gif.url : (gif.media_formats.tinygif ? gif.media_formats.tinygif.url : '');
-                    if (!gifUrl) return;
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(function(gif) {
                     var item = document.createElement('div');
                     item.className = 'gif-item';
                     var img = document.createElement('img');
-                    img.src = gif.media_formats.tinygif ? gif.media_formats.tinygif.url : gifUrl;
-                    img.alt = gif.content_description || 'GIF';
+                    img.src = gif.images.fixed_height_small.url;
+                    img.alt = gif.title || 'GIF';
                     img.loading = 'lazy';
                     item.appendChild(img);
                     item.onclick = function() {
-                        sendGif(gifUrl);
+                        sendGif(gif.images.fixed_height.url);
                     };
                     grid.appendChild(item);
                 });
@@ -12262,11 +12258,10 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // ==========================================
-    // Post GIF Picker (Tenor API)
+    // Post GIF Picker (Giphy API)
     // ==========================================
     var feedPostGifUrl = null;
-    var TENOR_API_KEY = 'AIzaSyDqCLKvwD3j9z_EQCzHrtcGXOpYgXPm3yw'; // Demo key
-    var TENOR_CLIENT_KEY = 'bsithub';
+    var GIPHY_API_KEY = 'dc6zaTOxFJmzC'; // Giphy public beta key
 
     window.showPostGifPicker = function() {
         var html = '<div class="post-gif-modal">';
@@ -12287,20 +12282,20 @@ document.addEventListener('DOMContentLoaded', function() {
         html += '</div>';
         html += '</div>';
         showModal(html);
-        loadTenorTrending();
+        loadGiphyTrending();
     };
 
-    function loadTenorTrending() {
+    function loadGiphyTrending() {
         var grid = document.getElementById('post-gif-grid');
-        var url = 'https://tenor.googleapis.com/v2/featured?key=' + TENOR_API_KEY + '&client_key=' + TENOR_CLIENT_KEY + '&limit=20&media_filter=gif,tinygif';
+        var url = 'https://api.giphy.com/v1/gifs/trending?api_key=' + GIPHY_API_KEY + '&limit=20&rating=g';
         
         fetch(url)
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                renderTenorGifs(data.results || []);
+                renderGiphyGifs(data.data || []);
             })
             .catch(function(err) {
-                console.error('Tenor error:', err);
+                console.error('Giphy error:', err);
                 grid.innerHTML = '<div class="gif-no-results">Could not load GIFs. Try searching instead.</div>';
             });
     }
@@ -12308,7 +12303,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.searchPostGifs = function(query) {
         var grid = document.getElementById('post-gif-grid');
         if (!query || !query.trim()) {
-            loadTenorTrending();
+            loadGiphyTrending();
             return;
         }
         
@@ -12322,20 +12317,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        var url = 'https://tenor.googleapis.com/v2/search?q=' + encodeURIComponent(query) + '&key=' + TENOR_API_KEY + '&client_key=' + TENOR_CLIENT_KEY + '&limit=20&media_filter=gif,tinygif';
+        var url = 'https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_API_KEY + '&q=' + encodeURIComponent(query) + '&limit=20&rating=g';
         
         fetch(url)
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                renderTenorGifs(data.results || []);
+                renderGiphyGifs(data.data || []);
             })
             .catch(function(err) {
-                console.error('Tenor search error:', err);
+                console.error('Giphy search error:', err);
                 grid.innerHTML = '<div class="gif-no-results">Search failed. Please try again.</div>';
             });
     };
 
-    function renderTenorGifs(results) {
+    function renderGiphyGifs(results) {
         var grid = document.getElementById('post-gif-grid');
         grid.innerHTML = '';
         
@@ -12349,17 +12344,13 @@ document.addEventListener('DOMContentLoaded', function() {
             item.className = 'gif-item';
             
             var img = document.createElement('img');
-            // Use tinygif for preview, gif for full size
-            var previewUrl = gif.media_formats.tinygif ? gif.media_formats.tinygif.url : (gif.media_formats.gif ? gif.media_formats.gif.url : '');
-            var fullUrl = gif.media_formats.gif ? gif.media_formats.gif.url : previewUrl;
-            
-            img.src = previewUrl;
-            img.alt = gif.content_description || 'GIF';
+            img.src = gif.images.fixed_height_small.url;
+            img.alt = gif.title || 'GIF';
             img.loading = 'lazy';
             
             item.appendChild(img);
             item.onclick = function() {
-                selectPostGif(fullUrl);
+                selectPostGif(gif.images.fixed_height.url);
             };
             grid.appendChild(item);
         });
