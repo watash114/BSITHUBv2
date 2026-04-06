@@ -73,7 +73,7 @@ app.get('/api/gifs/search', async (req, res) => {
 // ==========================================
 // News API Proxy (NewsAPI.org)
 // ==========================================
-const NEWS_API_KEY = process.env.NEWS_API_KEY || 'demo';
+const NEWS_API_KEY = process.env.NEWS_API_KEY || '11d62a2481dd4d95965ce1fe86fb07d5';
 
 app.get('/api/news', async (req, res) => {
     try {
@@ -95,7 +95,7 @@ app.get('/api/news', async (req, res) => {
 // ==========================================
 // Weather API Proxy (OpenWeatherMap)
 // ==========================================
-const WEATHER_API_KEY = process.env.WEATHER_API_KEY || 'demo';
+const WEATHER_API_KEY = process.env.WEATHER_API_KEY || '8c39f0a7ef12b456f83fa19d7a1f83bd';
 
 app.get('/api/weather', async (req, res) => {
     try {
