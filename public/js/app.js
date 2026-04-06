@@ -12718,4 +12718,444 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderStories === 'function') {
         setTimeout(renderStories, 1000);
     }
+
+    // ==========================================
+    // Status Music
+    // ==========================================
+    var musicLibrary = [
+        { id: 'm1', title: 'Blinding Lights', artist: 'The Weeknd', emoji: '🎵' },
+        { id: 'm2', title: 'Shape of You', artist: 'Ed Sheeran', emoji: '🎵' },
+        { id: 'm3', title: 'Dance Monkey', artist: 'Tones and I', emoji: '🎵' },
+        { id: 'm4', title: 'Someone Like You', artist: 'Adele', emoji: '🎵' },
+        { id: 'm5', title: 'Uptown Funk', artist: 'Bruno Mars', emoji: '🎵' },
+        { id: 'm6', title: 'Bad Guy', artist: 'Billie Eilish', emoji: '🎵' },
+        { id: 'm7', title: 'Levitating', artist: 'Dua Lipa', emoji: '🎵' },
+        { id: 'm8', title: 'Stay', artist: 'The Kid LAROI & Justin Bieber', emoji: '🎵' },
+        { id: 'm9', title: 'Peaches', artist: 'Justin Bieber', emoji: '🎵' },
+        { id: 'm10', title: 'Watermelon Sugar', artist: 'Harry Styles', emoji: '🎵' },
+        { id: 'm11', title: 'Circles', artist: 'Post Malone', emoji: '🎵' },
+        { id: 'm12', title: 'Señorita', artist: 'Shawn Mendes & Camila Cabello', emoji: '🎵' },
+        { id: 'm13', title: 'Havana', artist: 'Camila Cabello', emoji: '🎵' },
+        { id: 'm14', title: 'Sorry', artist: 'Justin Bieber', emoji: '🎵' },
+        { id: 'm15', title: 'Cheap Thrills', artist: 'Sia', emoji: '🎵' }
+    ];
+
+    window.showMusicPicker = function() {
+        var currentMusic = Storage.get('userMusic_' + currentUser.id);
+        
+        var html = '<div class="music-picker">';
+        html += '<h3><i class="fas fa-music"></i> Set Status Music</h3>';
+        html += '<input type="text" class="music-search" id="music-search" placeholder="Search songs..." oninput="filterMusic(this.value)">';
+        html += '<div class="music-list" id="music-list">';
+        
+        musicLibrary.forEach(function(song) {
+            var isSelected = currentMusic && currentMusic.id === song.id;
+            html += '<div class="music-item' + (isSelected ? ' selected' : '') + '" onclick="selectMusic(\'' + song.id + '\')">';
+            html += '<div class="music-icon"><i class="fas fa-music"></i></div>';
+            html += '<div class="music-info">';
+            html += '<div class="music-title">' + song.title + '</div>';
+            html += '<div class="music-artist">' + song.artist + '</div>';
+            html += '</div>';
+            if (isSelected) html += '<i class="fas fa-check" style="color:var(--primary);"></i>';
+            html += '</div>';
+        });
+        
+        html += '</div>';
+        html += '<div style="display:flex;gap:10px;margin-top:16px;">';
+        html += '<button class="btn" onclick="clearMusic()"><i class="fas fa-times"></i> Remove</button>';
+        html += '<button class="btn btn-primary" onclick="closeModal()"><i class="fas fa-check"></i> Done</button>';
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+    };
+
+    window.filterMusic = function(query) {
+        var list = document.getElementById('music-list');
+        var filtered = musicLibrary.filter(function(song) {
+            return song.title.toLowerCase().includes(query.toLowerCase()) ||
+                   song.artist.toLowerCase().includes(query.toLowerCase());
+        });
+        
+        var html = '';
+        filtered.forEach(function(song) {
+            html += '<div class="music-item" onclick="selectMusic(\'' + song.id + '\')">';
+            html += '<div class="music-icon"><i class="fas fa-music"></i></div>';
+            html += '<div class="music-info">';
+            html += '<div class="music-title">' + song.title + '</div>';
+            html += '<div class="music-artist">' + song.artist + '</div>';
+            html += '</div></div>';
+        });
+        list.innerHTML = html;
+    };
+
+    window.selectMusic = function(musicId) {
+        var song = musicLibrary.find(function(s) { return s.id === musicId; });
+        if (!song) return;
+        
+        Storage.set('userMusic_' + currentUser.id, song);
+        showToast('Status music set to ' + song.title, 'success');
+        updateMusicDisplay();
+        
+        // Update selection UI
+        document.querySelectorAll('.music-item').forEach(function(item) {
+            item.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+    };
+
+    window.clearMusic = function() {
+        Storage.remove('userMusic_' + currentUser.id);
+        showToast('Status music removed', 'info');
+        updateMusicDisplay();
+        closeModal();
+    };
+
+    window.updateMusicDisplay = function() {
+        var music = Storage.get('userMusic_' + currentUser.id);
+        var musicEl = document.getElementById('sidebar-music');
+        
+        if (musicEl) {
+            if (music) {
+                musicEl.innerHTML = '<div class="status-music"><i class="fas fa-music"></i><span>' + music.title + ' - ' + music.artist + '</span></div>';
+                musicEl.style.display = 'block';
+            } else {
+                musicEl.style.display = 'none';
+            }
+        }
+    };
+
+    // ==========================================
+    // About Section
+    // ==========================================
+    window.showAboutEditor = function() {
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === currentUser.id; });
+        var currentAbout = user ? (user.about || '') : '';
+        
+        var html = '<div class="about-editor">';
+        html += '<h3><i class="fas fa-info-circle"></i> Edit About</h3>';
+        html += '<textarea id="about-input" placeholder="Write something about yourself..." maxlength="500" rows="4">' + escapeHtml(currentAbout) + '</textarea>';
+        html += '<div class="char-counter"><span id="about-char-count">' + currentAbout.length + '</span>/500</div>';
+        html += '<button class="btn btn-primary" onclick="saveAbout()"><i class="fas fa-save"></i> Save</button>';
+        html += '</div>';
+        showModal(html);
+        
+        var input = document.getElementById('about-input');
+        input.addEventListener('input', function() {
+            document.getElementById('about-char-count').textContent = this.value.length;
+        });
+    };
+
+    window.saveAbout = function() {
+        var aboutText = document.getElementById('about-input').value.trim();
+        
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === currentUser.id; });
+        if (userIndex !== -1) {
+            users[userIndex].about = aboutText;
+            Storage.set('users', users);
+            currentUser = users[userIndex];
+            
+            if (typeof syncUserToFirebase === 'function') {
+                syncUserToFirebase(currentUser);
+            }
+        }
+        
+        showToast('About section updated', 'success');
+        closeModal();
+        
+        // Update profile display
+        var aboutEl = document.getElementById('profile-about');
+        if (aboutEl) {
+            aboutEl.textContent = aboutText || 'No about info yet';
+        }
+    };
+
+    window.getAboutSection = function(user) {
+        if (!user || !user.about) return '';
+        return '<div class="about-section"><h4>About</h4><p>' + escapeHtml(user.about) + '</p></div>';
+    };
+
+    // ==========================================
+    // Chat Bubble Styles
+    // ==========================================
+    var bubbleStyles = [
+        { id: 'modern', name: 'Modern', icon: '💬' },
+        { id: 'rounded', name: 'Rounded', icon: '🔵' },
+        { id: 'square', name: 'Square', icon: '⬜' },
+        { id: 'telegram', name: 'Telegram', icon: '✈️' },
+        { id: 'minimal', name: 'Minimal', icon: '➖' },
+        { id: 'ios', name: 'iOS', icon: '🍎' }
+    ];
+
+    window.showBubbleStylePicker = function() {
+        var currentStyle = (Storage.get('settings') || {}).bubbleStyle || 'modern';
+        
+        var html = '<div class="bubble-style-modal">';
+        html += '<h3><i class="fas fa-comment"></i> Chat Bubble Style</h3>';
+        html += '<div class="bubble-style-picker">';
+        
+        bubbleStyles.forEach(function(style) {
+            var isSelected = currentStyle === style.id;
+            html += '<div class="bubble-style-option' + (isSelected ? ' selected' : '') + '" onclick="setBubbleStyle(\'' + style.id + '\')">';
+            html += '<div class="preview">';
+            html += '<div class="preview-msg received" style="border-radius:' + getBorderRadius(style.id, 'received') + '">Hello!</div>';
+            html += '<div class="preview-msg sent" style="border-radius:' + getBorderRadius(style.id, 'sent') + '">Hi!</div>';
+            html += '</div>';
+            html += '<span>' + style.icon + ' ' + style.name + '</span>';
+            html += '</div>';
+        });
+        
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+    };
+
+    function getBorderRadius(style, type) {
+        var radii = {
+            modern: { received: '18px 18px 18px 4px', sent: '18px 18px 4px 18px' },
+            rounded: { received: '24px 24px 24px 8px', sent: '24px 24px 8px 24px' },
+            square: { received: '6px 6px 6px 2px', sent: '6px 6px 2px 6px' },
+            telegram: { received: '12px 12px 12px 2px', sent: '12px 12px 2px 12px' },
+            minimal: { received: '4px', sent: '4px' },
+            ios: { received: '18px 18px 18px 4px', sent: '18px 18px 4px 18px' }
+        };
+        return (radii[style] || radii.modern)[type];
+    }
+
+    window.setBubbleStyle = function(styleId) {
+        var settings = Storage.get('settings') || {};
+        settings.bubbleStyle = styleId;
+        Storage.set('settings', settings);
+        
+        // Apply style
+        var messagesContainer = document.getElementById('chat-messages');
+        if (messagesContainer) {
+            bubbleStyles.forEach(function(s) {
+                messagesContainer.classList.remove('bubble-style-' + s.id);
+            });
+            messagesContainer.classList.add('bubble-style-' + styleId);
+        }
+        
+        showToast('Bubble style changed to ' + styleId, 'success');
+        
+        // Update selection
+        document.querySelectorAll('.bubble-style-option').forEach(function(opt) {
+            opt.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+    };
+
+    window.applyBubbleStyle = function() {
+        var style = (Storage.get('settings') || {}).bubbleStyle || 'modern';
+        var messagesContainer = document.getElementById('chat-messages');
+        if (messagesContainer) {
+            bubbleStyles.forEach(function(s) {
+                messagesContainer.classList.remove('bubble-style-' + s.id);
+            });
+            messagesContainer.classList.add('bubble-style-' + style);
+        }
+    };
+
+    // ==========================================
+    // Account Recovery (Security Questions)
+    // ==========================================
+    window.showSecurityQuestionsSetup = function() {
+        var questions = [
+            'What was the name of your first pet?',
+            'What city were you born in?',
+            'What is your mother\'s maiden name?',
+            'What was the name of your first school?',
+            'What is your favorite movie?',
+            'What was your childhood nickname?',
+            'What is the name of your best friend?',
+            'What was your first car?'
+        ];
+        
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === currentUser.id; });
+        var sq = user ? user.securityQuestions : null;
+        
+        var html = '<div class="security-questions-setup">';
+        html += '<h3><i class="fas fa-shield-alt"></i> Security Questions</h3>';
+        html += '<p>Set up security questions to recover your account if you forget your password.</p>';
+        
+        for (var i = 1; i <= 3; i++) {
+            html += '<div class="sq-item">';
+            html += '<label>Question ' + i + '</label>';
+            html += '<select id="sq-question-' + i + '">';
+            html += '<option value="">Select a question...</option>';
+            questions.forEach(function(q, idx) {
+                var selected = sq && sq['q' + i] === idx ? ' selected' : '';
+                html += '<option value="' + idx + '"' + selected + '>' + q + '</option>';
+            });
+            html += '</select>';
+            html += '<input type="password" id="sq-answer-' + i + '" placeholder="Your answer" value="' + (sq && sq['a' + i] ? '********' : '') + '">';
+            html += '</div>';
+        }
+        
+        html += '<button class="btn btn-primary" onclick="saveSecurityQuestions()"><i class="fas fa-save"></i> Save</button>';
+        html += '</div>';
+        showModal(html);
+    };
+
+    window.saveSecurityQuestions = function() {
+        var q1 = document.getElementById('sq-question-1').value;
+        var q2 = document.getElementById('sq-question-2').value;
+        var q3 = document.getElementById('sq-question-3').value;
+        var a1 = document.getElementById('sq-answer-1').value;
+        var a2 = document.getElementById('sq-answer-2').value;
+        var a3 = document.getElementById('sq-answer-3').value;
+        
+        if (!q1 || !q2 || !q3 || !a1 || !a2 || !a3) {
+            showToast('Please fill in all questions and answers', 'error');
+            return;
+        }
+        
+        if (q1 === q2 || q1 === q3 || q2 === q3) {
+            showToast('Please select different questions', 'error');
+            return;
+        }
+        
+        // Hash answers
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === currentUser.id; });
+        if (userIndex !== -1) {
+            users[userIndex].securityQuestions = {
+                q1: parseInt(q1),
+                q2: parseInt(q2),
+                q3: parseInt(q3),
+                a1: hashPassword(a1.toLowerCase()),
+                a2: hashPassword(a2.toLowerCase()),
+                a3: hashPassword(a3.toLowerCase())
+            };
+            Storage.set('users', users);
+            currentUser = users[userIndex];
+            
+            if (typeof syncUserToFirebase === 'function') {
+                syncUserToFirebase(currentUser);
+            }
+        }
+        
+        showToast('Security questions saved', 'success');
+        closeModal();
+    };
+
+    window.showAccountRecovery = function() {
+        var html = '<div class="account-recovery">';
+        html += '<h3><i class="fas fa-key"></i> Account Recovery</h3>';
+        html += '<p>Enter your email to recover your account using security questions.</p>';
+        html += '<input type="email" id="recovery-email" placeholder="Your email address">';
+        html += '<button class="btn btn-primary" onclick="startRecovery()"><i class="fas fa-arrow-right"></i> Continue</button>';
+        html += '</div>';
+        showModal(html);
+    };
+
+    window.startRecovery = function() {
+        var email = document.getElementById('recovery-email').value.trim();
+        if (!email) {
+            showToast('Please enter your email', 'error');
+            return;
+        }
+        
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.email === email; });
+        
+        if (!user || !user.securityQuestions) {
+            showToast('No security questions found for this email', 'error');
+            return;
+        }
+        
+        showRecoveryQuestions(user);
+    };
+
+    function showRecoveryQuestions(user) {
+        var questions = [
+            'What was the name of your first pet?',
+            'What city were you born in?',
+            'What is your mother\'s maiden name?',
+            'What was the name of your first school?',
+            'What is your favorite movie?',
+            'What was your childhood nickname?',
+            'What is the name of your best friend?',
+            'What was your first car?'
+        ];
+        
+        var sq = user.securityQuestions;
+        var html = '<div class="recovery-questions">';
+        html += '<h3><i class="fas fa-question-circle"></i> Answer Security Questions</h3>';
+        html += '<div class="rq-item"><label>' + questions[sq.q1] + '</label><input type="text" id="rq-answer-1" placeholder="Your answer"></div>';
+        html += '<div class="rq-item"><label>' + questions[sq.q2] + '</label><input type="text" id="rq-answer-2" placeholder="Your answer"></div>';
+        html += '<div class="rq-item"><label>' + questions[sq.q3] + '</label><input type="text" id="rq-answer-3" placeholder="Your answer"></div>';
+        html += '<input type="hidden" id="recovery-user-id" value="' + user.id + '">';
+        html += '<button class="btn btn-primary" onclick="verifyRecoveryAnswers()"><i class="fas fa-check"></i> Verify</button>';
+        html += '</div>';
+        showModal(html);
+    }
+
+    window.verifyRecoveryAnswers = function() {
+        var userId = document.getElementById('recovery-user-id').value;
+        var a1 = document.getElementById('rq-answer-1').value.trim().toLowerCase();
+        var a2 = document.getElementById('rq-answer-2').value.trim().toLowerCase();
+        var a3 = document.getElementById('rq-answer-3').value.trim().toLowerCase();
+        
+        var users = Storage.get('users') || [];
+        var user = users.find(function(u) { return u.id === userId; });
+        
+        if (!user || !user.securityQuestions) {
+            showToast('User not found', 'error');
+            return;
+        }
+        
+        var sq = user.securityQuestions;
+        if (hashPassword(a1) === sq.a1 && hashPassword(a2) === sq.a2 && hashPassword(a3) === sq.a3) {
+            showRecoveryPasswordReset(userId);
+        } else {
+            showToast('Incorrect answers. Please try again.', 'error');
+        }
+    };
+
+    function showRecoveryPasswordReset(userId) {
+        var html = '<div class="recovery-reset">';
+        html += '<h3><i class="fas fa-lock"></i> Set New Password</h3>';
+        html += '<input type="password" id="recovery-new-password" placeholder="New password">';
+        html += '<input type="password" id="recovery-confirm-password" placeholder="Confirm password">';
+        html += '<input type="hidden" id="recovery-user-id-reset" value="' + userId + '">';
+        html += '<button class="btn btn-primary" onclick="resetRecoveryPassword()"><i class="fas fa-save"></i> Reset Password</button>';
+        html += '</div>';
+        showModal(html);
+    }
+
+    window.resetRecoveryPassword = function() {
+        var userId = document.getElementById('recovery-user-id-reset').value;
+        var password = document.getElementById('recovery-new-password').value;
+        var confirm = document.getElementById('recovery-confirm-password').value;
+        
+        if (!password || password.length < 6) {
+            showToast('Password must be at least 6 characters', 'error');
+            return;
+        }
+        
+        if (password !== confirm) {
+            showToast('Passwords do not match', 'error');
+            return;
+        }
+        
+        var users = Storage.get('users') || [];
+        var userIndex = users.findIndex(function(u) { return u.id === userId; });
+        if (userIndex !== -1) {
+            users[userIndex].password = hashPassword(password);
+            Storage.set('users', users);
+            
+            if (typeof syncUserToFirebase === 'function') {
+                syncUserToFirebase(users[userIndex]);
+            }
+        }
+        
+        showToast('Password reset successful! You can now login.', 'success');
+        closeModal();
+    };
+
+    // Initialize music display
+    setTimeout(updateMusicDisplay, 500);
 });

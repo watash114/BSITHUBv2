@@ -13212,3 +13212,268 @@ body {
 .verified-badge.gold {
     background: linear-gradient(135deg, #f59e0b, #d97706);
 }
+
+/* ==========================================
+   Chat Bubble Styles
+   ========================================== */
+/* Modern Style (Default) */
+.bubble-style-modern .message.received {
+    border-radius: 18px 18px 18px 4px;
+}
+
+.bubble-style-modern .message.sent {
+    border-radius: 18px 18px 4px 18px;
+}
+
+/* Rounded Style */
+.bubble-style-rounded .message.received {
+    border-radius: 24px 24px 24px 8px;
+}
+
+.bubble-style-rounded .message.sent {
+    border-radius: 24px 24px 8px 24px;
+}
+
+/* Square Style */
+.bubble-style-square .message.received {
+    border-radius: 6px 6px 6px 2px;
+}
+
+.bubble-style-square .message.sent {
+    border-radius: 6px 6px 2px 6px;
+}
+
+/* Telegram Style */
+.bubble-style-telegram .message.received {
+    border-radius: 12px 12px 12px 2px;
+    background: var(--bg-tertiary);
+}
+
+.bubble-style-telegram .message.sent {
+    border-radius: 12px 12px 2px 12px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+/* Minimal Style */
+.bubble-style-minimal .message.received {
+    border-radius: 4px;
+    border-left: 3px solid var(--primary);
+}
+
+.bubble-style-minimal .message.sent {
+    border-radius: 4px;
+    border-right: 3px solid var(--primary-light);
+}
+
+/* iOS Style */
+.bubble-style-ios .message.received {
+    border-radius: 18px 18px 18px 4px;
+    background: #e9e9eb;
+}
+
+.bubble-style-ios .message.sent {
+    border-radius: 18px 18px 4px 18px;
+    background: #007aff;
+}
+
+/* Status Music */
+.status-music {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 20px;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.status-music i {
+    color: var(--primary);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.status-music span {
+    color: var(--text-secondary);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* About Section */
+.about-section {
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    margin: 16px 0;
+}
+
+.about-section h4 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.about-section p {
+    font-size: 15px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.about-edit-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    margin-top: 12px;
+}
+
+.about-edit-btn:hover {
+    background: var(--border);
+}
+
+/* Bubble Style Picker */
+.bubble-style-picker {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 16px;
+}
+
+.bubble-style-option {
+    padding: 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.bubble-style-option:hover {
+    border-color: var(--primary);
+}
+
+.bubble-style-option.selected {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.bubble-style-option .preview {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.bubble-style-option .preview-msg {
+    padding: 6px 10px;
+    font-size: 10px;
+    background: var(--bg-tertiary);
+}
+
+.bubble-style-option .preview-msg.sent {
+    background: var(--primary);
+    color: white;
+    align-self: flex-end;
+}
+
+.bubble-style-option span {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Music Picker */
+.music-picker {
+    padding: 20px;
+}
+
+.music-picker h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.music-picker h3 i {
+    color: var(--primary);
+}
+
+.music-search {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.music-search:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.music-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.music-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.music-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.music-item.selected {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid var(--primary);
+}
+
+.music-item .music-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.music-item .music-info {
+    flex: 1;
+}
+
+.music-item .music-title {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.music-item .music-artist {
+    font-size: 12px;
+    color: var(--text-muted);
+}
