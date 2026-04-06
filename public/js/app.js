@@ -4768,25 +4768,28 @@ function searchGifs(query) {
     var grid = document.getElementById('gif-grid');
     grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
     
-    // Use Giphy API
-    var apiKey = 'dc6zaTOxFJmzC';
-    var url = 'https://api.giphy.com/v1/gifs/search?api_key=' + apiKey + '&q=' + encodeURIComponent(query) + '&limit=24&rating=g';
+    // Use Tenor API v1
+    var apiKey = 'LIVDSRZULELA';
+    var url = 'https://g.tenor.com/v1/search?q=' + encodeURIComponent(query) + '&key=' + apiKey + '&limit=24&media_filter=minimal';
     
     fetch(url)
         .then(function(response) { return response.json(); })
         .then(function(data) {
             grid.innerHTML = '';
-            if (data.data && data.data.length > 0) {
-                data.data.forEach(function(gif) {
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(function(gif) {
+                    var gifUrl = gif.media && gif.media[0] ? gif.media[0].tinygif.url : '';
+                    var fullUrl = gif.media && gif.media[0] ? gif.media[0].gif.url : gifUrl;
+                    if (!gifUrl) return;
                     var item = document.createElement('div');
                     item.className = 'gif-item';
                     var img = document.createElement('img');
-                    img.src = gif.images.fixed_height_small.url;
+                    img.src = gifUrl;
                     img.alt = gif.title || 'GIF';
                     img.loading = 'lazy';
                     item.appendChild(img);
                     item.onclick = function() {
-                        sendGif(gif.images.fixed_height.url);
+                        sendGif(fullUrl);
                     };
                     grid.appendChild(item);
                 });
@@ -4804,25 +4807,28 @@ function populateGifPicker(type) {
     var grid = document.getElementById('gif-grid');
     grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Loading GIFs...</div>';
     
-    // Use Giphy API for GIFs
-    var apiKey = 'dc6zaTOxFJmzC';
-    var url = 'https://api.giphy.com/v1/gifs/trending?api_key=' + apiKey + '&limit=24&rating=g';
+    // Use Tenor API v1
+    var apiKey = 'LIVDSRZULELA';
+    var url = 'https://g.tenor.com/v1/trending?key=' + apiKey + '&limit=24&media_filter=minimal';
     
     fetch(url)
         .then(function(response) { return response.json(); })
         .then(function(data) {
             grid.innerHTML = '';
-            if (data.data && data.data.length > 0) {
-                data.data.forEach(function(gif) {
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(function(gif) {
+                    var gifUrl = gif.media && gif.media[0] ? gif.media[0].tinygif.url : '';
+                    var fullUrl = gif.media && gif.media[0] ? gif.media[0].gif.url : gifUrl;
+                    if (!gifUrl) return;
                     var item = document.createElement('div');
                     item.className = 'gif-item';
                     var img = document.createElement('img');
-                    img.src = gif.images.fixed_height_small.url;
+                    img.src = gifUrl;
                     img.alt = gif.title || 'GIF';
                     img.loading = 'lazy';
                     item.appendChild(img);
                     item.onclick = function() {
-                        sendGif(gif.images.fixed_height.url);
+                        sendGif(fullUrl);
                     };
                     grid.appendChild(item);
                 });
@@ -12258,10 +12264,10 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // ==========================================
-    // Post GIF Picker (Giphy API)
+    // Post GIF Picker (Tenor API v1)
     // ==========================================
     var feedPostGifUrl = null;
-    var GIPHY_API_KEY = 'dc6zaTOxFJmzC'; // Giphy public beta key
+    var TENOR_API_KEY = 'LIVDSRZULELA';
 
     window.showPostGifPicker = function() {
         var html = '<div class="post-gif-modal">';
@@ -12282,28 +12288,28 @@ document.addEventListener('DOMContentLoaded', function() {
         html += '</div>';
         html += '</div>';
         showModal(html);
-        loadGiphyTrending();
+        loadTenorTrending();
     };
 
-    function loadGiphyTrending() {
+    function loadTenorTrending() {
         var grid = document.getElementById('post-gif-grid');
-        var url = 'https://api.giphy.com/v1/gifs/trending?api_key=' + GIPHY_API_KEY + '&limit=20&rating=g';
+        var url = 'https://g.tenor.com/v1/trending?key=' + TENOR_API_KEY + '&limit=20&media_filter=minimal';
         
         fetch(url)
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                renderGiphyGifs(data.data || []);
+                renderTenorGifs(data.results || []);
             })
             .catch(function(err) {
-                console.error('Giphy error:', err);
+                console.error('Tenor error:', err);
                 grid.innerHTML = '<div class="gif-no-results">Could not load GIFs. Try searching instead.</div>';
             });
     }
 
     window.searchPostGifs = function(query) {
         var grid = document.getElementById('post-gif-grid');
-        if (!query || !query.trim()) {
-            loadGiphyTrending();
+        if (!query || !query.trim() || query === 'trending') {
+            loadTenorTrending();
             return;
         }
         
@@ -12317,20 +12323,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        var url = 'https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_API_KEY + '&q=' + encodeURIComponent(query) + '&limit=20&rating=g';
+        var url = 'https://g.tenor.com/v1/search?q=' + encodeURIComponent(query) + '&key=' + TENOR_API_KEY + '&limit=20&media_filter=minimal';
         
         fetch(url)
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                renderGiphyGifs(data.data || []);
+                renderTenorGifs(data.results || []);
             })
             .catch(function(err) {
-                console.error('Giphy search error:', err);
+                console.error('Tenor search error:', err);
                 grid.innerHTML = '<div class="gif-no-results">Search failed. Please try again.</div>';
             });
     };
 
-    function renderGiphyGifs(results) {
+    function renderTenorGifs(results) {
         var grid = document.getElementById('post-gif-grid');
         grid.innerHTML = '';
         
@@ -12344,13 +12350,18 @@ document.addEventListener('DOMContentLoaded', function() {
             item.className = 'gif-item';
             
             var img = document.createElement('img');
-            img.src = gif.images.fixed_height_small.url;
+            var gifUrl = gif.media && gif.media[0] ? gif.media[0].tinygif.url : '';
+            var fullUrl = gif.media && gif.media[0] ? gif.media[0].gif.url : gifUrl;
+            
+            if (!gifUrl) return;
+            
+            img.src = gifUrl;
             img.alt = gif.title || 'GIF';
             img.loading = 'lazy';
             
             item.appendChild(img);
             item.onclick = function() {
-                selectPostGif(gif.images.fixed_height.url);
+                selectPostGif(fullUrl);
             };
             grid.appendChild(item);
         });
