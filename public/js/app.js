@@ -12373,25 +12373,73 @@ document.addEventListener('DOMContentLoaded', function() {
     window.showPostPrivacyPicker = function() {
         var currentPrivacy = document.getElementById('post-privacy').value || 'public';
         
-        var html = '<div class="privacy-picker-modal">';
-        html += '<h3><i class="fas fa-globe-americas"></i> Post Privacy</h3>';
-        html += '<p>Who can see this post?</p>';
-        html += '<div class="privacy-options">';
-        html += '<button class="privacy-option' + (currentPrivacy === 'public' ? ' selected' : '') + '" onclick="selectPostPrivacy(\'public\')">';
-        html += '<i class="fas fa-globe-americas"></i>';
-        html += '<div><strong>Public</strong><span>Anyone can see this post</span></div>';
-        html += '</button>';
-        html += '<button class="privacy-option' + (currentPrivacy === 'friends' ? ' selected' : '') + '" onclick="selectPostPrivacy(\'friends\')">';
-        html += '<i class="fas fa-user-friends"></i>';
-        html += '<div><strong>Friends</strong><span>Only your friends can see this</span></div>';
-        html += '</button>';
-        html += '<button class="privacy-option' + (currentPrivacy === 'private' ? ' selected' : '') + '" onclick="selectPostPrivacy(\'private\')">';
-        html += '<i class="fas fa-lock"></i>';
-        html += '<div><strong>Only Me</strong><span>Only you can see this post</span></div>';
-        html += '</button>';
+        var html = '<div class="privacy-picker-enhanced">';
+        html += '<div class="privacy-header">';
+        html += '<div class="privacy-icon"><i class="fas fa-shield-alt"></i></div>';
+        html += '<h3>Post Privacy</h3>';
+        html += '<p>Choose who can see this post</p>';
+        html += '</div>';
+        
+        html += '<div class="privacy-options-list">';
+        
+        // Public
+        html += '<label class="privacy-radio-option' + (currentPrivacy === 'public' ? ' active' : '') + '">';
+        html += '<input type="radio" name="post-privacy" value="public"' + (currentPrivacy === 'public' ? ' checked' : '') + '>';
+        html += '<div class="privacy-radio-icon public"><i class="fas fa-globe-americas"></i></div>';
+        html += '<div class="privacy-radio-content">';
+        html += '<strong>Public</strong>';
+        html += '<span>Anyone on BSITHUB can see this post</span>';
+        html += '</div>';
+        html += '<div class="privacy-check"><i class="fas fa-check-circle"></i></div>';
+        html += '</label>';
+        
+        // Friends
+        html += '<label class="privacy-radio-option' + (currentPrivacy === 'friends' ? ' active' : '') + '">';
+        html += '<input type="radio" name="post-privacy" value="friends"' + (currentPrivacy === 'friends' ? ' checked' : '') + '>';
+        html += '<div class="privacy-radio-icon friends"><i class="fas fa-user-friends"></i></div>';
+        html += '<div class="privacy-radio-content">';
+        html += '<strong>Friends</strong>';
+        html += '<span>Only your friends can see this post</span>';
+        html += '</div>';
+        html += '<div class="privacy-check"><i class="fas fa-check-circle"></i></div>';
+        html += '</label>';
+        
+        // Private
+        html += '<label class="privacy-radio-option' + (currentPrivacy === 'private' ? ' active' : '') + '">';
+        html += '<input type="radio" name="post-privacy" value="private"' + (currentPrivacy === 'private' ? ' checked' : '') + '>';
+        html += '<div class="privacy-radio-icon private"><i class="fas fa-lock"></i></div>';
+        html += '<div class="privacy-radio-content">';
+        html += '<strong>Only Me</strong>';
+        html += '<span>Only you can see this post</span>';
+        html += '</div>';
+        html += '<div class="privacy-check"><i class="fas fa-check-circle"></i></div>';
+        html += '</label>';
+        
+        html += '</div>';
+        
+        html += '<div class="privacy-footer">';
+        html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+        html += '<button class="btn btn-primary" onclick="applyPrivacySelection()">Done</button>';
         html += '</div>';
         html += '</div>';
         showModal(html);
+        
+        // Add click handlers
+        setTimeout(function() {
+            document.querySelectorAll('.privacy-radio-option').forEach(function(opt) {
+                opt.onclick = function() {
+                    document.querySelectorAll('.privacy-radio-option').forEach(function(o) { o.classList.remove('active'); });
+                    this.classList.add('active');
+                    this.querySelector('input').checked = true;
+                };
+            });
+        }, 50);
+    };
+
+    window.applyPrivacySelection = function() {
+        var selected = document.querySelector('input[name="post-privacy"]:checked');
+        if (!selected) return;
+        selectPostPrivacy(selected.value);
     };
 
     window.selectPostPrivacy = function(privacy) {
