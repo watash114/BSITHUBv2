@@ -9256,6 +9256,14 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         }
 
+        // Location button for posts
+        var postLocationBtn = document.getElementById('post-location-btn');
+        if (postLocationBtn) {
+            postLocationBtn.onclick = function() {
+                showPostLocationPicker();
+            };
+        }
+
         // Privacy button for posts
         var postPrivacyBtn = document.getElementById('post-privacy-btn');
         if (postPrivacyBtn) {
@@ -13219,4 +13227,225 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize music display
     setTimeout(updateMusicDisplay, 500);
+
+    // ==========================================
+    // Chat Backup Encryption
+    // ==========================================
+    window.exportEncryptedBackup = function() {
+        var password = prompt('Enter a password to encrypt your backup:');
+        if (!password) return;
+        
+        var backupData = {
+            users: Storage.get('users') || [],
+            chats: Storage.get('chats') || [],
+            messages: Storage.get('messages') || [],
+            posts: Storage.get('posts') || [],
+            settings: Storage.get('settings') || {},
+            exportedAt: new Date().toISOString(),
+            version: '2.5.0'
+        };
+        
+        // Encrypt the data
+        var encrypted = encryptBackup(JSON.stringify(backupData), password);
+        
+        // Create backup file
+        var blob = new Blob([encrypted], { type: 'application/octet-stream' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'bsithub-backup-' + new Date().toISOString().split('T')[0] + '.enc';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('Encrypted backup created!', 'success');
+    };
+
+    window.importEncryptedBackup = function() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.enc';
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var password = prompt('Enter the backup password:');
+                if (!password) return;
+                
+                try {
+                    var decrypted = decryptBackup(event.target.result, password);
+                    var data = JSON.parse(decrypted);
+                    
+                    if (data.users) Storage.set('users', data.users);
+                    if (data.chats) Storage.set('chats', data.chats);
+                    if (data.messages) Storage.set('messages', data.messages);
+                    if (data.posts) Storage.set('posts', data.posts);
+                    if (data.settings) Storage.set('settings', data.settings);
+                    
+                    showToast('Backup restored! Reloading...', 'success');
+                    setTimeout(function() { location.reload(); }, 1500);
+                } catch (err) {
+                    showToast('Invalid password or corrupted backup', 'error');
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
+
+    function encryptBackup(data, password) {
+        var encrypted = '';
+        for (var i = 0; i < data.length; i++) {
+            encrypted += String.fromCharCode(data.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+        }
+        return btoa(encrypted);
+    }
+
+    function decryptBackup(encrypted, password) {
+        var decoded = atob(encrypted);
+        var decrypted = '';
+        for (var i = 0; i < decoded.length; i++) {
+            decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+        }
+        return decrypted;
+    }
+
+    // ==========================================
+    // Profile Visitors
+    // ==========================================
+    window.trackProfileView = function(profileUserId) {
+        if (!currentUser || profileUserId === currentUser.id) return;
+        
+        var visitors = Storage.get('profileVisitors_' + profileUserId) || [];
+        
+        // Check if already visited recently (within 1 hour)
+        var recentVisit = visitors.find(function(v) {
+            return v.visitorId === currentUser.id && 
+                   Date.now() - new Date(v.timestamp).getTime() < 60 * 60 * 1000;
+        });
+        
+        if (recentVisit) return;
+        
+        visitors.unshift({
+            visitorId: currentUser.id,
+            visitorName: currentUser.name,
+            visitorAvatar: currentUser.avatar,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Keep only last 50 visitors
+        if (visitors.length > 50) visitors = visitors.slice(0, 50);
+        
+        Storage.set('profileVisitors_' + profileUserId, visitors);
+    };
+
+    window.getProfileVisitors = function() {
+        if (!currentUser) return [];
+        return Storage.get('profileVisitors_' + currentUser.id) || [];
+    };
+
+    window.showProfileVisitors = function() {
+        var visitors = getProfileVisitors();
+        
+        var html = '<div class="visitors-modal">';
+        html += '<h3><i class="fas fa-eye"></i> Profile Visitors</h3>';
+        
+        if (visitors.length === 0) {
+            html += '<div class="visitors-empty">';
+            html += '<i class="fas fa-eye-slash"></i>';
+            html += '<p>No visitors yet</p>';
+            html += '</div>';
+        } else {
+            html += '<div class="visitors-list">';
+            visitors.slice(0, 20).forEach(function(visitor) {
+                var avatarHtml = visitor.visitorAvatar 
+                    ? '<img src="' + visitor.visitorAvatar + '" class="visitor-avatar">'
+                    : '<div class="visitor-avatar">' + (visitor.visitorName || 'U').charAt(0).toUpperCase() + '</div>';
+                
+                html += '<div class="visitor-item">';
+                html += avatarHtml;
+                html += '<div class="visitor-info">';
+                html += '<div class="visitor-name">' + escapeHtml(visitor.visitorName || 'User') + '</div>';
+                html += '<div class="visitor-time">' + getTimeAgo(visitor.timestamp) + '</div>';
+                html += '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        showModal(html);
+    };
+
+    // ==========================================
+    // Post Location
+    // ==========================================
+    var feedPostLocation = null;
+
+    window.showPostLocationPicker = function() {
+        var html = '<div class="location-modal">';
+        html += '<h3><i class="fas fa-map-marker-alt"></i> Add Location</h3>';
+        html += '<div class="location-search">';
+        html += '<input type="text" id="location-input" placeholder="Enter a location..." value="' + (feedPostLocation || '') + '">';
+        html += '</div>';
+        html += '<div class="location-suggestions">';
+        html += '<div class="location-item" onclick="selectPostLocation(\'New York, NY\')"><i class="fas fa-map-marker-alt"></i> New York, NY</div>';
+        html += '<div class="location-item" onclick="selectPostLocation(\'Los Angeles, CA\')"><i class="fas fa-map-marker-alt"></i> Los Angeles, CA</div>';
+        html += '<div class="location-item" onclick="selectPostLocation(\'London, UK\')"><i class="fas fa-map-marker-alt"></i> London, UK</div>';
+        html += '<div class="location-item" onclick="selectPostLocation(\'Tokyo, Japan\')"><i class="fas fa-map-marker-alt"></i> Tokyo, Japan</div>';
+        html += '<div class="location-item" onclick="selectPostLocation(\'Paris, France\')"><i class="fas fa-map-marker-alt"></i> Paris, France</div>';
+        html += '<div class="location-item" onclick="selectPostLocation(\'Sydney, Australia\')"><i class="fas fa-map-marker-alt"></i> Sydney, Australia</div>';
+        html += '</div>';
+        html += '<div class="location-actions">';
+        html += '<button class="btn" onclick="clearPostLocation()"><i class="fas fa-times"></i> Remove</button>';
+        html += '<button class="btn btn-primary" onclick="applyPostLocation()"><i class="fas fa-check"></i> Apply</button>';
+        html += '</div>';
+        html += '</div>';
+        showModal(html);
+        
+        setTimeout(function() { document.getElementById('location-input').focus(); }, 100);
+    };
+
+    window.selectPostLocation = function(location) {
+        document.getElementById('location-input').value = location;
+    };
+
+    window.applyPostLocation = function() {
+        var location = document.getElementById('location-input').value.trim();
+        feedPostLocation = location || null;
+        closeModal();
+        
+        if (location) {
+            showToast('Location set: ' + location, 'success');
+        } else {
+            showToast('Location removed', 'info');
+        }
+        
+        updatePostSubmitBtn();
+    };
+
+    window.clearPostLocation = function() {
+        feedPostLocation = null;
+        closeModal();
+        showToast('Location removed', 'info');
+        updatePostSubmitBtn();
+    };
+
+    window.getCurrentLocation = function() {
+        if (!navigator.geolocation) {
+            showToast('Geolocation not supported', 'error');
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var lat = position.coords.latitude.toFixed(4);
+            var lng = position.coords.longitude.toFixed(4);
+            feedPostLocation = lat + ', ' + lng;
+            showToast('Location added!', 'success');
+            updatePostSubmitBtn();
+        }, function() {
+            showToast('Could not get location', 'error');
+        });
+    };
 });
