@@ -12701,19 +12701,62 @@ body {
     color: #00a8ff;
 }
 
+.gif-search-box {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
 .gif-search-box input {
-    width: 100%;
+    flex: 1;
     padding: 12px 16px;
     border: 2px solid var(--border);
     border-radius: var(--radius);
     font-size: 14px;
     background: var(--bg-tertiary);
     color: var(--text-primary);
-    margin-bottom: 12px;
 }
 
 .gif-search-box input:focus {
     outline: none;
+    border-color: var(--primary);
+}
+
+.gif-search-btn {
+    padding: 12px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.gif-search-btn:hover {
+    background: var(--primary-dark);
+}
+
+.gif-categories {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.gif-cat-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: var(--transition);
+}
+
+.gif-cat-btn:hover, .gif-cat-btn.active {
+    background: var(--primary);
+    color: white;
     border-color: var(--primary);
 }
 
