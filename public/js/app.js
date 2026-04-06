@@ -12364,56 +12364,6 @@ document.addEventListener('DOMContentLoaded', function() {
             grid.appendChild(item);
         });
     }
-                        item.appendChild(img);
-                        item.onclick = function() {
-                            selectPostGif(gif.images.fixed_height.url);
-                        };
-                        grid.appendChild(item);
-                    });
-                }
-            })
-            .catch(function() {
-                grid.innerHTML = '<div class="gif-no-results">Could not load GIFs</div>';
-            });
-    }
-
-    window.searchPostGifs = function(query) {
-        var grid = document.getElementById('post-gif-grid');
-        if (!query.trim()) {
-            loadTrendingPostGifs();
-            return;
-        }
-        
-        grid.innerHTML = '<div class="gif-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
-        
-        var apiKey = 'dc6zaTOxFJmzC';
-        var url = 'https://api.giphy.com/v1/gifs/search?q=' + encodeURIComponent(query) + '&api_key=' + apiKey + '&limit=20&rating=g';
-        
-        fetch(url)
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                grid.innerHTML = '';
-                if (data.data && data.data.length > 0) {
-                    data.data.forEach(function(gif) {
-                        var item = document.createElement('div');
-                        item.className = 'gif-item';
-                        var img = document.createElement('img');
-                        img.src = gif.images.fixed_height.url;
-                        img.alt = gif.title || 'GIF';
-                        item.appendChild(img);
-                        item.onclick = function() {
-                            selectPostGif(gif.images.fixed_height.url);
-                        };
-                        grid.appendChild(item);
-                    });
-                } else {
-                    grid.innerHTML = '<div class="gif-no-results">No GIFs found</div>';
-                }
-            })
-            .catch(function() {
-                grid.innerHTML = '<div class="gif-no-results">Search failed</div>';
-            });
-    };
 
     function selectPostGif(gifUrl) {
         feedPostGifUrl = gifUrl;
