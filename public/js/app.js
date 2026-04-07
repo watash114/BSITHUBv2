@@ -14038,8 +14038,334 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize mobile features
     initPullToRefresh();
     initKeyboardHandling();
+    initHapticFeedback();
+    initDraftAutoSave();
+    initChatSearch();
+    initPWAInstall();
+    initOfflineMode();
+    initPushNotifications();
+    initLinkPreviews();
+    initReactionsSummary();
+    initImagePinchZoom();
     
     // Log mobile detection
     var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     console.log('Mobile device:', isMobile);
 });
+
+// ==========================================
+// Mobile Features
+// ==========================================
+
+// 1. Share Sheet (Native Share API)
+window.shareContent = function(title, text, url) {
+    if (navigator.share) {
+        navigator.share({
+            title: title || 'BSITHUB',
+            text: text || '',
+            url: url || window.location.href
+        }).then(function() {
+            showToast('Shared!', 'success');
+        }).catch(function() {
+            // User cancelled
+        });
+    } else {
+        // Fallback: Copy to clipboard
+        var shareText = (title ? title + '\n' : '') + (text || '') + '\n' + (url || window.location.href);
+        navigator.clipboard.writeText(shareText).then(function() {
+            showToast('Copied to clipboard!', 'success');
+        });
+    }
+};
+
+window.sharePost = function(postId) {
+    var posts = Storage.get('posts') || [];
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (post) {
+        shareContent('BSITHUB Post', post.content || 'Check out this post!', window.location.href);
+    }
+};
+
+// 2. Haptic Feedback
+function initHapticFeedback() {
+    window.haptic = function(type) {
+        if (!navigator.vibrate) return;
+        switch(type) {
+            case 'light': navigator.vibrate(10); break;
+            case 'medium': navigator.vibrate(25); break;
+            case 'heavy': navigator.vibrate(50); break;
+            case 'success': navigator.vibrate([50, 50, 50]); break;
+            case 'error': navigator.vibrate([100, 50, 100]); break;
+            default: navigator.vibrate(20);
+        }
+    };
+    
+    // Add haptic to buttons
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn, .nav-item, .post-action-btn, .message-action-btn');
+        if (btn && navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+    });
+}
+
+// 3. Image Pinch Zoom
+function initImagePinchZoom() {
+    var scale = 1;
+    var lastDistance = 0;
+    
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 2 && e.target.tagName === 'IMG') {
+            lastDistance = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 2 && e.target.tagName === 'IMG') {
+            var currentDistance = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+            var delta = currentDistance / lastDistance;
+            scale = Math.min(Math.max(0.5, scale * delta), 3);
+            e.target.style.transform = 'scale(' + scale + ')';
+            lastDistance = currentDistance;
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        if (e.target.tagName === 'IMG' && scale !== 1) {
+            if (scale < 1.2) {
+                e.target.style.transform = 'scale(1)';
+                scale = 1;
+            }
+        }
+    }, { passive: true });
+}
+
+// 4. Draft Auto-save
+function initDraftAutoSave() {
+    var chatInput = document.getElementById('chat-input');
+    if (!chatInput) return;
+    
+    // Load draft when opening chat
+    var originalOpenChat = window.openChat;
+    if (originalOpenChat) {
+        window.openChat = function(chatId, userId) {
+            originalOpenChat(chatId, userId);
+            setTimeout(function() {
+                var drafts = Storage.get('messageDrafts') || {};
+                var input = document.getElementById('chat-input');
+                if (input && drafts[chatId]) {
+                    input.value = drafts[chatId];
+                }
+            }, 100);
+        };
+    }
+    
+    // Save draft on input
+    setInterval(function() {
+        var input = document.getElementById('chat-input');
+        if (input && activeChat) {
+            var drafts = Storage.get('messageDrafts') || {};
+            if (input.value.trim()) {
+                drafts[activeChat.id] = input.value;
+            } else {
+                delete drafts[activeChat.id];
+            }
+            Storage.set('messageDrafts', drafts);
+        }
+    }, 1000);
+}
+
+// 5. Chat Search
+function initChatSearch() {
+    window.searchInChat = function(query) {
+        if (!activeChat || !query.trim()) return [];
+        
+        var messages = Storage.get('messages') || [];
+        return messages.filter(function(m) {
+            return m.chatId === activeChat.id && 
+                   m.text && 
+                   m.text.toLowerCase().includes(query.toLowerCase());
+        });
+    };
+    
+    window.showChatSearch = function() {
+        if (!activeChat) return;
+        
+        var html = '<div class="chat-search-modal">';
+        html += '<h3><i class="fas fa-search"></i> Search in Chat</h3>';
+        html += '<input type="text" id="chat-search-input" placeholder="Search messages...">';
+        html += '<div id="chat-search-results"></div>';
+        html += '</div>';
+        showModal(html);
+        
+        setTimeout(function() {
+            var input = document.getElementById('chat-search-input');
+            input.focus();
+            input.addEventListener('input', function() {
+                var results = searchInChat(this.value);
+                var container = document.getElementById('chat-search-results');
+                if (results.length === 0) {
+                    container.innerHTML = '<div class="search-empty">No results found</div>';
+                } else {
+                    var html = '';
+                    results.slice(0, 20).forEach(function(msg) {
+                        html += '<div class="search-result" onclick="scrollToMessage(\'' + msg.id + '\')">';
+                        html += '<div class="search-result-text">' + escapeHtml(msg.text).substring(0, 100) + '</div>';
+                        html += '<div class="search-result-time">' + formatTime(msg.timestamp) + '</div>';
+                        html += '</div>';
+                    });
+                    container.innerHTML = html;
+                }
+            });
+        }, 100);
+    };
+    
+    window.scrollToMessage = function(msgId) {
+        closeModal();
+        var el = document.querySelector('[data-message-id="' + msgId + '"]');
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.style.background = 'rgba(99, 102, 241, 0.2)';
+            setTimeout(function() { el.style.background = ''; }, 2000);
+        }
+    };
+}
+
+// 6. PWA Install
+function initPWAInstall() {
+    var deferredPrompt = null;
+    
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        showInstallBanner();
+    });
+    
+    function showInstallBanner() {
+        var banner = document.getElementById('pwa-install-banner');
+        if (banner) return;
+        
+        var el = document.createElement('div');
+        el.id = 'pwa-install-banner';
+        el.className = 'pwa-install-banner';
+        el.innerHTML = '<span>Install BSITHUB for quick access</span>' +
+            '<button onclick="installPWA()">Install</button>' +
+            '<button onclick="dismissPWAInstall()" class="dismiss">Later</button>';
+        document.body.appendChild(el);
+    }
+    
+    window.installPWA = function() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(function(result) {
+                if (result.outcome === 'accepted') {
+                    showToast('App installed!', 'success');
+                }
+                deferredPrompt = null;
+                dismissPWAInstall();
+            });
+        }
+    };
+    
+    window.dismissPWAInstall = function() {
+        var banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.remove();
+    };
+}
+
+// 7. Offline Mode
+function initOfflineMode() {
+    window.addEventListener('online', function() {
+        showToast('Back online!', 'success');
+        document.body.classList.remove('offline');
+    });
+    
+    window.addEventListener('offline', function() {
+        showToast('You are offline', 'warning');
+        document.body.classList.add('offline');
+    });
+    
+    // Check initial state
+    if (!navigator.onLine) {
+        document.body.classList.add('offline');
+    }
+}
+
+// 8. Push Notifications
+function initPushNotifications() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        window.requestNotificationPermission = function() {
+            Notification.requestPermission().then(function(permission) {
+                if (permission === 'granted') {
+                    showToast('Notifications enabled!', 'success');
+                }
+            });
+        };
+    }
+    
+    window.showBrowserNotification = function(title, body, icon) {
+        if (Notification.permission === 'granted') {
+            new Notification(title, {
+                body: body,
+                icon: icon || '/favicon.ico',
+                badge: '/favicon.ico',
+                vibrate: [100, 50, 100]
+            });
+        }
+    };
+}
+
+// 9. Link Previews
+function initLinkPreviews() {
+    window.detectLinks = function(text) {
+        var urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.match(urlRegex) || [];
+    };
+    
+    window.createLinkPreview = function(url) {
+        return '<div class="link-preview" onclick="window.open(\'' + url + '\', \'_blank\')">' +
+            '<div class="link-preview-icon"><i class="fas fa-link"></i></div>' +
+            '<div class="link-preview-url">' + url.substring(0, 50) + '...</div>' +
+            '</div>';
+    };
+}
+
+// 10. Reactions Summary
+function showReactionsSummary(messageId) {
+    var messages = Storage.get('messages') || [];
+    var msg = messages.find(function(m) { return m.id === messageId; });
+    if (!msg || !msg.reactions || Object.keys(msg.reactions).length === 0) {
+        showToast('No reactions yet', 'info');
+        return;
+    }
+    
+    var users = Storage.get('users') || [];
+    var html = '<div class="reactions-summary">';
+    html += '<h3><i class="fas fa-smile"></i> Reactions</h3>';
+    
+    Object.entries(msg.reactions).forEach(function(entry) {
+        var emoji = entry[0];
+        var userIds = entry[1];
+        
+        html += '<div class="reaction-group">';
+        html += '<span class="reaction-emoji">' + emoji + '</span>';
+        html += '<div class="reaction-users">';
+        userIds.forEach(function(userId) {
+            var user = users.find(function(u) { return u.id === userId; });
+            var name = user ? user.name : 'Unknown';
+            html += '<span class="reaction-user">' + escapeHtml(name) + '</span>';
+        });
+        html += '</div>';
+        html += '<span class="reaction-count">' + userIds.length + '</span>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    showModal(html);
+}
