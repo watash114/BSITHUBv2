@@ -15000,3 +15000,327 @@ function showReactionsSummary(messageId) {
     html += '</div>';
     showModal(html);
 }
+
+// ==========================================
+// More Features
+// ==========================================
+
+// 1. Chat Backup (all chats)
+window.backupAllChats = function() {
+    var backup = {
+        users: Storage.get('users') || [],
+        chats: Storage.get('chats') || [],
+        messages: Storage.get('messages') || [],
+        posts: Storage.get('posts') || [],
+        settings: Storage.get('settings') || {},
+        exportedAt: new Date().toISOString()
+    };
+    
+    var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'bsithub-backup-' + Date.now() + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Backup created!', 'success');
+};
+
+window.restoreBackup = function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                var data = JSON.parse(ev.target.result);
+                if (data.users) Storage.set('users', data.users);
+                if (data.chats) Storage.set('chats', data.chats);
+                if (data.messages) Storage.set('messages', data.messages);
+                if (data.posts) Storage.set('posts', data.posts);
+                if (data.settings) Storage.set('settings', data.settings);
+                showToast('Restored! Reloading...', 'success');
+                setTimeout(function() { location.reload(); }, 1500);
+            } catch (err) { showToast('Invalid backup', 'error'); }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+};
+
+// 2. Message Edit History
+window.showMessageEditHistory = function(msgId) {
+    var messages = Storage.get('messages') || [];
+    var msg = messages.find(function(m) { return m.id === msgId; });
+    if (!msg || !msg.editHistory || msg.editHistory.length === 0) {
+        showToast('No edit history', 'info'); return;
+    }
+    var html = '<div class="edit-history-modal"><h3>Edit History</h3>';
+    msg.editHistory.forEach(function(edit) {
+        html += '<div class="edit-item"><div class="edit-time">' + new Date(edit.editedAt).toLocaleString() + '</div><div class="edit-text">' + escapeHtml(edit.text) + '</div></div>';
+    });
+    html += '</div>';
+    showModal(html);
+};
+
+// 3. Group Permissions
+window.showGroupPermissions = function() {
+    if (!activeChat || !activeChat.isGroup) { showToast('Not a group', 'error'); return; }
+    var perms = activeChat.permissions || {};
+    var html = '<div class="group-perms-modal"><h3>Group Permissions</h3>';
+    html += '<div class="perm-item"><span>Members can send messages</span><label class="toggle"><input type="checkbox" id="perm-messages" ' + (perms.sendMessages !== false ? 'checked' : '') + '><span class="toggle-slider"></span></label></div>';
+    html += '<div class="perm-item"><span>Members can send media</span><label class="toggle"><input type="checkbox" id="perm-media" ' + (perms.sendMedia !== false ? 'checked' : '') + '><span class="toggle-slider"></span></label></div>';
+    html += '<button class="btn btn-primary" onclick="saveGroupPermissions()"><i class="fas fa-save"></i> Save</button></div>';
+    showModal(html);
+};
+
+window.saveGroupPermissions = function() {
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    chats[chatIndex].permissions = {
+        sendMessages: document.getElementById('perm-messages').checked,
+        sendMedia: document.getElementById('perm-media').checked
+    };
+    Storage.set('chats', chats);
+    activeChat = chats[chatIndex];
+    closeModal();
+    showToast('Permissions updated', 'success');
+};
+
+// 4. Slow Mode
+window.toggleSlowMode = function() {
+    if (!activeChat || !activeChat.isGroup) { showToast('Not a group', 'error'); return; }
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    var options = [0, 10, 30, 60, 300];
+    var current = chats[chatIndex].slowMode || 0;
+    var nextIndex = (options.indexOf(current) + 1) % options.length;
+    chats[chatIndex].slowMode = options[nextIndex];
+    Storage.set('chats', chats);
+    activeChat = chats[chatIndex];
+    showToast('Slow mode: ' + (options[nextIndex] === 0 ? 'Off' : options[nextIndex] + 's'), 'success');
+};
+
+// 5. Read-only Groups
+window.toggleReadOnlyGroup = function() {
+    if (!activeChat || !activeChat.isGroup) { showToast('Not a group', 'error'); return; }
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    chats[chatIndex].readOnly = !chats[chatIndex].readOnly;
+    Storage.set('chats', chats);
+    activeChat = chats[chatIndex];
+    showToast(chats[chatIndex].readOnly ? 'Read-only enabled' : 'Read-only disabled', 'success');
+};
+
+// 6. Message Disappearing
+window.setMessageDisappearing = function(duration) {
+    var settings = Storage.get('settings') || {};
+    settings.disappearingMessages = duration || 0;
+    Storage.set('settings', settings);
+    showToast('Disappearing: ' + (duration ? duration / 3600000 + 'h' : 'Off'), 'success');
+};
+
+// 7. Custom Themes
+window.applyTheme = function(theme) {
+    var themes = {
+        default: { primary: '#6366f1', primaryDark: '#4f46e5' },
+        ocean: { primary: '#0ea5e9', primaryDark: '#0284c7' },
+        forest: { primary: '#22c55e', primaryDark: '#16a34a' },
+        sunset: { primary: '#f97316', primaryDark: '#ea580c' },
+        rose: { primary: '#f43f5e', primaryDark: '#e11d48' }
+    };
+    var t = themes[theme] || themes.default;
+    document.documentElement.style.setProperty('--primary', t.primary);
+    document.documentElement.style.setProperty('--primary-dark', t.primaryDark);
+    var settings = Storage.get('settings') || {};
+    settings.theme = theme;
+    Storage.set('settings', settings);
+    showToast('Theme: ' + theme, 'success');
+};
+
+// 8. Font Size
+window.setFontSize = function(size) {
+    document.documentElement.style.fontSize = size + 'px';
+    var settings = Storage.get('settings') || {};
+    settings.fontSize = size;
+    Storage.set('settings', settings);
+};
+
+// 9. Quick Replies
+window.showQuickReplies = function() {
+    var replies = Storage.get('quickReplies') || ['👋 Hello!', '👍 Okay', '🙏 Thank you!', '😊 How are you?', '📞 Call me later', '✅ Done!'];
+    var html = '<div class="quick-replies-modal"><h3>Quick Replies</h3><div class="replies-list">';
+    replies.forEach(function(r) { html += '<button class="reply-btn" onclick="sendQuickReply(\'' + escapeHtml(r) + '\')">' + escapeHtml(r) + '</button>'; });
+    html += '</div><input type="text" id="new-reply" placeholder="Add..."><button class="btn btn-small" onclick="addQuickReply()"><i class="fas fa-plus"></i></button></div>';
+    showModal(html);
+};
+
+window.sendQuickReply = function(text) {
+    if (!activeChat) return;
+    sendMessage(text);
+    closeModal();
+};
+
+window.addQuickReply = function() {
+    var input = document.getElementById('new-reply');
+    var text = input ? input.value.trim() : '';
+    if (!text) return;
+    var replies = Storage.get('quickReplies') || [];
+    replies.push(text);
+    Storage.set('quickReplies', replies);
+    showQuickReplies();
+};
+
+// 10. Keyboard Shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'k') { e.preventDefault(); showChatSearch(); }
+    if (e.key === 'Escape') closeModal();
+    if (e.ctrlKey && e.key === 'n') { e.preventDefault(); showNewChat(); }
+});
+
+// 11. Connection Status
+window.updateConnectionStatus = function() {
+    var status = document.getElementById('connection-status');
+    if (!status) {
+        status = document.createElement('div');
+        status.id = 'connection-status';
+        status.className = 'connection-status';
+        document.body.appendChild(status);
+    }
+    status.className = 'connection-status ' + (navigator.onLine ? 'online' : 'offline');
+    status.innerHTML = navigator.onLine ? '<i class="fas fa-wifi"></i>' : '<i class="fas fa-wifi-slash"></i> Offline';
+    status.style.opacity = navigator.onLine ? '0' : '1';
+};
+window.addEventListener('online', updateConnectionStatus);
+window.addEventListener('offline', updateConnectionStatus);
+updateConnectionStatus();
+
+// 12. Auto-reply
+window.setAutoReply = function(message) {
+    var settings = Storage.get('settings') || {};
+    settings.autoReply = message || '';
+    Storage.set('settings', settings);
+    showToast(message ? 'Auto-reply set' : 'Auto-reply disabled', 'success');
+};
+
+// 13. Chat Lock
+window.lockChat = function(chatId, pin) {
+    if (!chatId && activeChat) chatId = activeChat.id;
+    if (!chatId || !pin) return;
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex === -1) return;
+    chats[chatIndex].locked = true;
+    chats[chatIndex].lockPin = hashPassword(pin);
+    Storage.set('chats', chats);
+    showToast('Chat locked', 'success');
+};
+
+// 14. Hidden Chats
+window.hideChat = function(chatId) {
+    if (!chatId && activeChat) chatId = activeChat.id;
+    if (!chatId) return;
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex === -1) return;
+    chats[chatIndex].hidden = true;
+    Storage.set('chats', chats);
+    showToast('Chat hidden', 'success');
+    loadChats();
+};
+
+window.showHiddenChats = function() {
+    var chats = Storage.get('chats') || [];
+    var hidden = chats.filter(function(c) { return c.hidden && c.participants.indexOf(currentUser.id) !== -1; });
+    var html = '<div class="hidden-chats-modal"><h3>Hidden Chats</h3>';
+    if (hidden.length === 0) { html += '<div>No hidden chats</div>'; }
+    else { hidden.forEach(function(c) { html += '<div class="hidden-item"><span>' + escapeHtml(c.groupName || 'Chat') + '</span><button class="btn btn-small" onclick="unhideChat(\'' + c.id + '\')"><i class="fas fa-eye"></i></button></div>'; }); }
+    html += '</div>';
+    showModal(html);
+};
+
+window.unhideChat = function(chatId) {
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex === -1) return;
+    chats[chatIndex].hidden = false;
+    Storage.set('chats', chats);
+    showToast('Chat unhidden', 'success');
+    showHiddenChats();
+    loadChats();
+};
+
+// 15. Group Invite Expiry
+window.generateInviteWithExpiry = function(expiryHours) {
+    if (!activeChat || !activeChat.isGroup) return;
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    var code = generateId().toUpperCase().substring(0, 8);
+    chats[chatIndex].inviteCode = code;
+    chats[chatIndex].inviteExpiry = Date.now() + (expiryHours * 3600000);
+    Storage.set('chats', chats);
+    showToast('Invite expires in ' + expiryHours + 'h', 'success');
+    return code;
+};
+
+// 16. Dark Mode Toggle
+window.toggleDarkMode = function() {
+    var isDark = document.body.getAttribute('data-theme') === 'dark';
+    document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    var settings = Storage.get('settings') || {};
+    settings.theme = isDark ? 'light' : 'dark';
+    Storage.set('settings', settings);
+    showToast(isDark ? 'Light mode' : 'Dark mode', 'info');
+};
+
+// 17. Chat Wallpaper
+window.setChatWallpaper = function(color) {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === activeChat.id; });
+    if (chatIndex === -1) return;
+    chats[chatIndex].wallpaper = color;
+    Storage.set('chats', chats);
+    var wallpaper = document.getElementById('chat-wallpaper');
+    if (wallpaper) wallpaper.style.background = color || 'none';
+    showToast('Wallpaper set', 'success');
+};
+
+// 18. Draft Messages
+window.saveDraft = function() {
+    if (!activeChat) return;
+    var input = document.getElementById('chat-input');
+    if (!input || !input.value.trim()) return;
+    var drafts = Storage.get('drafts') || {};
+    drafts[activeChat.id] = input.value;
+    Storage.set('drafts', drafts);
+};
+
+window.loadDraft = function(chatId) {
+    return (Storage.get('drafts') || {})[chatId] || '';
+};
+
+// Auto-save drafts
+setInterval(function() { if (activeChat) saveDraft(); }, 5000);
+
+// 19. Notification Per Chat
+window.setChatNotificationSound = function(chatId, sound) {
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex === -1) return;
+    chats[chatIndex].notificationSound = sound;
+    Storage.set('chats', chats);
+    showToast('Sound set', 'success');
+};
+
+// 20. Connection Status CSS
+var connectionStyle = document.createElement('style');
+connectionStyle.textContent = '.connection-status{position:fixed;top:10px;right:10px;padding:6px 12px;border-radius:20px;font-size:12px;z-index:10000;transition:opacity 0.3s}.connection-status.online{background:#10b981;color:white}.connection-status.offline{background:#ef4444;color:white}';
+document.head.appendChild(connectionStyle);
