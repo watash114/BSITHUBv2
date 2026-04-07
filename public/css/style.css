@@ -14215,53 +14215,35 @@ body {
     .feed-list,
     .modal-content {
         -webkit-overflow-scrolling: touch;
-        will-change: scroll-position;
-        transform: translateZ(0);
     }
     
-    /* Contain layout for better performance */
-    .chat-item,
+    /* Only reduce shadows on cards, not buttons */
     .post-card,
-    .message,
-    .setting-item {
-        contain: layout style;
+    .chat-item,
+    .message {
+        box-shadow: none;
     }
     
-    /* Reduce shadow complexity */
-    * {
-        box-shadow: none !important;
-    }
-    
-    .sidebar,
-    .modal-content {
-        box-shadow: 0 -1px 3px rgba(0,0,0,0.1) !important;
-    }
-    
-    /* Disable expensive effects */
-    .message:hover,
-    .post-card:hover,
-    .chat-item:hover {
-        transform: none;
+    /* Keep button shadows for visibility */
+    .btn,
+    button,
+    .nav-item,
+    .fab {
+        box-shadow: inherit;
     }
     
     /* Simplify animations */
     * {
-        transition-duration: 0.1s !important;
-        animation-duration: 0.1s !important;
+        transition-duration: 0.15s !important;
     }
     
     .message {
         animation: none;
     }
     
-    /* Reduce blur effects */
-    .toast {
-        backdrop-filter: none;
-    }
-    
     /* Lazy load images */
     img {
-        content-visibility: auto;
+        loading: lazy;
     }
 }
 
