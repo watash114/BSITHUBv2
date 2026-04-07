@@ -466,36 +466,42 @@
                             <div class="composer-divider"></div>
                             <div class="composer-quick-actions">
                                 <button class="composer-action-btn" id="composer-action-photo">
-                                    <i class="fas fa-image" style="color:#45bd62;"></i>
+                                    <i class="fas fa-video" style="color:#f3425f;"></i>
+                                    <span>Live Video</span>
+                                </button>
+                                <button class="composer-action-btn" id="composer-action-photo">
+                                    <i class="fas fa-images" style="color:#45bd62;"></i>
                                     <span>Photo/Video</span>
                                 </button>
                                 <button class="composer-action-btn" id="composer-action-feeling">
-                                    <i class="fas fa-smile" style="color:#f7b928;"></i>
-                                    <span>Feeling</span>
+                                    <i class="fas fa-face-smile" style="color:#f7b928;"></i>
+                                    <span>Feeling/Activity</span>
                                 </button>
                             </div>
                             <div class="composer-expanded" id="composer-expanded" style="display:none;">
                                 <div class="composer-expanded-header">
+                                    <button class="btn-icon close-composer" id="close-composer">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </button>
+                                    <span class="composer-title">Create post</span>
+                                    <button class="btn-post" id="post-submit-btn" disabled>Post</button>
+                                </div>
+                                <div class="composer-user-row">
                                     <div class="composer-avatar" id="composer-avatar-2">
                                         <i class="fas fa-user"></i>
                                     </div>
                                     <div class="composer-user-info">
                                         <span class="composer-username" id="composer-username">User</span>
-                                        <select class="composer-privacy-select" id="post-privacy">
-                                            <option value="public">🌍 Public</option>
-                                            <option value="friends">👥 Friends</option>
-                                            <option value="private">🔒 Only Me</option>
-                                        </select>
+                                        <button class="composer-privacy-btn" id="post-privacy-btn">
+                                            <i class="fas fa-globe-americas"></i>
+                                            <span>Public</span>
+                                            <i class="fas fa-caret-down"></i>
+                                        </button>
+                                        <input type="hidden" id="post-privacy" value="public">
                                     </div>
-                                    <button class="btn-icon close-composer" id="close-composer">
-                                        <i class="fas fa-times"></i>
-                                    </button>
                                 </div>
                                 <div class="composer-textarea-wrapper">
                                     <textarea id="post-content" placeholder="What's on your mind?" rows="4" maxlength="5000"></textarea>
-                                    <div class="composer-char-counter" id="composer-char-counter">
-                                        <span id="char-count">0</span> / 5000
-                                    </div>
                                 </div>
                                 <div class="composer-feeling-bar" id="composer-feeling-bar" style="display:none;">
                                     <span class="feeling-label">Feeling:</span>
@@ -519,24 +525,28 @@
                                     </div>
                                 </div>
                                 <div class="composer-add-to-post">
-                                    <span>Add to your post</span>
-                                    <div class="composer-add-buttons">
-                                        <button class="add-btn" title="Photo/Video" id="post-image-btn">
-                                            <i class="fas fa-image" style="color:#45bd62;"></i>
-                                        </button>
-                                        <input type="file" id="post-image-input" accept="image/*" style="display:none;">
-                                        <button class="add-btn" title="Feeling" id="post-feeling-btn">
-                                            <i class="fas fa-smile" style="color:#f7b928;"></i>
-                                        </button>
-                                        <button class="add-btn" title="Location" id="post-location-btn">
-                                            <i class="fas fa-map-marker-alt" style="color:#ef4444;"></i>
-                                        </button>
-                                        <button class="add-btn" title="Privacy" id="post-privacy-btn">
-                                            <i class="fas fa-globe-americas" style="color:#6366f1;"></i>
-                                        </button>
+                                    <div class="add-to-post-header">
+                                        <span>Add to your post</span>
+                                        <div class="composer-add-buttons">
+                                            <button class="add-btn" title="Photo/Video" id="post-image-btn">
+                                                <i class="fas fa-images" style="color:#45bd62;"></i>
+                                            </button>
+                                            <input type="file" id="post-image-input" accept="image/*" style="display:none;">
+                                            <button class="add-btn" title="Tag People" id="post-tag-btn">
+                                                <i class="fas fa-user-tag" style="color:#1877f2;"></i>
+                                            </button>
+                                            <button class="add-btn" title="Feeling" id="post-feeling-btn">
+                                                <i class="fas fa-face-smile" style="color:#f7b928;"></i>
+                                            </button>
+                                            <button class="add-btn" title="Check in" id="post-location-btn">
+                                                <i class="fas fa-location-dot" style="color:#f3425f;"></i>
+                                            </button>
+                                            <button class="add-btn" title="GIF" id="post-gif-btn">
+                                                <i class="fas fa-file-image" style="color:#00a8ff;"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <button class="btn-post" id="post-submit-btn" disabled>Post</button>
                             </div>
                         </div>
 
