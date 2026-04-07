@@ -2663,22 +2663,277 @@ function showReactionDetails(messageId) {
     showModal(html);
 }
 
-// Initialize mobile features after DOM and all functions are defined
+// ==========================================
+// Additional Mobile Features
+// ==========================================
+
+// Message Swipe (swipe left to reply/delete)
+window.initMessageSwipe = function() {
+    var startX = 0;
+    var currentX = 0;
+    var isDragging = false;
+    
+    document.addEventListener('touchstart', function(e) {
+        var msg = e.target.closest('.message');
+        if (msg) {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+        currentX = e.touches[0].clientX;
+        var diff = startX - currentX;
+        
+        if (diff > 0 && diff < 100) {
+            var msg = document.querySelector('.message.swiping');
+            if (msg) msg.style.transform = 'translateX(-' + diff + 'px)';
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        if (!isDragging) return;
+        var diff = startX - currentX;
+        
+        if (diff > 60) {
+            var msg = e.target.closest('.message');
+            if (msg) {
+                var msgId = msg.dataset.messageId;
+                showMessageActions(msgId);
+            }
+        }
+        
+        // Reset all messages
+        document.querySelectorAll('.message').forEach(function(m) {
+            m.style.transform = '';
+        });
+        
+        isDragging = false;
+    }, { passive: true });
+};
+
+// Long Press Context Menu
+window.initLongPress = function() {
+    var pressTimer = null;
+    
+    document.addEventListener('touchstart', function(e) {
+        var target = e.target.closest('.message, .chat-item, .post-card');
+        if (target) {
+            pressTimer = setTimeout(function() {
+                // Long press detected
+                if (navigator.vibrate) navigator.vibrate(50);
+                
+                if (target.classList.contains('message')) {
+                    showMessageActions(target.dataset.messageId);
+                } else if (target.classList.contains('chat-item')) {
+                    // Show chat options
+                }
+            }, 500);
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function() {
+        clearTimeout(pressTimer);
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function() {
+        clearTimeout(pressTimer);
+    }, { passive: true });
+};
+
+// Show Message Actions Menu
+window.showMessageActions = function(msgId) {
+    var messages = Storage.get('messages') || [];
+    var msg = messages.find(function(m) { return m.id === msgId; });
+    if (!msg) return;
+    
+    var isSent = msg.senderId === currentUser.id;
+    
+    var html = '<div class="message-actions-modal">';
+    html += '<div class="message-preview">' + escapeHtml(msg.text || '').substring(0, 50) + (msg.text && msg.text.length > 50 ? '...' : '') + '</div>';
+    html += '<div class="actions-grid">';
+    html += '<button class="action-item" onclick="replyToMessage(\'' + msgId + '\'); closeModal();"><i class="fas fa-reply"></i><span>Reply</span></button>';
+    html += '<button class="action-item" onclick="showReactionPicker(\'' + msgId + '\'); closeModal();"><i class="fas fa-smile"></i><span>React</span></button>';
+    html += '<button class="action-item" onclick="forwardMessage(\'' + msgId + '\'); closeModal();"><i class="fas fa-share"></i><span>Forward</span></button>';
+    html += '<button class="action-item" onclick="copyMessageText(\'' + msgId + '\'); closeModal();"><i class="fas fa-copy"></i><span>Copy</span></button>';
+    html += '<button class="action-item" onclick="toggleStarMessage(\'' + msgId + '\'); closeModal();"><i class="fas fa-star"></i><span>Star</span></button>';
+    if (isSent) {
+        html += '<button class="action-item" onclick="editMessage(\'' + msgId + '\'); closeModal();"><i class="fas fa-pen"></i><span>Edit</span></button>';
+    }
+    html += '<button class="action-item danger" onclick="deleteMessage(\'' + msgId + '\'); closeModal();"><i class="fas fa-trash"></i><span>Delete</span></button>';
+    html += '</div>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.copyMessageText = function(msgId) {
+    var messages = Storage.get('messages') || [];
+    var msg = messages.find(function(m) { return m.id === msgId; });
+    if (msg && msg.text) {
+        navigator.clipboard.writeText(msg.text).then(function() {
+            showToast('Copied!', 'success');
+        });
+    }
+};
+
+// Scroll to Bottom Button
+window.initScrollToBottom = function() {
+    var btn = document.createElement('button');
+    btn.className = 'scroll-to-bottom';
+    btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+    btn.style.display = 'none';
+    btn.onclick = function() {
+        var messages = document.getElementById('chat-messages');
+        if (messages) {
+            messages.scrollTop = messages.scrollHeight;
+        }
+    };
+    
+    var chatMain = document.querySelector('.chat-main');
+    if (chatMain) chatMain.appendChild(btn);
+    
+    // Show/hide based on scroll position
+    document.addEventListener('scroll', function(e) {
+        if (e.target.id === 'chat-messages') {
+            var el = e.target;
+            var isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+            btn.style.display = isNearBottom ? 'none' : 'flex';
+        }
+    }, true);
+};
+
+// Unread Badge on Tab
+window.updateTabBadge = function() {
+    var messages = Storage.get('messages') || [];
+    var unread = messages.filter(function(m) { return !m.read && m.senderId !== currentUser.id; }).length;
+    
+    if (unread > 0) {
+        document.title = '(' + unread + ') BSITHUB';
+    } else {
+        document.title = 'BSITHUB';
+    }
+};
+
+// Call this on message changes
+setInterval(updateTabBadge, 5000);
+
+// Mute Chat
+window.muteChat = function(chatId) {
+    if (!chatId && activeChat) chatId = activeChat.id;
+    if (!chatId) return;
+    
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex === -1) return;
+    
+    chats[chatIndex].muted = !chats[chatIndex].muted;
+    Storage.set('chats', chats);
+    
+    showToast(chats[chatIndex].muted ? 'Chat muted' : 'Chat unmuted', 'success');
+};
+
+// Pin Chat
+window.togglePinChat = function(chatId) {
+    if (!chatId && activeChat) chatId = activeChat.id;
+    if (!chatId) return;
+    
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex === -1) return;
+    
+    chats[chatIndex].pinned = !chats[chatIndex].pinned;
+    Storage.set('chats', chats);
+    
+    showToast(chats[chatIndex].pinned ? 'Chat pinned' : 'Chat unpinned', 'success');
+    loadChats();
+};
+
+// Dark Mode Toggle
+window.toggleDarkMode = function() {
+    var isDark = document.body.getAttribute('data-theme') === 'dark';
+    document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    
+    var settings = Storage.get('settings') || {};
+    settings.theme = isDark ? 'light' : 'dark';
+    Storage.set('settings', settings);
+    
+    showToast(isDark ? 'Light mode' : 'Dark mode', 'info');
+};
+
+// Font Size
+window.setFontSize = function(size) {
+    document.documentElement.style.fontSize = size + 'px';
+    
+    var settings = Storage.get('settings') || {};
+    settings.fontSize = size;
+    Storage.set('settings', settings);
+};
+
+// Chat Backup Export
+window.exportChatBackup = function() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'error');
+        return;
+    }
+    
+    var messages = Storage.get('messages') || [];
+    var chatMessages = messages.filter(function(m) { return m.chatId === activeChat.id; });
+    
+    var text = 'Chat Backup - ' + new Date().toLocaleString() + '\n';
+    text += '================================\n\n';
+    
+    chatMessages.forEach(function(msg) {
+        var time = new Date(msg.timestamp).toLocaleString();
+        var sender = msg.senderId === currentUser.id ? 'You' : (msg.senderName || 'Unknown');
+        text += '[' + time + '] ' + sender + ': ' + (msg.text || '[Media]') + '\n';
+    });
+    
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'bsithub-chat-' + Date.now() + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Chat exported!', 'success');
+};
+
+// Image Lazy Loading
+window.initLazyLoading = function() {
+    if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                    }
+                    observer.unobserve(img);
+                }
+            });
+        }, { rootMargin: '100px' });
+        
+        document.querySelectorAll('img[data-src]').forEach(function(img) {
+            observer.observe(img);
+        });
+    }
+};
+
+// Initialize all features
 setTimeout(function() {
     try {
-        initHapticFeedback();
-        initDraftAutoSave();
-        initChatSearch();
-        initPWAInstall();
-        initOfflineMode();
-        initPushNotifications();
-        initLinkPreviews();
-        initImagePinchZoom();
-        console.log('Mobile features initialized');
+        initMessageSwipe();
+        initLongPress();
+        initScrollToBottom();
+        initLazyLoading();
+        console.log('Additional mobile features initialized');
     } catch(e) {
-        console.error('Mobile features init error:', e);
+        console.error('Init error:', e);
     }
-}, 1000);
+}, 1500);
 
 function clearReplyPreview() {
     currentReplyTo = null;
