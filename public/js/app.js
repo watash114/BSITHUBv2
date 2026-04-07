@@ -2664,6 +2664,374 @@ function showReactionDetails(messageId) {
 }
 
 // ==========================================
+// Additional Features
+// ==========================================
+
+// 1. Chat Export - Export chat as text file
+window.exportChatAsText = function(chatId) {
+    if (!chatId && activeChat) chatId = activeChat.id;
+    if (!chatId) { showToast('Select a chat first', 'error'); return; }
+    
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === chatId; });
+    if (!chat) { showToast('Chat not found', 'error'); return; }
+    
+    var messages = Storage.get('messages') || [];
+    var chatMessages = messages.filter(function(m) { return m.chatId === chatId; }).sort(function(a, b) {
+        return new Date(a.timestamp) - new Date(b.timestamp);
+    });
+    
+    var chatName = chat.isGroup ? (chat.groupName || 'Group') : 'Chat';
+    
+    var text = 'BSITHUB Chat Export\n';
+    text += 'Chat: ' + chatName + '\n';
+    text += 'Exported: ' + new Date().toLocaleString() + '\n';
+    text += 'Messages: ' + chatMessages.length + '\n';
+    text += '================================\n\n';
+    
+    chatMessages.forEach(function(msg) {
+        var time = new Date(msg.timestamp).toLocaleString();
+        var sender = msg.senderId === currentUser.id ? 'You' : (msg.senderName || 'Unknown');
+        var content = msg.text || (msg.imageUrl ? '[Image]' : msg.audioData ? '[Voice]' : '[Media]');
+        text += '[' + time + '] ' + sender + ': ' + content + '\n';
+    });
+    
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'bsithub-' + chatName.replace(/[^a-z0-9]/gi, '-') + '-' + Date.now() + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Chat exported!', 'success');
+};
+
+// 2. Mute Chat
+window.toggleMuteChat = function(chatId) {
+    if (!chatId && activeChat) chatId = activeChat.id;
+    if (!chatId) return;
+    
+    var chats = Storage.get('chats') || [];
+    var chatIndex = chats.findIndex(function(c) { return c.id === chatId; });
+    if (chatIndex === -1) return;
+    
+    chats[chatIndex].muted = !chats[chatIndex].muted;
+    Storage.set('chats', chats);
+    
+    showToast(chats[chatIndex].muted ? 'Chat muted' : 'Chat unmuted', 'success');
+};
+
+// 3. Pin Message
+window.togglePinMessage = function(msgId) {
+    var messages = Storage.get('messages') || [];
+    var msgIndex = messages.findIndex(function(m) { return m.id === msgId; });
+    if (msgIndex === -1) return;
+    
+    messages[msgIndex].pinned = !messages[msgIndex].pinned;
+    Storage.set('messages', messages);
+    
+    showToast(messages[msgIndex].pinned ? 'Message pinned' : 'Message unpinned', 'success');
+    
+    if (activeChat) renderMessages(activeChat.id);
+};
+
+window.showPinnedMessages = function() {
+    if (!activeChat) return;
+    
+    var messages = Storage.get('messages') || [];
+    var pinned = messages.filter(function(m) { return m.chatId === activeChat.id && m.pinned; });
+    
+    var html = '<div class="pinned-messages-modal">';
+    html += '<h3><i class="fas fa-thumbtack"></i> Pinned Messages</h3>';
+    
+    if (pinned.length === 0) {
+        html += '<div class="pinned-empty">No pinned messages</div>';
+    } else {
+        pinned.forEach(function(msg) {
+            html += '<div class="pinned-item">';
+            html += '<div class="pinned-text">' + escapeHtml(msg.text || '[Media]') + '</div>';
+            html += '<div class="pinned-meta">' + formatTime(msg.timestamp) + '</div>';
+            html += '</div>';
+        });
+    }
+    
+    html += '</div>';
+    showModal(html);
+};
+
+// 4. Read Receipts Toggle
+window.toggleReadReceipts = function() {
+    var settings = Storage.get('settings') || {};
+    settings.readReceipts = !settings.readReceipts;
+    Storage.set('settings', settings);
+    showToast(settings.readReceipts ? 'Read receipts enabled' : 'Read receipts disabled', 'info');
+};
+
+// 5. Custom Notification Sound
+window.setNotificationSound = function(sound) {
+    var settings = Storage.get('settings') || {};
+    settings.notificationSound = sound || 'default';
+    Storage.set('settings', settings);
+    showToast('Notification sound updated', 'success');
+};
+
+// 6. Chat Folders
+window.showChatFolders = function() {
+    var folders = Storage.get('chatFolders') || [];
+    
+    var html = '<div class="chat-folders-modal">';
+    html += '<h3><i class="fas fa-folder"></i> Chat Folders</h3>';
+    
+    if (folders.length === 0) {
+        html += '<div class="folders-empty">No folders created</div>';
+    } else {
+        folders.forEach(function(folder, index) {
+            html += '<div class="folder-item">';
+            html += '<span>' + escapeHtml(folder.name) + '</span>';
+            html += '<button onclick="deleteFolder(' + index + ')"><i class="fas fa-trash"></i></button>';
+            html += '</div>';
+        });
+    }
+    
+    html += '<input type="text" id="new-folder-name" placeholder="New folder name...">';
+    html += '<button class="btn btn-primary" onclick="createFolder()"><i class="fas fa-plus"></i> Create</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.createFolder = function() {
+    var input = document.getElementById('new-folder-name');
+    var name = input ? input.value.trim() : '';
+    if (!name) return;
+    
+    var folders = Storage.get('chatFolders') || [];
+    folders.push({ name: name, chats: [] });
+    Storage.set('chatFolders', folders);
+    showToast('Folder created!', 'success');
+    showChatFolders();
+};
+
+window.deleteFolder = function(index) {
+    var folders = Storage.get('chatFolders') || [];
+    folders.splice(index, 1);
+    Storage.set('chatFolders', folders);
+    showToast('Folder deleted', 'info');
+    showChatFolders();
+};
+
+// 7. Scheduled Messages
+window.showScheduleMessage = function() {
+    if (!activeChat) { showToast('Select a chat first', 'error'); return; }
+    
+    var html = '<div class="schedule-modal">';
+    html += '<h3><i class="fas fa-clock"></i> Schedule Message</h3>';
+    html += '<textarea id="schedule-text" placeholder="Type your message..."></textarea>';
+    html += '<input type="datetime-local" id="schedule-time">';
+    html += '<button class="btn btn-primary" onclick="scheduleMessage()"><i class="fas fa-clock"></i> Schedule</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.scheduleMessage = function() {
+    var text = document.getElementById('schedule-text').value.trim();
+    var time = document.getElementById('schedule-time').value;
+    
+    if (!text || !time) { showToast('Fill all fields', 'error'); return; }
+    
+    var scheduledTime = new Date(time).getTime();
+    if (scheduledTime <= Date.now()) { showToast('Time must be in future', 'error'); return; }
+    
+    var scheduled = Storage.get('scheduledMessages') || [];
+    scheduled.push({
+        id: generateId(),
+        chatId: activeChat.id,
+        text: text,
+        scheduledTime: scheduledTime
+    });
+    Storage.set('scheduledMessages', scheduled);
+    
+    setTimeout(function() {
+        sendScheduledMessage(scheduled[scheduled.length - 1]);
+    }, scheduledTime - Date.now());
+    
+    closeModal();
+    showToast('Message scheduled!', 'success');
+};
+
+function sendScheduledMessage(scheduled) {
+    var messages = Storage.get('messages') || [];
+    messages.push({
+        id: generateId(),
+        chatId: scheduled.chatId,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: scheduled.text,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent'
+    });
+    Storage.set('messages', messages);
+    
+    if (activeChat && activeChat.id === scheduled.chatId) {
+        renderMessages(scheduled.chatId);
+    }
+    
+    showToast('Scheduled message sent!', 'info');
+}
+
+// 8. Typing Indicator
+document.addEventListener('input', function(e) {
+    if (e.target.id === 'chat-input') {
+        var indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.style.display = 'flex';
+            clearTimeout(window.typingTimeout);
+            window.typingTimeout = setTimeout(function() {
+                indicator.style.display = 'none';
+            }, 3000);
+        }
+    }
+});
+
+// 9. Location Sharing
+window.shareLocationInChat = function() {
+    if (!activeChat) { showToast('Select a chat first', 'error'); return; }
+    
+    if (!navigator.geolocation) {
+        showToast('Geolocation not supported', 'error');
+        return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        var lat = pos.coords.latitude;
+        var lon = pos.coords.longitude;
+        var mapUrl = 'https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon;
+        
+        var messages = Storage.get('messages') || [];
+        messages.push({
+            id: generateId(),
+            chatId: activeChat.id,
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            text: '📍 Location: ' + lat.toFixed(4) + ', ' + lon.toFixed(4),
+            locationUrl: mapUrl,
+            timestamp: new Date().toISOString(),
+            read: false,
+            status: 'sent'
+        });
+        Storage.set('messages', messages);
+        renderMessages(activeChat.id);
+        showToast('Location shared!', 'success');
+    }, function() {
+        showToast('Could not get location', 'error');
+    });
+};
+
+// 10. Group Polls
+window.showCreatePoll = function() {
+    if (!activeChat || !activeChat.isGroup) {
+        showToast('Only in group chats', 'error');
+        return;
+    }
+    
+    var html = '<div class="poll-modal">';
+    html += '<h3>Create Poll</h3>';
+    html += '<input type="text" id="poll-question" placeholder="Question...">';
+    html += '<input type="text" class="poll-option" placeholder="Option 1">';
+    html += '<input type="text" class="poll-option" placeholder="Option 2">';
+    html += '<button class="btn" onclick="addPollOption()">Add Option</button>';
+    html += '<button class="btn btn-primary" onclick="createPoll()">Create</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.addPollOption = function() {
+    var modal = document.querySelector('.poll-modal');
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'poll-option';
+    input.placeholder = 'Option ' + (modal.querySelectorAll('.poll-option').length + 1);
+    modal.insertBefore(input, modal.querySelector('.btn'));
+};
+
+window.createPoll = function() {
+    var question = document.getElementById('poll-question').value.trim();
+    var options = [];
+    document.querySelectorAll('.poll-option').forEach(function(input) {
+        if (input.value.trim()) options.push({ text: input.value.trim(), votes: [] });
+    });
+    
+    if (!question || options.length < 2) {
+        showToast('Need question + 2 options', 'error');
+        return;
+    }
+    
+    var pollId = generateId();
+    var messages = Storage.get('messages') || [];
+    messages.push({
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: '📊 Poll: ' + question,
+        pollId: pollId,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent'
+    });
+    Storage.set('messages', messages);
+    
+    var polls = Storage.get('polls') || [];
+    polls.push({ id: pollId, question: question, options: options });
+    Storage.set('polls', polls);
+    
+    closeModal();
+    renderMessages(activeChat.id);
+    showToast('Poll created!', 'success');
+};
+
+window.votePoll = function(pollId, optionIndex) {
+    var polls = Storage.get('polls') || [];
+    var poll = polls.find(function(p) { return p.id === pollId; });
+    if (!poll) return;
+    
+    var hasVoted = poll.options.some(function(opt) {
+        return opt.votes && opt.votes.indexOf(currentUser.id) !== -1;
+    });
+    
+    if (hasVoted) { showToast('Already voted', 'info'); return; }
+    
+    if (!poll.options[optionIndex].votes) poll.options[optionIndex].votes = [];
+    poll.options[optionIndex].votes.push(currentUser.id);
+    Storage.set('polls', polls);
+    
+    if (activeChat) renderMessages(activeChat.id);
+    showToast('Vote recorded!', 'success');
+};
+
+// 11. Link Previews
+window.renderLinkPreview = function(text) {
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    var match = text.match(urlRegex);
+    if (!match) return '';
+    
+    return '<div class="link-preview" onclick="window.open(\'' + escapeHtml(match[0]) + '\', \'_blank\')">' +
+        '<i class="fas fa-external-link-alt"></i>' +
+        '<span>' + escapeHtml(match[0].substring(0, 40)) + '...</span></div>';
+};
+
+// Initialize scheduled messages
+setTimeout(function() {
+    var scheduled = Storage.get('scheduledMessages') || [];
+    scheduled.forEach(function(msg) {
+        var delay = msg.scheduledTime - Date.now();
+        if (delay > 0 && delay < 86400000) {
+            setTimeout(function() { sendScheduledMessage(msg); }, delay);
+        }
+    });
+}, 2000);
+
+// ==========================================
 // Additional Mobile Features
 // ==========================================
 
