@@ -2663,6 +2663,23 @@ function showReactionDetails(messageId) {
     showModal(html);
 }
 
+// Initialize mobile features after DOM and all functions are defined
+setTimeout(function() {
+    try {
+        initHapticFeedback();
+        initDraftAutoSave();
+        initChatSearch();
+        initPWAInstall();
+        initOfflineMode();
+        initPushNotifications();
+        initLinkPreviews();
+        initImagePinchZoom();
+        console.log('Mobile features initialized');
+    } catch(e) {
+        console.error('Mobile features init error:', e);
+    }
+}, 1000);
+
 function clearReplyPreview() {
     currentReplyTo = null;
     var preview = document.getElementById('reply-preview');
@@ -14038,15 +14055,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize mobile features
     initPullToRefresh();
     initKeyboardHandling();
-    initHapticFeedback();
-    initDraftAutoSave();
-    initChatSearch();
-    initPWAInstall();
-    initOfflineMode();
-    initPushNotifications();
-    initLinkPreviews();
-    initReactionsSummary();
-    initImagePinchZoom();
     
     // Log mobile detection
     var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
