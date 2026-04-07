@@ -3173,6 +3173,7 @@ window.initScrollToBottom = function() {
 
 // Unread Badge on Tab
 window.updateTabBadge = function() {
+    if (!currentUser) return;
     var messages = Storage.get('messages') || [];
     var unread = messages.filter(function(m) { return !m.read && m.senderId !== currentUser.id; }).length;
     
@@ -13523,6 +13524,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     window.updateMusicDisplay = function() {
+        if (!currentUser) return;
         var music = Storage.get('userMusic_' + currentUser.id);
         var musicEl = document.getElementById('sidebar-music');
         
