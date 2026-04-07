@@ -7727,7 +7727,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(function(event) {
         document.addEventListener(event, function(e) {
             // Don't reset timer if clicking inside auto-logout warning
-            if (e && e.target && e.target.closest('#auto-logout-warning')) return;
+            if (e && e.target && typeof e.target.closest === 'function' && e.target.closest('#auto-logout-warning')) return;
             if (currentUser) resetAutoLogoutTimer();
         }, { passive: true });
     });
