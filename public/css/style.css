@@ -1709,6 +1709,34 @@ body {
     gap: 8px;
 }
 
+/* Call buttons styling */
+#voice-call-btn,
+#video-call-btn {
+    background: var(--bg-secondary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+#voice-call-btn:hover {
+    background: #4CAF50;
+    color: white;
+}
+
+#video-call-btn:hover {
+    background: var(--primary);
+    color: white;
+}
+
+#voice-call-btn i,
+#video-call-btn i {
+    font-size: 16px;
+}
+
 .chat-search-bar {
     padding: 12px 24px;
     background: var(--bg-primary);
