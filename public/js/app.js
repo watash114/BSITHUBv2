@@ -15326,3 +15326,559 @@ window.setChatNotificationSound = function(chatId, sound) {
 var connectionStyle = document.createElement('style');
 connectionStyle.textContent = '.connection-status{position:fixed;top:10px;right:10px;padding:6px 12px;border-radius:20px;font-size:12px;z-index:10000;transition:opacity 0.3s}.connection-status.online{background:#10b981;color:white}.connection-status.offline{background:#ef4444;color:white}';
 document.head.appendChild(connectionStyle);
+
+// ==========================================
+// 21. Message Scheduling
+// ==========================================
+window.showScheduleMessage = function() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var html = '<div class="schedule-modal"><h3>Schedule Message</h3>';
+    html += '<textarea id="schedule-text" placeholder="Type your message..." rows="3"></textarea>';
+    html += '<div class="schedule-datetime">';
+    html += '<label>Date:</label>';
+    html += '<input type="date" id="schedule-date" min="' + new Date().toISOString().split('T')[0] + '">';
+    html += '<label>Time:</label>';
+    html += '<input type="time" id="schedule-time">';
+    html += '</div>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="scheduleMessage()">Schedule</button>';
+    html += '</div></div>';
+    showModal(html);
+    
+    // Set default time to next hour
+    var now = new Date();
+    now.setHours(now.getHours() + 1, 0, 0, 0);
+    document.getElementById('schedule-date').value = now.toISOString().split('T')[0];
+    document.getElementById('schedule-time').value = now.toTimeString().slice(0, 5);
+};
+
+window.scheduleMessage = function() {
+    var text = document.getElementById('schedule-text').value.trim();
+    var date = document.getElementById('schedule-date').value;
+    var time = document.getElementById('schedule-time').value;
+    
+    if (!text) {
+        showToast('Enter a message', 'error');
+        return;
+    }
+    if (!date || !time) {
+        showToast('Select date and time', 'error');
+        return;
+    }
+    
+    var scheduledTime = new Date(date + 'T' + time);
+    if (scheduledTime <= new Date()) {
+        showToast('Time must be in the future', 'error');
+        return;
+    }
+    
+    var scheduled = Storage.get('scheduledMessages') || [];
+    scheduled.push({
+        id: generateId(),
+        chatId: activeChat.id,
+        text: text,
+        scheduledTime: scheduledTime.toISOString(),
+        senderId: currentUser.id,
+        senderName: currentUser.name
+    });
+    Storage.set('scheduledMessages', scheduled);
+    
+    closeModal();
+    showToast('Message scheduled for ' + scheduledTime.toLocaleString(), 'success');
+};
+
+// Check and send scheduled messages
+setInterval(function() {
+    var scheduled = Storage.get('scheduledMessages') || [];
+    var now = new Date();
+    var remaining = [];
+    
+    scheduled.forEach(function(msg) {
+        if (new Date(msg.scheduledTime) <= now) {
+            // Send the message
+            var messages = Storage.get('messages') || [];
+            messages.push({
+                id: generateId(),
+                chatId: msg.chatId,
+                senderId: msg.senderId,
+                senderName: msg.senderName,
+                text: msg.text,
+                timestamp: new Date().toISOString(),
+                read: false,
+                status: 'sent',
+                reactions: {},
+                edited: false,
+                starred: false,
+                replyTo: null,
+                forwarded: false,
+                scheduled: true
+            });
+            Storage.set('messages', messages);
+            showToast('Scheduled message sent!', 'success');
+        } else {
+            remaining.push(msg);
+        }
+    });
+    
+    if (remaining.length !== scheduled.length) {
+        Storage.set('scheduledMessages', remaining);
+        if (activeChat) renderMessages(activeChat.id);
+    }
+}, 10000);
+
+window.viewScheduledMessages = function() {
+    var scheduled = Storage.get('scheduledMessages') || [];
+    var myScheduled = scheduled.filter(function(m) { return m.senderId === currentUser.id; });
+    
+    if (myScheduled.length === 0) {
+        showToast('No scheduled messages', 'info');
+        return;
+    }
+    
+    var html = '<div class="scheduled-list"><h3>Scheduled Messages</h3>';
+    myScheduled.forEach(function(msg) {
+        html += '<div class="scheduled-item">';
+        html += '<div class="scheduled-text">' + escapeHtml(msg.text.substring(0, 50)) + '</div>';
+        html += '<div class="scheduled-time">📅 ' + new Date(msg.scheduledTime).toLocaleString() + '</div>';
+        html += '<button class="btn btn-small danger" onclick="cancelScheduledMessage(\'' + msg.id + '\')">Cancel</button>';
+        html += '</div>';
+    });
+    html += '</div>';
+    showModal(html);
+};
+
+window.cancelScheduledMessage = function(id) {
+    var scheduled = Storage.get('scheduledMessages') || [];
+    scheduled = scheduled.filter(function(m) { return m.id !== id; });
+    Storage.set('scheduledMessages', scheduled);
+    closeModal();
+    showToast('Scheduled message cancelled', 'info');
+};
+
+// ==========================================
+// 22. Chat Folders
+// ==========================================
+window.showChatFolders = function() {
+    var folders = Storage.get('chatFolders') || [];
+    var html = '<div class="folders-modal"><h3>Chat Folders</h3>';
+    html += '<div class="folder-list" id="folder-list">';
+    
+    if (folders.length === 0) {
+        html += '<p class="no-folders">No folders yet. Create one to organize your chats!</p>';
+    } else {
+        folders.forEach(function(folder) {
+            var chatCount = folder.chatIds ? folder.chatIds.length : 0;
+            html += '<div class="folder-item">';
+            html += '<div class="folder-icon">📁</div>';
+            html += '<div class="folder-info">';
+            html += '<div class="folder-name">' + escapeHtml(folder.name) + '</div>';
+            html += '<div class="folder-count">' + chatCount + ' chats</div>';
+            html += '</div>';
+            html += '<div class="folder-actions">';
+            html += '<button class="btn-icon" onclick="editFolder(\'' + folder.id + '\')" title="Edit"><i class="fas fa-edit"></i></button>';
+            html += '<button class="btn-icon danger" onclick="deleteFolder(\'' + folder.id + '\')" title="Delete"><i class="fas fa-trash"></i></button>';
+            html += '</div>';
+            html += '</div>';
+        });
+    }
+    
+    html += '</div>';
+    html += '<button class="btn btn-primary" onclick="showCreateFolder()"><i class="fas fa-plus"></i> Create Folder</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.showCreateFolder = function() {
+    var chats = Storage.get('chats') || [];
+    var myChats = chats.filter(function(c) { return c.participants.indexOf(currentUser.id) !== -1; });
+    var users = Storage.get('users') || [];
+    
+    var html = '<div class="create-folder-modal"><h3>Create Folder</h3>';
+    html += '<input type="text" id="folder-name" placeholder="Folder name (e.g., Work, Family, Friends)">';
+    html += '<div class="folder-chats">';
+    
+    myChats.forEach(function(chat) {
+        var name = chat.isGroup ? (chat.groupName || 'Group') : (users.find(function(u) { return u.id === chat.participants.find(function(p) { return p !== currentUser.id; }); }) || {}).name || 'Chat';
+        html += '<label class="folder-chat-item">';
+        html += '<input type="checkbox" value="' + chat.id + '"> ';
+        html += '<span>' + escapeHtml(name) + '</span>';
+        html += '</label>';
+    });
+    
+    html += '</div>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="showChatFolders()">Back</button>';
+    html += '<button class="btn btn-primary" onclick="createFolder()">Create</button>';
+    html += '</div></div>';
+    showModal(html);
+};
+
+window.createFolder = function() {
+    var name = document.getElementById('folder-name').value.trim();
+    if (!name) {
+        showToast('Enter folder name', 'error');
+        return;
+    }
+    
+    var chatIds = [];
+    document.querySelectorAll('.folder-chat-item input:checked').forEach(function(cb) {
+        chatIds.push(cb.value);
+    });
+    
+    var folders = Storage.get('chatFolders') || [];
+    folders.push({
+        id: generateId(),
+        name: name,
+        chatIds: chatIds,
+        createdAt: new Date().toISOString()
+    });
+    Storage.set('chatFolders', folders);
+    
+    closeModal();
+    showToast('Folder created!', 'success');
+    showChatFolders();
+};
+
+window.editFolder = function(folderId) {
+    var folders = Storage.get('chatFolders') || [];
+    var folder = folders.find(function(f) { return f.id === folderId; });
+    if (!folder) return;
+    
+    var chats = Storage.get('chats') || [];
+    var myChats = chats.filter(function(c) { return c.participants.indexOf(currentUser.id) !== -1; });
+    var users = Storage.get('users') || [];
+    
+    var html = '<div class="create-folder-modal"><h3>Edit Folder</h3>';
+    html += '<input type="text" id="folder-name" value="' + escapeHtml(folder.name) + '">';
+    html += '<div class="folder-chats">';
+    
+    myChats.forEach(function(chat) {
+        var name = chat.isGroup ? (chat.groupName || 'Group') : (users.find(function(u) { return u.id === chat.participants.find(function(p) { return p !== currentUser.id; }); }) || {}).name || 'Chat';
+        var checked = folder.chatIds && folder.chatIds.indexOf(chat.id) !== -1 ? 'checked' : '';
+        html += '<label class="folder-chat-item">';
+        html += '<input type="checkbox" value="' + chat.id + '" ' + checked + '> ';
+        html += '<span>' + escapeHtml(name) + '</span>';
+        html += '</label>';
+    });
+    
+    html += '</div>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="showChatFolders()">Back</button>';
+    html += '<button class="btn btn-primary" onclick="updateFolder(\'' + folderId + '\')">Save</button>';
+    html += '</div></div>';
+    showModal(html);
+};
+
+window.updateFolder = function(folderId) {
+    var name = document.getElementById('folder-name').value.trim();
+    if (!name) {
+        showToast('Enter folder name', 'error');
+        return;
+    }
+    
+    var chatIds = [];
+    document.querySelectorAll('.folder-chat-item input:checked').forEach(function(cb) {
+        chatIds.push(cb.value);
+    });
+    
+    var folders = Storage.get('chatFolders') || [];
+    var index = folders.findIndex(function(f) { return f.id === folderId; });
+    if (index !== -1) {
+        folders[index].name = name;
+        folders[index].chatIds = chatIds;
+        Storage.set('chatFolders', folders);
+    }
+    
+    closeModal();
+    showToast('Folder updated!', 'success');
+    showChatFolders();
+};
+
+window.deleteFolder = function(folderId) {
+    var folders = Storage.get('chatFolders') || [];
+    folders = folders.filter(function(f) { return f.id !== folderId; });
+    Storage.set('chatFolders', folders);
+    closeModal();
+    showToast('Folder deleted', 'info');
+};
+
+window.filterByFolder = function(folderId) {
+    var folders = Storage.get('chatFolders') || [];
+    var folder = folders.find(function(f) { return f.id === folderId; });
+    if (!folder) return;
+    
+    window.currentFolderFilter = folderId;
+    loadChats();
+    showToast('Showing: ' + folder.name, 'info');
+};
+
+window.clearFolderFilter = function() {
+    window.currentFolderFilter = null;
+    loadChats();
+    showToast('Showing all chats', 'info');
+};
+
+// ==========================================
+// 23. Quick Replies
+// ==========================================
+window.showQuickReplies = function() {
+    var quickReplies = Storage.get('quickReplies') || [
+        { id: '1', text: 'Thanks!', label: 'Thanks' },
+        { id: '2', text: "I'll get back to you soon.", label: 'Get back' },
+        { id: '3', text: 'Sounds good!', label: 'Sounds good' },
+        { id: '4', text: "I'm busy right now.", label: 'Busy' },
+        { id: '5', text: 'On my way!', label: 'On way' }
+    ];
+    
+    var html = '<div class="quick-replies-modal"><h3>Quick Replies</h3>';
+    html += '<div class="quick-reply-list">';
+    
+    quickReplies.forEach(function(qr) {
+        html += '<div class="quick-reply-item" onclick="useQuickReply(\'' + escapeHtml(qr.text.replace(/'/g, "\\'")) + '\')">';
+        html += '<div class="qr-label">' + escapeHtml(qr.label) + '</div>';
+        html += '<div class="qr-text">' + escapeHtml(qr.text) + '</div>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="showManageQuickReplies()">Manage</button>';
+    html += '<button class="btn" onclick="closeModal()">Close</button>';
+    html += '</div></div>';
+    showModal(html);
+};
+
+window.useQuickReply = function(text) {
+    var input = document.getElementById('chat-input');
+    if (input) {
+        input.value = text;
+        input.focus();
+    }
+    closeModal();
+};
+
+window.showManageQuickReplies = function() {
+    var quickReplies = Storage.get('quickReplies') || [
+        { id: '1', text: 'Thanks!', label: 'Thanks' },
+        { id: '2', text: "I'll get back to you soon.", label: 'Get back' },
+        { id: '3', text: 'Sounds good!', label: 'Sounds good' },
+        { id: '4', text: "I'm busy right now.", label: 'Busy' },
+        { id: '5', text: 'On my way!', label: 'On way' }
+    ];
+    
+    var html = '<div class="manage-qr-modal"><h3>Manage Quick Replies</h3>';
+    html += '<div class="qr-manage-list" id="qr-manage-list">';
+    
+    quickReplies.forEach(function(qr) {
+        html += '<div class="qr-manage-item">';
+        html += '<input type="text" value="' + escapeHtml(qr.label) + '" class="qr-label-input" data-id="' + qr.id + '">';
+        html += '<input type="text" value="' + escapeHtml(qr.text) + '" class="qr-text-input" data-id="' + qr.id + '">';
+        html += '<button class="btn-icon danger" onclick="deleteQuickReply(\'' + qr.id + '\')"><i class="fas fa-trash"></i></button>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    html += '<button class="btn" onclick="addQuickReply()"><i class="fas fa-plus"></i> Add</button>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="showQuickReplies()">Back</button>';
+    html += '<button class="btn btn-primary" onclick="saveQuickReplies()">Save</button>';
+    html += '</div></div>';
+    showModal(html);
+};
+
+window.addQuickReply = function() {
+    var list = document.getElementById('qr-manage-list');
+    var id = generateId();
+    var html = '<div class="qr-manage-item">';
+    html += '<input type="text" placeholder="Label" class="qr-label-input" data-id="' + id + '">';
+    html += '<input type="text" placeholder="Message text" class="qr-text-input" data-id="' + id + '">';
+    html += '<button class="btn-icon danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>';
+    html += '</div>';
+    list.insertAdjacentHTML('beforeend', html);
+};
+
+window.deleteQuickReply = function(id) {
+    var item = event.target.closest('.qr-manage-item');
+    if (item) item.remove();
+};
+
+window.saveQuickReplies = function() {
+    var quickReplies = [];
+    document.querySelectorAll('.qr-manage-item').forEach(function(item) {
+        var label = item.querySelector('.qr-label-input').value.trim();
+        var text = item.querySelector('.qr-text-input').value.trim();
+        if (label && text) {
+            quickReplies.push({
+                id: item.querySelector('.qr-label-input').dataset.id || generateId(),
+                label: label,
+                text: text
+            });
+        }
+    });
+    Storage.set('quickReplies', quickReplies);
+    closeModal();
+    showToast('Quick replies saved!', 'success');
+};
+
+// ==========================================
+// 24. Pinned Messages
+// ==========================================
+window.showPinnedMessages = function() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var messages = Storage.get('messages') || [];
+    var pinned = messages.filter(function(m) { return m.chatId === activeChat.id && m.pinned; });
+    
+    if (pinned.length === 0) {
+        showToast('No pinned messages', 'info');
+        return;
+    }
+    
+    var html = '<div class="pinned-messages-modal"><h3>📌 Pinned Messages</h3>';
+    
+    pinned.forEach(function(msg) {
+        html += '<div class="pinned-message-item">';
+        html += '<div class="pinned-text">' + escapeHtml(msg.text) + '</div>';
+        html += '<div class="pinned-meta">' + formatTime(msg.timestamp) + '</div>';
+        html += '<button class="btn btn-small" onclick="unpinMessage(\'' + msg.id + '\')">Unpin</button>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    showModal(html);
+};
+
+window.pinMessage = function(messageId) {
+    var messages = Storage.get('messages') || [];
+    var index = messages.findIndex(function(m) { return m.id === messageId; });
+    
+    if (index === -1) return;
+    
+    messages[index].pinned = !messages[index].pinned;
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(messages[index]);
+    }
+    
+    if (activeChat) renderMessages(activeChat.id);
+    showToast(messages[index].pinned ? 'Message pinned!' : 'Message unpinned', 'success');
+};
+
+window.unpinMessage = function(messageId) {
+    pinMessage(messageId);
+    closeModal();
+};
+
+// ==========================================
+// 25. User Search
+// ==========================================
+window.showUserSearch = function() {
+    var html = '<div class="user-search-modal"><h3>Find Users</h3>';
+    html += '<div class="search-input-wrapper">';
+    html += '<i class="fas fa-search"></i>';
+    html += '<input type="text" id="user-search-input" placeholder="Search by name or username..." oninput="searchUsers()">';
+    html += '</div>';
+    html += '<div class="user-search-results" id="user-search-results">';
+    html += '<p class="search-hint">Type to search for users</p>';
+    html += '</div>';
+    html += '</div>';
+    showModal(html);
+    
+    setTimeout(function() {
+        document.getElementById('user-search-input').focus();
+    }, 100);
+};
+
+window.searchUsers = function() {
+    var query = document.getElementById('user-search-input').value.trim().toLowerCase();
+    var results = document.getElementById('user-search-results');
+    
+    if (!query) {
+        results.innerHTML = '<p class="search-hint">Type to search for users</p>';
+        return;
+    }
+    
+    var users = Storage.get('users') || [];
+    var filtered = users.filter(function(u) {
+        return u.id !== currentUser.id && 
+               u.status === 'active' &&
+               (u.name.toLowerCase().includes(query) || 
+                u.username.toLowerCase().includes(query) ||
+                u.email.toLowerCase().includes(query));
+    }).slice(0, 10);
+    
+    if (filtered.length === 0) {
+        results.innerHTML = '<p class="no-results">No users found</p>';
+        return;
+    }
+    
+    var html = '';
+    filtered.forEach(function(user) {
+        var existingChat = findExistingChat(user.id);
+        html += '<div class="user-search-item">';
+        html += '<div class="user-avatar-small">' + (user.avatar ? '<img src="' + user.avatar + '">' : '<i class="fas fa-user"></i>') + '</div>';
+        html += '<div class="user-info">';
+        html += '<div class="user-name">' + escapeHtml(user.name) + '</div>';
+        html += '<div class="user-username">@' + escapeHtml(user.username) + '</div>';
+        html += '</div>';
+        if (existingChat) {
+            html += '<button class="btn btn-small" onclick="openChatFromSearch(\'' + existingChat.id + '\', \'' + user.id + '\')">Chat</button>';
+        } else {
+            html += '<button class="btn btn-small btn-primary" onclick="startChatWithUser(\'' + user.id + '\')"><i class="fas fa-plus"></i> Add</button>';
+        }
+        html += '</div>';
+    });
+    
+    results.innerHTML = html;
+};
+
+window.findExistingChat = function(userId) {
+    var chats = Storage.get('chats') || [];
+    return chats.find(function(c) {
+        return !c.isGroup && 
+               c.participants.indexOf(currentUser.id) !== -1 && 
+               c.participants.indexOf(userId) !== -1;
+    });
+};
+
+window.startChatWithUser = function(userId) {
+    var chats = Storage.get('chats') || [];
+    var existing = findExistingChat(userId);
+    
+    if (existing) {
+        openChatFromSearch(existing.id, userId);
+        return;
+    }
+    
+    var newChat = {
+        id: generateId(),
+        participants: [currentUser.id, userId],
+        createdAt: new Date().toISOString(),
+        pinned: false,
+        muted: false,
+        archived: false,
+        isGroup: false
+    };
+    
+    chats.push(newChat);
+    Storage.set('chats', chats);
+    
+    closeModal();
+    loadChats();
+    openChat(newChat.id, userId);
+    showToast('Chat started!', 'success');
+};
+
+window.openChatFromSearch = function(chatId, userId) {
+    closeModal();
+    openChat(chatId, userId);
+};

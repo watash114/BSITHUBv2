@@ -299,6 +299,12 @@
                             <div class="chat-header">
                                 <h2>Messages</h2>
                                 <div class="chat-header-actions">
+                                    <button class="btn-icon" onclick="showUserSearch()" title="Find Users">
+                                        <i class="fas fa-user-plus"></i>
+                                    </button>
+                                    <button class="btn-icon" onclick="showChatFolders()" title="Chat Folders">
+                                        <i class="fas fa-folder"></i>
+                                    </button>
                                     <button class="btn-icon" id="archived-chats-btn" title="Archived">
                                         <i class="fas fa-archive"></i>
                                     </button>
@@ -415,6 +421,15 @@
                                     </button>
                                     <button class="btn-icon" title="Emoji" id="emoji-btn">
                                         <i class="fas fa-smile"></i>
+                                    </button>
+                                    <button class="btn-icon" onclick="showQuickReplies()" title="Quick Replies">
+                                        <i class="fas fa-bolt"></i>
+                                    </button>
+                                    <button class="btn-icon" onclick="showScheduleMessage()" title="Schedule Message">
+                                        <i class="fas fa-clock"></i>
+                                    </button>
+                                    <button class="btn-icon" onclick="showPinnedMessages()" title="Pinned Messages">
+                                        <i class="fas fa-thumbtack"></i>
                                     </button>
                                     <div class="emoji-picker" id="emoji-picker" style="display: none;">
                                         <div class="emoji-categories">
