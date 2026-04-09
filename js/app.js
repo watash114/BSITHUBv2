@@ -70,14 +70,38 @@ function initRealtime() {
 }
 
 function handleNewMessages() {
-    if (!currentUser || !activeChat) return;
+    if (!currentUser) return;
     
     var messages = Storage.get('messages') || [];
-    var chatMessages = messages.filter(function(m) { return m.chatId === activeChat.id; });
     
-    if (chatMessages.length !== lastMessageCount) {
-        lastMessageCount = chatMessages.length;
-        renderMessages(activeChat.id);
+    // Check for new messages across all chats
+    var allMyMessages = messages.filter(function(m) {
+        var chats = Storage.get('chats') || [];
+        var chat = chats.find(function(c) { return c.id === m.chatId; });
+        return chat && chat.participants.indexOf(currentUser.id) !== -1;
+    });
+    
+    var newMessagesCount = allMyMessages.length;
+    
+    // If we have new messages
+    if (newMessagesCount !== lastMessageCount) {
+        // Find the newest message
+        if (allMyMessages.length > 0) {
+            var newestMsg = allMyMessages[allMyMessages.length - 1];
+            
+            // Show notification if message is from someone else and not in active chat
+            if (newestMsg.senderId !== currentUser.id) {
+                if (!activeChat || activeChat.id !== newestMsg.chatId) {
+                    notifyNewMessage(newestMsg);
+                }
+            }
+        }
+        
+        lastMessageCount = newMessagesCount;
+        
+        if (activeChat) {
+            renderMessages(activeChat.id);
+        }
         updateChatList();
     }
 }
@@ -1728,6 +1752,60 @@ function scrollToMessage(messageId) {
             msgEl.classList.remove('highlight-message');
         }, 2000);
     }
+}
+
+// ==========================================
+// Browser Notifications
+// ==========================================
+function showBrowserNotification(title, body, icon) {
+    // Check if notifications are enabled
+    var settings = Storage.get('settings') || {};
+    if (settings.browserNotifications === false) return;
+    
+    // Check if permission is granted
+    if (Notification.permission === 'granted') {
+        var notification = new Notification(title, {
+            body: body,
+            icon: icon || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23667eea" width="100" height="100" rx="20"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">B</text></svg>',
+            badge: icon,
+            tag: 'bsithub-message',
+            requireInteraction: false
+        });
+        
+        notification.onclick = function() {
+            window.focus();
+            notification.close();
+        };
+        
+        setTimeout(function() {
+            notification.close();
+        }, 5000);
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function(permission) {
+            if (permission === 'granted') {
+                showBrowserNotification(title, body, icon);
+            }
+        });
+    }
+}
+
+function notifyNewMessage(message) {
+    if (!currentUser) return;
+    if (message.senderId === currentUser.id) return;
+    
+    // Don't notify if chat is active and visible
+    if (activeChat && activeChat.id === message.chatId) return;
+    
+    var users = Storage.get('users') || [];
+    var sender = users.find(function(u) { return u.id === message.senderId; });
+    var senderName = sender ? sender.name : 'Someone';
+    
+    var messageText = message.text || '';
+    if (message.gifUrl) messageText = '[GIF]';
+    if (message.fileData) messageText = '[File]';
+    if (message.audioData) messageText = '[Voice Message]';
+    
+    showBrowserNotification(senderName, messageText);
 }
 
 function getFileIcon(fileName) {
