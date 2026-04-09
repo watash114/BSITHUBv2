@@ -1,5 +1,5 @@
 // BSITHUB Service Worker
-const CACHE_NAME = 'bsithub-v3.0.0';
+const CACHE_NAME = 'bsithub-v3.0.1';
 
 // Install event
 self.addEventListener('install', function(event) {
