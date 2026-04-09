@@ -16092,10 +16092,10 @@ window.showAutoReplySettings = function() {
     html += '<textarea id="auto-reply-message" placeholder="Auto-reply message..." rows="3">' + escapeHtml(autoReply.message) + '</textarea>';
     html += '<div class="auto-reply-templates">';
     html += '<h4>Quick Templates</h4>';
-    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m currently busy. I\\'ll get back to you soon!\')">I\'m busy, will reply soon</div>';
-    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m away from my phone. Leave a message!\')">Away from phone</div>';
-    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m in a meeting. I\\'ll respond when I\\'m free.\')">In a meeting</div>';
-    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m sleeping. I\\'ll reply tomorrow!\')">Sleeping</div>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(this.textContent)">I am currently busy. I will get back to you soon!</div>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(this.textContent)">I am away from my phone. Leave a message!</div>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(this.textContent)">I am in a meeting. I will respond when I am free.</div>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(this.textContent)">I am sleeping. I will reply tomorrow!</div>';
     html += '</div>';
     html += '<div class="modal-buttons">';
     html += '<button class="btn" onclick="closeModal()">Cancel</button>';
