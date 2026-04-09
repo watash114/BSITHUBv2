@@ -7217,86 +7217,121 @@ document.addEventListener('DOMContentLoaded', function() {
     var currentCommentsPostId = null;
 
     function initFeed() {
-        var composerTrigger = document.getElementById('composer-trigger');
-        var composerExpanded = document.getElementById('composer-expanded');
         var postContent = document.getElementById('post-content');
         var postSubmitBtn = document.getElementById('post-submit-btn');
         var postImageBtn = document.getElementById('post-image-btn');
         var postImageInput = document.getElementById('post-image-input');
         var removeImageBtn = document.getElementById('remove-composer-image');
+        var postFeelingBtn = document.getElementById('post-feeling-btn');
+        var postLocationBtn = document.getElementById('post-location-btn');
+        var refreshFeedBtn = document.getElementById('refresh-feed-btn');
 
-        if (!composerTrigger) return;
+        if (!postContent) return;
 
-        // Expand composer on click
-        composerTrigger.onclick = function() {
-            composerTrigger.style.display = 'none';
-            composerExpanded.style.display = 'block';
-            postContent.focus();
-            updateComposerAvatar();
-        };
+        var selectedFeeling = '';
 
-        // Collapse if empty and loses focus
-        postContent.onblur = function() {
-            setTimeout(function() {
-                if (!postContent.value.trim() && !feedPostImageData) {
-                    composerExpanded.style.display = 'none';
-                    composerTrigger.style.display = 'flex';
-                }
-            }, 200);
-        };
-
-        // Enable/disable post button
+        // Auto-resize textarea
         postContent.oninput = function() {
-            postSubmitBtn.disabled = !postContent.value.trim() && !feedPostImageData;
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            postSubmitBtn.disabled = !this.value.trim() && !feedPostImageData;
         };
 
         // Image upload
-        postImageBtn.onclick = function() {
-            postImageInput.click();
-        };
+        if (postImageBtn) {
+            postImageBtn.onclick = function() {
+                postImageInput.click();
+            };
+        }
 
-        postImageInput.onchange = function(e) {
-            var file = e.target.files[0];
-            if (!file) return;
-            var reader = new FileReader();
-            reader.onload = function(ev) {
-                feedPostImageData = ev.target.result;
-                document.getElementById('composer-preview-img').src = feedPostImageData;
-                document.getElementById('composer-image-preview').style.display = 'block';
+        if (postImageInput) {
+            postImageInput.onchange = function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    feedPostImageData = ev.target.result;
+                    document.getElementById('composer-preview-img').src = feedPostImageData;
+                    document.getElementById('composer-image-preview').style.display = 'block';
+                    postSubmitBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+                postImageInput.value = '';
+            };
+        }
+
+        if (removeImageBtn) {
+            removeImageBtn.onclick = function() {
+                feedPostImageData = null;
+                document.getElementById('composer-image-preview').style.display = 'none';
+                postSubmitBtn.disabled = !postContent.value.trim();
+            };
+        }
+
+        // Feeling selector
+        if (postFeelingBtn) {
+            postFeelingBtn.onclick = function() {
+                var feelingPanel = document.getElementById('composer-feeling');
+                var locationPanel = document.getElementById('composer-location');
+                if (feelingPanel) {
+                    feelingPanel.style.display = feelingPanel.style.display === 'none' ? 'block' : 'none';
+                    if (locationPanel) locationPanel.style.display = 'none';
+                }
+            };
+        }
+
+        // Location selector
+        if (postLocationBtn) {
+            postLocationBtn.onclick = function() {
+                var locationPanel = document.getElementById('composer-location');
+                var feelingPanel = document.getElementById('composer-feeling');
+                if (locationPanel) {
+                    locationPanel.style.display = locationPanel.style.display === 'none' ? 'block' : 'none';
+                    if (feelingPanel) feelingPanel.style.display = 'none';
+                }
+            };
+        }
+
+        // Feeling buttons
+        document.querySelectorAll('.feeling-btn').forEach(function(btn) {
+            btn.onclick = function() {
+                selectedFeeling = this.dataset.feeling;
+                postFeelingBtn.innerHTML = '<i class="fas fa-smile"></i><span>' + selectedFeeling + '</span>';
+                document.getElementById('composer-feeling').style.display = 'none';
                 postSubmitBtn.disabled = false;
             };
-            reader.readAsDataURL(file);
-            postImageInput.value = '';
-        };
+        });
 
-        removeImageBtn.onclick = function() {
-            feedPostImageData = null;
-            document.getElementById('composer-image-preview').style.display = 'none';
-            postSubmitBtn.disabled = !postContent.value.trim();
-        };
+        // Refresh feed
+        if (refreshFeedBtn) {
+            refreshFeedBtn.onclick = function() {
+                loadFeed();
+                showToast('Feed refreshed', 'info');
+            };
+        }
 
         // Submit post
-        postSubmitBtn.onclick = function() {
-            var content = postContent.value.trim();
-            if (!content && !feedPostImageData) return;
-            createPost(content, feedPostImageData);
-        };
+        if (postSubmitBtn) {
+            postSubmitBtn.onclick = function() {
+                var content = postContent.value.trim();
+                var locationInput = document.getElementById('post-location-input');
+                var selectedLocation = locationInput ? locationInput.value.trim() : '';
+                
+                if (!content && !feedPostImageData && !selectedFeeling) return;
+                createPost(content, feedPostImageData, selectedFeeling, selectedLocation);
+                
+                // Reset
+                selectedFeeling = '';
+                if (postFeelingBtn) postFeelingBtn.innerHTML = '<i class="fas fa-smile"></i><span>Feeling</span>';
+                if (locationInput) locationInput.value = '';
+            };
+        }
 
         // Load feed
         loadFeed();
     }
 
-    function updateComposerAvatar() {
-        var avatar = document.getElementById('composer-avatar');
-        if (!avatar || !currentUser) return;
-        if (currentUser.avatar) {
-            avatar.innerHTML = '<img src="' + escapeHtml(currentUser.avatar) + '" alt="Avatar">';
-        } else {
-            avatar.innerHTML = '<i class="fas fa-user"></i>';
-        }
-    }
-
-    function createPost(content, imageData) {
+    function createPost(content, imageData, feeling, location) {
         if (!currentUser) return;
 
         var post = {
@@ -7306,6 +7341,8 @@ document.addEventListener('DOMContentLoaded', function() {
             userAvatar: currentUser.avatar || null,
             content: content || '',
             imageUrl: imageData || null,
+            feeling: feeling || '',
+            location: location || '',
             visibility: 'public',
             likes: {},
             comments: [],
@@ -7317,17 +7354,11 @@ document.addEventListener('DOMContentLoaded', function() {
         posts.unshift(post);
         Storage.set('posts', posts);
 
-        // Save to Supabase database
-        if (DB.isReady()) {
-            DB.createPost(post);
-        }
-
         // Reset composer
         document.getElementById('post-content').value = '';
+        document.getElementById('post-content').style.height = 'auto';
         feedPostImageData = null;
         document.getElementById('composer-image-preview').style.display = 'none';
-        document.getElementById('composer-expanded').style.display = 'none';
-        document.getElementById('composer-trigger').style.display = 'flex';
         document.getElementById('post-submit-btn').disabled = true;
 
         // Re-render
@@ -7337,9 +7368,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (firebaseDb) {
             firebaseDb.ref('posts/' + post.id).set(post);
         }
-
-        showToast('Posting published!', 'success');
-    }
 
         showToast('Posting published!', 'success');
     }

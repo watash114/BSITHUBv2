@@ -436,35 +436,98 @@
                 <section id="feed-section" class="content-section">
                     <div class="section-header">
                         <h2><i class="fas fa-clipboard-list"></i> Postings</h2>
+                        <div class="header-actions">
+                            <button class="btn-icon" id="refresh-feed-btn" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="feed-container">
                         <!-- Post Composer -->
-                        <div class="post-composer">
-                            <div class="composer-header">
-                                <div class="composer-avatar" id="composer-avatar">
+                        <div class="post-composer-card">
+                            <div class="composer-top">
+                                <div class="composer-avatar-large">
                                     <i class="fas fa-user"></i>
                                 </div>
-                                <div class="composer-input-wrapper" id="composer-trigger">
-                                    <span class="composer-placeholder">What's on your mind?</span>
+                                <div class="composer-input-area">
+                                    <textarea id="post-content" placeholder="What's on your mind? Share your thoughts..." rows="1" class="composer-textarea"></textarea>
                                 </div>
                             </div>
-                            <div class="composer-expanded" id="composer-expanded" style="display: none;">
-                                <textarea id="post-content" placeholder="What's on your mind?" rows="3"></textarea>
-                                <div class="composer-image-preview" id="composer-image-preview" style="display: none;">
+                            <div class="composer-image-preview" id="composer-image-preview" style="display: none;">
+                                <div class="preview-container">
                                     <img id="composer-preview-img" src="" alt="Preview">
-                                    <button class="btn-icon remove-image" id="remove-composer-image"><i class="fas fa-times"></i></button>
-                                </div>
-                                <div class="composer-actions">
-                                    <div class="composer-tools">
-                                        <button class="btn-icon" title="Photo" id="post-image-btn">
-                                            <i class="fas fa-image"></i>
-                                        </button>
-                                        <input type="file" id="post-image-input" accept="image/*" style="display: none;">
-                                    </div>
-                                    <button class="btn btn-primary" id="post-submit-btn" disabled>
-                                        <i class="fas fa-paper-plane"></i> Post
+                                    <button class="btn-icon remove-image-btn" id="remove-composer-image">
+                                        <i class="fas fa-times"></i>
                                     </button>
                                 </div>
+                            </div>
+                            <div class="composer-divider"></div>
+                            <div class="composer-bottom">
+                                <div class="composer-tools-grid">
+                                    <button class="composer-tool-btn" title="Photo/Video" id="post-image-btn">
+                                        <i class="fas fa-image"></i>
+                                        <span>Photo</span>
+                                    </button>
+                                    <input type="file" id="post-image-input" accept="image/*,video/*" style="display: none;">
+                                    <button class="composer-tool-btn" title="Feeling/Activity" id="post-feeling-btn">
+                                        <i class="fas fa-smile"></i>
+                                        <span>Feeling</span>
+                                    </button>
+                                    <button class="composer-tool-btn" title="Location" id="post-location-btn">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>Location</span>
+                                    </button>
+                                    <button class="composer-tool-btn" title="Tag Friends" id="post-tag-btn">
+                                        <i class="fas fa-user-tag"></i>
+                                        <span>Tag</span>
+                                    </button>
+                                </div>
+                                <button class="btn btn-primary btn-post" id="post-submit-btn" disabled>
+                                    <i class="fas fa-paper-plane"></i> Post
+                                </button>
+                            </div>
+                            <div class="composer-extras" id="composer-feeling" style="display: none;">
+                                <div class="feeling-grid">
+                                    <button class="feeling-btn" data-feeling="😊 Happy">😊 Happy</button>
+                                    <button class="feeling-btn" data-feeling="😢 Sad">😢 Sad</button>
+                                    <button class="feeling-btn" data-feeling="😍 Loved">😍 Loved</button>
+                                    <button class="feeling-btn" data-feeling="🎉 Excited">🎉 Excited</button>
+                                    <button class="feeling-btn" data-feeling="😴 Tired">😴 Tired</button>
+                                    <button class="feeling-btn" data-feeling="🤔 Thinking">🤔 Thinking</button>
+                                    <button class="feeling-btn" data-feeling="😎 Cool">😎 Cool</button>
+                                    <button class="feeling-btn" data-feeling="🔥 Fire">🔥 Fire</button>
+                                </div>
+                            </div>
+                            <div class="composer-extras" id="composer-location" style="display: none;">
+                                <input type="text" id="post-location-input" placeholder="Where are you?" class="location-input">
+                            </div>
+                        </div>
+
+                        <!-- Stories/Highlights -->
+                        <div class="stories-bar">
+                            <div class="story-add">
+                                <div class="story-avatar-add">
+                                    <i class="fas fa-plus"></i>
+                                </div>
+                                <span>Add Story</span>
+                            </div>
+                            <div class="story-item">
+                                <div class="story-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span>John</span>
+                            </div>
+                            <div class="story-item">
+                                <div class="story-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span>Jane</span>
+                            </div>
+                            <div class="story-item">
+                                <div class="story-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span>Admin</span>
                             </div>
                         </div>
 
