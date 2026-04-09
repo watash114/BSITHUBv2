@@ -8763,3 +8763,256 @@ body {
         height: 50px;
     }
 }
+
+/* ==========================================
+   Poll Styles
+   ========================================== */
+.poll-modal {
+    padding: 10px;
+}
+
+.poll-modal h3 {
+    margin-bottom: 15px;
+}
+
+.poll-modal input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+#poll-options {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.poll-option-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.poll-message {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 15px;
+    margin: 5px 0;
+}
+
+.poll-question {
+    font-weight: 600;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+.poll-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.poll-option:hover {
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.poll-option.voted {
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.15);
+}
+
+.poll-option-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.poll-option-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.poll-option-text {
+    flex: 1;
+    font-size: 14px;
+}
+
+.poll-option-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    min-width: 30px;
+    text-align: right;
+}
+
+.poll-total {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 10px;
+}
+
+/* ==========================================
+   Sticker Styles
+   ========================================== */
+.sticker-modal {
+    padding: 10px;
+}
+
+.sticker-modal h3 {
+    margin-bottom: 15px;
+}
+
+.sticker-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.sticker-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.sticker-tab:hover {
+    background: var(--bg-secondary);
+}
+
+.sticker-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.sticker-item {
+    font-size: 32px;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.sticker-item:hover {
+    background: var(--bg-secondary);
+    transform: scale(1.2);
+}
+
+.message-emoji-large {
+    font-size: 48px;
+    line-height: 1.2;
+}
+
+/* ==========================================
+   Voice/Video Call Styles
+   ========================================== */
+.call-modal {
+    text-align: center;
+    padding: 30px 20px;
+}
+
+.call-avatar-large {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+    font-size: 40px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+    50% { box-shadow: 0 0 0 20px rgba(102, 126, 234, 0); }
+}
+
+.call-modal h3 {
+    margin-bottom: 10px;
+    font-size: 20px;
+}
+
+.call-status {
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.call-timer {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 30px;
+}
+
+.call-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.call-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.call-end {
+    background: #e74c3c;
+    color: white;
+}
+
+.call-end:hover {
+    background: #c0392b;
+    transform: scale(1.1);
+}
+
+/* ==========================================
+   Disappearing Messages Badge
+   ========================================== */
+.disappearing-badge {
+    font-size: 11px;
+    background: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    margin-left: 10px;
+}

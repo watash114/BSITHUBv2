@@ -334,7 +334,10 @@
                                         </div>
                                     </div>
                                     <div class="chat-actions">
-                                        <button class="btn-icon" id="video-call-btn" title="Video Call">
+                                        <button class="btn-icon" id="voice-call-btn" title="Voice Call" onclick="startVoiceCall()">
+                                            <i class="fas fa-phone"></i>
+                                        </button>
+                                        <button class="btn-icon" id="video-call-btn" title="Video Call" onclick="startVideoCall()">
                                             <i class="fas fa-video"></i>
                                         </button>
                                         <button class="btn-icon" id="quick-actions-btn" title="Quick Actions">
@@ -402,6 +405,12 @@
                                     </button>
                                     <button class="btn-icon" title="Emoji" id="emoji-btn">
                                         <i class="fas fa-smile"></i>
+                                    </button>
+                                    <button class="btn-icon" title="Stickers" id="sticker-btn">
+                                        <i class="fas fa-sticky-note"></i>
+                                    </button>
+                                    <button class="btn-icon" title="Create Poll" id="poll-btn">
+                                        <i class="fas fa-poll"></i>
                                     </button>
                                     <div class="emoji-picker" id="emoji-picker" style="display: none;">
                                         <div class="emoji-categories">

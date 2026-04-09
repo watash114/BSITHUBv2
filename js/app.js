@@ -1672,6 +1672,31 @@ function renderMessages(chatId) {
             html += '<span class="file-name">' + escapeHtml(msg.fileName || 'file') + '</span>';
             html += '</a></div>';
         }
+        // Check for poll
+        else if (msg.poll) {
+            html += '<div class="poll-message">';
+            html += '<div class="poll-question">📊 ' + escapeHtml(msg.poll.question) + '</div>';
+            
+            var totalVotes = 0;
+            msg.poll.options.forEach(function(opt) {
+                totalVotes += Object.keys(opt.votes || {}).length;
+            });
+            
+            msg.poll.options.forEach(function(opt, idx) {
+                var voteCount = Object.keys(opt.votes || {}).length;
+                var hasVoted = opt.votes && opt.votes[currentUser.id];
+                var percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                
+                html += '<div class="poll-option ' + (hasVoted ? 'voted' : '') + '" onclick="votePoll(\'' + msg.id + '\', ' + idx + ')">';
+                html += '<span class="poll-option-text">' + escapeHtml(opt.text) + '</span>';
+                html += '<div class="poll-option-bar"><div class="poll-option-fill" style="width:' + percentage + '%"></div></div>';
+                html += '<span class="poll-option-count">' + voteCount + '</span>';
+                html += '</div>';
+            });
+            
+            html += '<div class="poll-total">' + totalVotes + ' vote' + (totalVotes !== 1 ? 's' : '') + '</div>';
+            html += '</div>';
+        }
         // Regular text
         else {
             html += '<div class="message-text">' + escapeHtml(msg.text) + '</div>';
@@ -2125,6 +2150,399 @@ function confirmForward(messageId, toChatId) {
     closeModal();
     showToast('Message forwarded', 'success');
     loadChats();
+}
+
+// ==========================================
+// Disappearing Messages
+// ==========================================
+function setDisappearingMessages(chatId, duration) {
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === chatId; });
+    if (!chat) return;
+    
+    chat.disappearingDuration = duration; // 'off', '1h', '24h', '7d', '30d'
+    Storage.set('chats', chats);
+    
+    showToast('Disappearing messages: ' + (duration === 'off' ? 'Off' : duration), 'success');
+}
+
+function checkDisappearingMessages() {
+    var messages = Storage.get('messages') || [];
+    var chats = Storage.get('chats') || [];
+    var now = Date.now();
+    var changed = false;
+    
+    messages = messages.filter(function(msg) {
+        var chat = chats.find(function(c) { return c.id === msg.chatId; });
+        if (!chat || !chat.disappearingDuration || chat.disappearingDuration === 'off') {
+            return true;
+        }
+        
+        var msgTime = new Date(msg.timestamp).getTime();
+        var duration = 0;
+        
+        switch(chat.disappearingDuration) {
+            case '1h': duration = 60 * 60 * 1000; break;
+            case '24h': duration = 24 * 60 * 60 * 1000; break;
+            case '7d': duration = 7 * 24 * 60 * 60 * 1000; break;
+            case '30d': duration = 30 * 24 * 60 * 60 * 1000; break;
+            default: return true;
+        }
+        
+        if (now - msgTime > duration) {
+            changed = true;
+            return false;
+        }
+        return true;
+    });
+    
+    if (changed) {
+        Storage.set('messages', messages);
+        if (activeChat) {
+            renderMessages(activeChat.id);
+        }
+    }
+}
+
+// Run disappearing messages check every minute
+setInterval(checkDisappearingMessages, 60000);
+
+// ==========================================
+// Polls
+// ==========================================
+function showCreatePoll() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var html = '<div class="poll-modal"><h3>Create Poll</h3>';
+    html += '<input type="text" id="poll-question" placeholder="Ask a question...">';
+    html += '<div id="poll-options">';
+    html += '<input type="text" class="poll-option-input" placeholder="Option 1">';
+    html += '<input type="text" class="poll-option-input" placeholder="Option 2">';
+    html += '</div>';
+    html += '<button class="btn" onclick="addPollOption()"><i class="fas fa-plus"></i> Add Option</button>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="createPoll()">Create Poll</button>';
+    html += '</div></div>';
+    showModal(html);
+}
+
+function addPollOption() {
+    var container = document.getElementById('poll-options');
+    var count = container.querySelectorAll('.poll-option-input').length;
+    if (count >= 10) {
+        showToast('Maximum 10 options', 'info');
+        return;
+    }
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'poll-option-input';
+    input.placeholder = 'Option ' + (count + 1);
+    container.appendChild(input);
+}
+
+function createPoll() {
+    var question = document.getElementById('poll-question').value.trim();
+    var optionInputs = document.querySelectorAll('.poll-option-input');
+    var options = [];
+    
+    optionInputs.forEach(function(input) {
+        var text = input.value.trim();
+        if (text) options.push({ text: text, votes: {} });
+    });
+    
+    if (!question) {
+        showToast('Enter a question', 'error');
+        return;
+    }
+    
+    if (options.length < 2) {
+        showToast('Add at least 2 options', 'error');
+        return;
+    }
+    
+    var messages = Storage.get('messages') || [];
+    var pollMessage = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: '📊 Poll: ' + question,
+        poll: {
+            question: question,
+            options: options
+        },
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    
+    messages.push(pollMessage);
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(pollMessage);
+    }
+    
+    closeModal();
+    renderMessages(activeChat.id);
+    showToast('Poll created!', 'success');
+}
+
+function votePoll(messageId, optionIndex) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message || !message.poll) return;
+    
+    // Remove previous vote
+    message.poll.options.forEach(function(opt) {
+        delete opt.votes[currentUser.id];
+    });
+    
+    // Add new vote
+    message.poll.options[optionIndex].votes[currentUser.id] = true;
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(message);
+    }
+    
+    renderMessages(activeChat.id);
+    showToast('Vote recorded!', 'success');
+}
+
+// ==========================================
+// Stickers
+// ==========================================
+function showStickerPicker() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var stickerPacks = {
+        'Happy': ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😋'],
+        'Sad': ['😢', '😭', '😤', '😠', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽'],
+        'Love': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖'],
+        'Animals': ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔'],
+        'Food': ['🍕', '🍔', '🍟', '🌭', '🍿', '🥓', '🥚', '🍳', '🧇', '🥞', '🧈', '🍞', '🥐', '🥖', '🥨', '🧀'],
+        'Nature': ['🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '💐', '🌿', '☘️', '🍀', '🌱', '🌲', '🌳', '🌴', '🌵', '🌾']
+    };
+    
+    var html = '<div class="sticker-modal"><h3>Stickers</h3>';
+    html += '<div class="sticker-tabs">';
+    Object.keys(stickerPacks).forEach(function(pack, idx) {
+        html += '<button class="sticker-tab ' + (idx === 0 ? 'active' : '') + '" onclick="switchStickerTab(\'' + pack + '\')">' + pack + '</button>';
+    });
+    html += '</div>';
+    html += '<div class="sticker-grid" id="sticker-grid">';
+    
+    var firstPack = Object.keys(stickerPacks)[0];
+    stickerPacks[firstPack].forEach(function(sticker) {
+        html += '<div class="sticker-item" onclick="sendSticker(\'' + sticker + '\')">' + sticker + '</div>';
+    });
+    
+    html += '</div></div>';
+    showModal(html);
+    
+    window.stickerPacks = stickerPacks;
+}
+
+function switchStickerTab(pack) {
+    document.querySelectorAll('.sticker-tab').forEach(function(tab) {
+        tab.classList.remove('active');
+        if (tab.textContent === pack) tab.classList.add('active');
+    });
+    
+    var grid = document.getElementById('sticker-grid');
+    grid.innerHTML = '';
+    window.stickerPacks[pack].forEach(function(sticker) {
+        grid.innerHTML += '<div class="sticker-item" onclick="sendSticker(\'' + sticker + '\')">' + sticker + '</div>';
+    });
+}
+
+function sendSticker(sticker) {
+    var messages = Storage.get('messages') || [];
+    var newMessage = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: sticker,
+        isEmoji: true,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    
+    messages.push(newMessage);
+    Storage.set('messages', messages);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(newMessage);
+    }
+    
+    closeModal();
+    renderMessages(activeChat.id);
+}
+
+// ==========================================
+// Voice/Video Calls
+// ==========================================
+var callTimer = null;
+var callSeconds = 0;
+
+function startVoiceCall() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var users = Storage.get('users') || [];
+    var chat = Storage.get('chats') || [];
+    chat = chat.find(function(c) { return c.id === activeChat.id; });
+    
+    var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
+    var otherUser = users.find(function(u) { return u.id === otherUserId; });
+    
+    if (!otherUser) {
+        showToast('User not found', 'error');
+        return;
+    }
+    
+    showCallUI('voice', otherUser);
+}
+
+function startVideoCall() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var users = Storage.get('users') || [];
+    var chat = Storage.get('chats') || [];
+    chat = chat.find(function(c) { return c.id === activeChat.id; });
+    
+    var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
+    var otherUser = users.find(function(u) { return u.id === otherUserId; });
+    
+    if (!otherUser) {
+        showToast('User not found', 'error');
+        return;
+    }
+    
+    showCallUI('video', otherUser);
+}
+
+function showCallUI(type, user) {
+    var html = '<div class="call-modal">';
+    html += '<div class="call-avatar-large"><i class="fas fa-user"></i></div>';
+    html += '<h3>' + escapeHtml(user.name) + '</h3>';
+    html += '<p class="call-status">' + (type === 'video' ? 'Video' : 'Voice') + ' Calling...</p>';
+    html += '<p class="call-timer" id="call-timer" style="display:none;">00:00</p>';
+    html += '<div class="call-actions">';
+    html += '<button class="call-btn call-end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>';
+    html += '</div>';
+    html += '</div>';
+    
+    showModal(html);
+    
+    // Simulate call connection after 2 seconds
+    setTimeout(function() {
+        var status = document.querySelector('.call-status');
+        var timer = document.getElementById('call-timer');
+        if (status) status.textContent = 'Connected';
+        if (timer) timer.style.display = 'block';
+        startCallTimer();
+    }, 2000);
+    
+    // Play ring sound
+    playRingSound();
+}
+
+function startCallTimer() {
+    callSeconds = 0;
+    callTimer = setInterval(function() {
+        callSeconds++;
+        var mins = Math.floor(callSeconds / 60);
+        var secs = callSeconds % 60;
+        var timer = document.getElementById('call-timer');
+        if (timer) {
+            timer.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+    }, 1000);
+}
+
+function endCall() {
+    if (callTimer) {
+        clearInterval(callTimer);
+        callTimer = null;
+    }
+    
+    var duration = callSeconds;
+    var mins = Math.floor(duration / 60);
+    var secs = duration % 60;
+    
+    closeModal();
+    
+    if (duration > 0) {
+        showToast('Call ended - ' + mins + 'm ' + secs + 's', 'info');
+        
+        // Save call log
+        if (activeChat) {
+            var messages = Storage.get('messages') || [];
+            var callMessage = {
+                id: generateId(),
+                chatId: activeChat.id,
+                senderId: currentUser.id,
+                senderName: currentUser.name,
+                text: '📞 Call ended - ' + mins + 'm ' + secs + 's',
+                timestamp: new Date().toISOString(),
+                read: false,
+                status: 'sent',
+                reactions: {},
+                edited: false,
+                starred: false,
+                replyTo: null,
+                forwarded: false
+            };
+            messages.push(callMessage);
+            Storage.set('messages', messages);
+            renderMessages(activeChat.id);
+        }
+    } else {
+        showToast('Call cancelled', 'info');
+    }
+}
+
+function playRingSound() {
+    try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 440;
+        gain.gain.value = 0.1;
+        osc.start();
+        setTimeout(function() { 
+            osc.stop();
+            ctx.close();
+        }, 2000);
+    } catch(e) {}
 }
 
 function handleMentionInput(input) {
@@ -5536,6 +5954,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Emoji
     document.getElementById('emoji-btn').onclick = toggleEmojiPicker;
+    
+    // Sticker
+    var stickerBtn = document.getElementById('sticker-btn');
+    if (stickerBtn) stickerBtn.onclick = showStickerPicker;
+    
+    // Poll
+    var pollBtn = document.getElementById('poll-btn');
+    if (pollBtn) pollBtn.onclick = showCreatePoll;
     
     // Create Group
     document.getElementById('create-group-btn').onclick = showCreateGroup;
