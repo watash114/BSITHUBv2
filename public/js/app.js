@@ -2510,6 +2510,7 @@ function renderMessages(chatId) {
         html += '<button class="message-action-btn" onclick="replyToMessage(\'' + msg.id + '\')" title="Reply"><i class="fas fa-reply"></i></button>';
         html += '<button class="message-action-btn" onclick="showReactionPicker(\'' + msg.id + '\')" title="React"><i class="far fa-smile"></i></button>';
         html += '<button class="message-action-btn" onclick="forwardMessage(\'' + msg.id + '\')" title="Forward"><i class="fas fa-share"></i></button>';
+        html += '<button class="message-action-btn" onclick="translateMessage(\'' + msg.id + '\')" title="Translate"><i class="fas fa-language"></i></button>';
         html += '<button class="message-action-btn' + (msg.starred ? ' starred' : '') + '" onclick="toggleStarMessage(\'' + msg.id + '\')" title="' + (msg.starred ? 'Unstar' : 'Star') + '"><i class="' + (msg.starred ? 'fas' : 'far') + ' fa-star"></i></button>';
         html += '<button class="message-action-btn' + (msg.pinned ? ' pinned' : '') + '" onclick="pinMessage(\'' + msg.id + '\')" title="' + (msg.pinned ? 'Unpin' : 'Pin') + '"><i class="fas fa-thumbtack"></i></button>';
         if (canEdit) {
@@ -15881,4 +15882,441 @@ window.startChatWithUser = function(userId) {
 window.openChatFromSearch = function(chatId, userId) {
     closeModal();
     openChat(chatId, userId);
+};
+
+// ==========================================
+// 26. Chat Backup
+// ==========================================
+window.showChatBackup = function() {
+    var html = '<div class="backup-modal"><h3>Chat Backup</h3>';
+    html += '<p>Backup your chats and messages to a file.</p>';
+    html += '<div class="backup-options">';
+    html += '<button class="btn btn-primary" onclick="backupAllChats()"><i class="fas fa-download"></i> Backup All Chats</button>';
+    html += '<button class="btn" onclick="backupCurrentChat()"><i class="fas fa-comment"></i> Backup Current Chat</button>';
+    html += '<button class="btn" onclick="restoreBackup()"><i class="fas fa-upload"></i> Restore Backup</button>';
+    html += '</div>';
+    html += '<input type="file" id="restore-input" accept=".json" style="display:none" onchange="handleRestore(event)">';
+    html += '</div>';
+    showModal(html);
+};
+
+window.backupAllChats = function() {
+    var data = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        user: currentUser,
+        chats: Storage.get('chats') || [],
+        messages: Storage.get('messages') || [],
+        quickReplies: Storage.get('quickReplies') || [],
+        settings: Storage.get('settings') || {}
+    };
+    
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'bsithub-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    closeModal();
+    showToast('Backup downloaded!', 'success');
+};
+
+window.backupCurrentChat = function() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    var messages = Storage.get('messages') || [];
+    var chatMessages = messages.filter(function(m) { return m.chatId === activeChat.id; });
+    
+    var data = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        chatId: activeChat.id,
+        messages: chatMessages
+    };
+    
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'bsithub-chat-' + activeChat.id + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    closeModal();
+    showToast('Chat backup downloaded!', 'success');
+};
+
+window.restoreBackup = function() {
+    document.getElementById('restore-input').click();
+};
+
+window.handleRestore = function(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var data = JSON.parse(e.target.result);
+            
+            if (data.chats && data.messages) {
+                // Full backup restore
+                if (confirm('This will replace all your current data. Continue?')) {
+                    Storage.set('chats', data.chats);
+                    Storage.set('messages', data.messages);
+                    if (data.quickReplies) Storage.set('quickReplies', data.quickReplies);
+                    if (data.settings) Storage.set('settings', data.settings);
+                    
+                    closeModal();
+                    showToast('Backup restored! Refreshing...', 'success');
+                    setTimeout(function() { location.reload(); }, 1500);
+                }
+            } else if (data.messages) {
+                // Single chat restore
+                var messages = Storage.get('messages') || [];
+                data.messages.forEach(function(msg) {
+                    if (!messages.find(function(m) { return m.id === msg.id; })) {
+                        messages.push(msg);
+                    }
+                });
+                Storage.set('messages', messages);
+                
+                closeModal();
+                showToast('Chat restored!', 'success');
+                if (activeChat) renderMessages(activeChat.id);
+            }
+        } catch (err) {
+            showToast('Invalid backup file', 'error');
+        }
+    };
+    reader.readAsText(file);
+};
+
+// ==========================================
+// 27. Custom Themes
+// ==========================================
+window.showThemePicker = function() {
+    var themes = [
+        { id: 'default', name: 'Default', color: '#667eea' },
+        { id: 'ocean', name: 'Ocean', color: '#0077b6' },
+        { id: 'forest', name: 'Forest', color: '#2d6a4f' },
+        { id: 'sunset', name: 'Sunset', color: '#e76f51' },
+        { id: 'purple', name: 'Purple', color: '#7b2cbf' },
+        { id: 'rose', name: 'Rose', color: '#e63946' },
+        { id: 'teal', name: 'Teal', color: '#009688' },
+        { id: 'amber', name: 'Amber', color: '#ff8f00' },
+        { id: 'indigo', name: 'Indigo', color: '#3f51b5' },
+        { id: 'pink', name: 'Pink', color: '#e91e63' },
+        { id: 'cyan', name: 'Cyan', color: '#00bcd4' },
+        { id: 'lime', name: 'Lime', color: '#8bc34a' }
+    ];
+    
+    var currentTheme = (Storage.get('settings') || {}).theme || 'default';
+    
+    var html = '<div class="theme-modal"><h3>Choose Theme</h3>';
+    html += '<div class="theme-grid">';
+    
+    themes.forEach(function(theme) {
+        var isActive = theme.id === currentTheme;
+        html += '<div class="theme-item ' + (isActive ? 'active' : '') + '" onclick="applyTheme(\'' + theme.id + '\', \'' + theme.color + '\')">';
+        html += '<div class="theme-color" style="background: ' + theme.color + '"></div>';
+        html += '<div class="theme-name">' + theme.name + '</div>';
+        if (isActive) html += '<div class="theme-check"><i class="fas fa-check"></i></div>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    html += '<h4>Custom Color</h4>';
+    html += '<input type="color" id="custom-theme-color" value="#667eea">';
+    html += '<button class="btn btn-primary" onclick="applyCustomTheme()">Apply Custom</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.applyTheme = function(themeId, color) {
+    var settings = Storage.get('settings') || {};
+    settings.theme = themeId;
+    settings.themeColor = color;
+    Storage.set('settings', settings);
+    
+    document.documentElement.style.setProperty('--primary', color);
+    document.documentElement.style.setProperty('--primary-dark', shadeColor(color, -20));
+    document.documentElement.style.setProperty('--primary-light', shadeColor(color, 20));
+    
+    closeModal();
+    showToast('Theme applied!', 'success');
+};
+
+window.applyCustomTheme = function() {
+    var color = document.getElementById('custom-theme-color').value;
+    applyTheme('custom', color);
+};
+
+function shadeColor(color, percent) {
+    var num = parseInt(color.replace('#', ''), 16);
+    var amt = Math.round(2.55 * percent);
+    var R = (num >> 16) + amt;
+    var G = (num >> 8 & 0x00FF) + amt;
+    var B = (num & 0x0000FF) + amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+}
+
+// Load saved theme on startup
+(function() {
+    var settings = Storage.get('settings') || {};
+    if (settings.themeColor) {
+        document.documentElement.style.setProperty('--primary', settings.themeColor);
+        document.documentElement.style.setProperty('--primary-dark', shadeColor(settings.themeColor, -20));
+        document.documentElement.style.setProperty('--primary-light', shadeColor(settings.themeColor, 20));
+    }
+})();
+
+// ==========================================
+// 28. Auto-Reply
+// ==========================================
+window.showAutoReplySettings = function() {
+    var settings = Storage.get('settings') || {};
+    var autoReply = settings.autoReply || { enabled: false, message: '' };
+    
+    var html = '<div class="auto-reply-modal"><h3>Auto-Reply</h3>';
+    html += '<p>Automatically reply when you\'re busy.</p>';
+    html += '<label class="toggle-label">';
+    html += '<input type="checkbox" id="auto-reply-toggle" ' + (autoReply.enabled ? 'checked' : '') + '>';
+    html += '<span>Enable Auto-Reply</span>';
+    html += '</label>';
+    html += '<textarea id="auto-reply-message" placeholder="Auto-reply message..." rows="3">' + escapeHtml(autoReply.message) + '</textarea>';
+    html += '<div class="auto-reply-templates">';
+    html += '<h4>Quick Templates</h4>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m currently busy. I\\'ll get back to you soon!\')">I\'m busy, will reply soon</div>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m away from my phone. Leave a message!\')">Away from phone</div>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m in a meeting. I\\'ll respond when I\\'m free.\')">In a meeting</div>';
+    html += '<div class="template-item" onclick="setAutoReplyTemplate(\'I\\'m sleeping. I\\'ll reply tomorrow!\')">Sleeping</div>';
+    html += '</div>';
+    html += '<div class="modal-buttons">';
+    html += '<button class="btn" onclick="closeModal()">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="saveAutoReply()">Save</button>';
+    html += '</div></div>';
+    showModal(html);
+};
+
+window.setAutoReplyTemplate = function(message) {
+    document.getElementById('auto-reply-message').value = message;
+};
+
+window.saveAutoReply = function() {
+    var enabled = document.getElementById('auto-reply-toggle').checked;
+    var message = document.getElementById('auto-reply-message').value.trim();
+    
+    if (enabled && !message) {
+        showToast('Enter an auto-reply message', 'error');
+        return;
+    }
+    
+    var settings = Storage.get('settings') || {};
+    settings.autoReply = { enabled: enabled, message: message };
+    Storage.set('settings', settings);
+    
+    closeModal();
+    showToast('Auto-reply ' + (enabled ? 'enabled' : 'disabled'), 'success');
+};
+
+// Auto-reply check when receiving messages
+function checkAutoReply(message) {
+    if (!currentUser || message.senderId === currentUser.id) return;
+    
+    var settings = Storage.get('settings') || {};
+    var autoReply = settings.autoReply;
+    
+    if (!autoReply || !autoReply.enabled) return;
+    
+    // Check if we already sent auto-reply to this user recently
+    var autoReplyLog = Storage.get('autoReplyLog') || {};
+    var lastReply = autoReplyLog[message.senderId];
+    var now = Date.now();
+    
+    // Only send auto-reply once every 30 minutes per user
+    if (lastReply && (now - lastReply < 30 * 60 * 1000)) return;
+    
+    // Send auto-reply
+    var messages = Storage.get('messages') || [];
+    var autoReplyMsg = {
+        id: generateId(),
+        chatId: message.chatId,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: '🤖 ' + autoReply.message,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false,
+        isAutoReply: true
+    };
+    
+    messages.push(autoReplyMsg);
+    Storage.set('messages', messages);
+    
+    // Log the auto-reply
+    autoReplyLog[message.senderId] = now;
+    Storage.set('autoReplyLog', autoReplyLog);
+    
+    if (typeof sendMsgToFirebase === 'function') {
+        sendMsgToFirebase(autoReplyMsg);
+    }
+}
+
+// ==========================================
+// 29. Message Translation
+// ==========================================
+window.translateMessage = function(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message || !message.text) {
+        showToast('No text to translate', 'info');
+        return;
+    }
+    
+    var html = '<div class="translate-modal"><h3>Translate Message</h3>';
+    html += '<div class="translate-original"><strong>Original:</strong><p>' + escapeHtml(message.text) + '</p></div>';
+    html += '<div class="translate-language">';
+    html += '<label>Translate to:</label>';
+    html += '<select id="translate-language">';
+    html += '<option value="en">English</option>';
+    html += '<option value="es">Spanish</option>';
+    html += '<option value="fr">French</option>';
+    html += '<option value="de">German</option>';
+    html += '<option value="it">Italian</option>';
+    html += '<option value="pt">Portuguese</option>';
+    html += '<option value="ru">Russian</option>';
+    html += '<option value="ja">Japanese</option>';
+    html += '<option value="ko">Korean</option>';
+    html += '<option value="zh">Chinese</option>';
+    html += '<option value="ar">Arabic</option>';
+    html += '<option value="hi">Hindi</option>';
+    html += '</select>';
+    html += '</div>';
+    html += '<button class="btn btn-primary" onclick="doTranslate(\'' + messageId + '\')">Translate</button>';
+    html += '<div id="translate-result" style="display:none; margin-top: 16px;"></div>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.doTranslate = function(messageId) {
+    var messages = Storage.get('messages') || [];
+    var message = messages.find(function(m) { return m.id === messageId; });
+    if (!message) return;
+    
+    var targetLang = document.getElementById('translate-language').value;
+    var resultDiv = document.getElementById('translate-result');
+    
+    // Simple translation simulation (in production, use a real API like Google Translate)
+    var translations = {
+        'en': { 'hola': 'hello', 'gracias': 'thank you', 'amor': 'love', 'bueno': 'good' },
+        'es': { 'hello': 'hola', 'thank you': 'gracias', 'love': 'amor', 'good': 'bueno' },
+        'fr': { 'hello': 'bonjour', 'thank you': 'merci', 'love': 'amour', 'good': 'bon' },
+        'de': { 'hello': 'hallo', 'thank you': 'danke', 'love': 'liebe', 'good': 'gut' }
+    };
+    
+    // Simulated translation (in real app, call translation API)
+    var translated = message.text;
+    if (translations[targetLang]) {
+        Object.keys(translations[targetLang]).forEach(function(word) {
+            translated = translated.replace(new RegExp(word, 'gi'), translations[targetLang][word]);
+        });
+    }
+    
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<strong>Translation:</strong><p style="color: var(--primary); font-weight: 500;">' + escapeHtml(translated) + '</p>';
+    showToast('Translated!', 'success');
+};
+
+// ==========================================
+// 30. Login History
+// ==========================================
+window.showLoginHistory = function() {
+    var loginHistory = Storage.get('loginHistory') || [];
+    var myHistory = loginHistory.filter(function(h) { return h.userId === currentUser.id; }).slice(0, 20);
+    
+    var html = '<div class="login-history-modal"><h3>Login History</h3>';
+    
+    if (myHistory.length === 0) {
+        html += '<p class="no-history">No login history available.</p>';
+    } else {
+        html += '<div class="history-list">';
+        myHistory.forEach(function(entry) {
+            var date = new Date(entry.timestamp);
+            html += '<div class="history-item">';
+            html += '<div class="history-icon"><i class="fas fa-' + (entry.success ? 'check-circle success' : 'times-circle danger') + '"></i></div>';
+            html += '<div class="history-info">';
+            html += '<div class="history-device">' + escapeHtml(entry.device || 'Unknown Device') + '</div>';
+            html += '<div class="history-details">';
+            html += '<span class="history-ip">' + escapeHtml(entry.ip || 'Unknown IP') + '</span>';
+            html += '<span class="history-time">' + date.toLocaleString() + '</span>';
+            html += '</div>';
+            html += '<div class="history-status ' + (entry.success ? 'success' : 'danger') + '">' + (entry.success ? 'Successful' : 'Failed') + '</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+        html += '</div>';
+    }
+    
+    html += '<button class="btn" onclick="clearLoginHistory()">Clear History</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.recordLogin = function(success) {
+    var loginHistory = Storage.get('loginHistory') || [];
+    
+    // Get device info
+    var device = navigator.userAgent;
+    if (device.length > 50) device = device.substring(0, 50) + '...';
+    
+    loginHistory.unshift({
+        userId: currentUser ? currentUser.id : 'unknown',
+        timestamp: new Date().toISOString(),
+        device: device,
+        ip: 'Local',
+        success: success
+    });
+    
+    // Keep only last 50 entries
+    if (loginHistory.length > 50) {
+        loginHistory = loginHistory.slice(0, 50);
+    }
+    
+    Storage.set('loginHistory', loginHistory);
+};
+
+window.clearLoginHistory = function() {
+    if (confirm('Clear all login history?')) {
+        Storage.set('loginHistory', []);
+        closeModal();
+        showToast('Login history cleared', 'success');
+    }
+};
+// ==========================================
+// Quick Actions Menu
+// ==========================================
+window.showQuickActionsMenu = function() {
+    var html = '<div class="quick-actions-modal"><h3>Quick Actions</h3>';
+    html += '<div class="quick-actions-grid">';
+    html += '<div class="quick-action-item" onclick="showChatBackup()"><i class="fas fa-download"></i><span>Backup</span></div>';
+    html += '<div class="quick-action-item" onclick="showThemePicker()"><i class="fas fa-palette"></i><span>Themes</span></div>';
+    html += '<div class="quick-action-item" onclick="showAutoReplySettings()"><i class="fas fa-robot"></i><span>Auto-Reply</span></div>';
+    html += '<div class="quick-action-item" onclick="showLoginHistory()"><i class="fas fa-history"></i><span>Login History</span></div>';
+    html += '<div class="quick-action-item" onclick="viewScheduledMessages()"><i class="fas fa-clock"></i><span>Scheduled</span></div>';
+    html += '<div class="quick-action-item" onclick="showChatFolders()"><i class="fas fa-folder"></i><span>Folders</span></div>';
+    html += '<div class="quick-action-item" onclick="showQuickReplies()"><i class="fas fa-bolt"></i><span>Quick Replies</span></div>';
+    html += '<div class="quick-action-item" onclick="showUserSearch()"><i class="fas fa-user-plus"></i><span>Find Users</span></div>';
+    html += '</div></div>';
+    showModal(html);
 };
