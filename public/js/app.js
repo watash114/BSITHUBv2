@@ -16840,3 +16840,233 @@ document.addEventListener('touchend', function() {
         document.body.style.pointerEvents = 'auto';
     }, 50);
 }, { passive: true });
+
+// ==========================================
+// Enhanced Mobile Features
+// ==========================================
+
+// Pull to Refresh
+var pullToRefresh = {
+    startY: 0,
+    pulling: false,
+    threshold: 80,
+    
+    init: function() {
+        var chatList = document.querySelector('.chat-list');
+        if (!chatList || window.innerWidth > 768) return;
+        
+        chatList.addEventListener('touchstart', function(e) {
+            if (chatList.scrollTop === 0) {
+                pullToRefresh.startY = e.touches[0].clientY;
+                pullToRefresh.pulling = true;
+            }
+        }, { passive: true });
+        
+        chatList.addEventListener('touchmove', function(e) {
+            if (!pullToRefresh.pulling) return;
+            var currentY = e.touches[0].clientY;
+            var diff = currentY - pullToRefresh.startY;
+            
+            if (diff > 20 && chatList.scrollTop === 0) {
+                var indicator = document.getElementById('pull-indicator');
+                if (!indicator) {
+                    indicator = document.createElement('div');
+                    indicator.id = 'pull-indicator';
+                    indicator.className = 'pull-indicator';
+                    chatList.parentNode.insertBefore(indicator, chatList);
+                }
+                
+                if (diff > pullToRefresh.threshold) {
+                    indicator.innerHTML = '<i class="fas fa-sync-alt"></i> Release to refresh';
+                } else {
+                    indicator.innerHTML = '<i class="fas fa-arrow-down"></i> Pull to refresh';
+                }
+            }
+        }, { passive: true });
+        
+        chatList.addEventListener('touchend', function() {
+            var indicator = document.getElementById('pull-indicator');
+            if (indicator && pullToRefresh.pulling) {
+                indicator.innerHTML = '<i class="fas fa-sync-alt"></i> Refreshing...';
+                setTimeout(function() {
+                    if (typeof loadChats === 'function') loadChats();
+                    indicator.remove();
+                }, 500);
+            }
+            pullToRefresh.pulling = false;
+        }, { passive: true });
+    }
+};
+
+// Swipe to Delete/Archive
+var swipeActions = {
+    init: function() {
+        document.querySelectorAll('.chat-item').forEach(function(item) {
+            var startX = 0;
+            var currentX = 0;
+            var isSwiping = false;
+            
+            item.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+            }, { passive: true });
+            
+            item.addEventListener('touchmove', function(e) {
+                currentX = e.touches[0].clientX;
+                var diff = currentX - startX;
+                
+                if (Math.abs(diff) > 10) {
+                    isSwiping = true;
+                    item.style.transform = 'translateX(' + (diff * 0.5) + 'px)';
+                }
+            }, { passive: true });
+            
+            item.addEventListener('touchend', function() {
+                var diff = currentX - startX;
+                
+                if (diff < -100) {
+                    // Swipe left - Archive
+                    var chatId = item.dataset.chatId;
+                    if (chatId) {
+                        item.style.transform = 'translateX(-100%)';
+                        setTimeout(function() {
+                            archiveChatById(chatId);
+                        }, 200);
+                    }
+                } else if (diff > 100) {
+                    // Swipe right - Delete
+                    var chatId = item.dataset.chatId;
+                    if (chatId && confirm('Delete this chat?')) {
+                        item.style.transform = 'translateX(100%)';
+                        setTimeout(function() {
+                            deleteChatById(chatId);
+                        }, 200);
+                    }
+                }
+                
+                item.style.transform = '';
+                isSwiping = false;
+            }, { passive: true });
+        });
+    }
+};
+
+function archiveChatById(chatId) {
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === chatId; });
+    if (chat) {
+        chat.archived = true;
+        Storage.set('chats', chats);
+        loadChats();
+        showToast('Chat archived', 'success');
+    }
+}
+
+function deleteChatById(chatId) {
+    var chats = Storage.get('chats') || [];
+    chats = chats.filter(function(c) { return c.id !== chatId; });
+    Storage.set('chats', chats);
+    
+    var messages = Storage.get('messages') || [];
+    messages = messages.filter(function(m) { return m.chatId !== chatId; });
+    Storage.set('messages', messages);
+    
+    loadChats();
+    showToast('Chat deleted', 'success');
+}
+
+// Haptic Feedback (if supported)
+function hapticFeedback(type) {
+    if (navigator.vibrate) {
+        switch(type) {
+            case 'light':
+                navigator.vibrate(10);
+                break;
+            case 'medium':
+                navigator.vibrate(25);
+                break;
+            case 'heavy':
+                navigator.vibrate(50);
+                break;
+        }
+    }
+}
+
+// Mobile Keyboard Handling
+function handleMobileKeyboard() {
+    var chatInput = document.getElementById('chat-input');
+    if (!chatInput) return;
+    
+    chatInput.addEventListener('focus', function() {
+        // Scroll to input when keyboard opens
+        setTimeout(function() {
+            chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 300);
+    });
+    
+    chatInput.addEventListener('blur', function() {
+        // Reset scroll position
+        setTimeout(function() {
+            window.scrollTo(0, 0);
+        }, 100);
+    });
+}
+
+// Share functionality
+function shareContent(title, text, url) {
+    if (navigator.share) {
+        navigator.share({
+            title: title || 'BSITHUB',
+            text: text || '',
+            url: url || window.location.href
+        }).catch(function(err) {
+            console.log('Share cancelled');
+        });
+    } else {
+        // Fallback - copy to clipboard
+        navigator.clipboard.writeText(url || window.location.href);
+        showToast('Link copied!', 'success');
+    }
+}
+
+// App Install Prompt
+var deferredPrompt;
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Show install button or banner
+    var installBanner = document.getElementById('install-banner');
+    if (!installBanner) {
+        installBanner = document.createElement('div');
+        installBanner.id = 'install-banner';
+        installBanner.innerHTML = '<div style="position:fixed;bottom:80px;left:16px;right:16px;background:var(--primary);color:white;padding:16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);"><div><strong>Install BSITHUB</strong><br><small>Add to home screen for the best experience</small></div><button onclick="installApp()" style="background:white;color:var(--primary);border:none;padding:10px 20px;border-radius:10px;font-weight:600;cursor:pointer;">Install</button><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;margin-left:10px;">&times;</button></div>';
+        document.body.appendChild(installBanner);
+    }
+});
+
+window.installApp = function() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choiceResult) {
+            if (choiceResult.outcome === 'installed') {
+                showToast('App installed!', 'success');
+            }
+            deferredPrompt = null;
+        });
+    }
+};
+
+// Initialize mobile features
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.innerWidth <= 768) {
+        pullToRefresh.init();
+        handleMobileKeyboard();
+        
+        // Re-init swipe on chat load
+        var originalLoadChats = window.loadChats;
+        window.loadChats = function() {
+            if (originalLoadChats) originalLoadChats();
+            setTimeout(swipeActions.init, 100);
+        };
+    }
+});
