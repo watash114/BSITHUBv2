@@ -16717,3 +16717,126 @@ window.addEventListener('beforeunload', function() {
         clearInterval(realtimeInterval);
     }
 });
+
+// ==========================================
+// Fix Touch Lag & Mobile Chat Features
+// ==========================================
+
+// Remove 300ms tap delay
+document.addEventListener('DOMContentLoaded', function() {
+    // Fast click for all interactive elements
+    var fastClickElements = document.querySelectorAll(
+        '.btn, .btn-icon, .chat-item, .nav-item, .mobile-nav-item, .message-action-btn, .emoji-item, .gif-item'
+    );
+    
+    fastClickElements.forEach(function(el) {
+        el.style.touchAction = 'manipulation';
+    });
+    
+    // Optimize chat item clicks
+    document.addEventListener('click', function(e) {
+        var chatItem = e.target.closest('.chat-item');
+        if (chatItem) {
+            e.preventDefault();
+            var chatId = chatItem.dataset.chatId;
+            var userId = chatItem.dataset.userId;
+            if (chatId && userId) {
+                openChat(chatId, userId);
+            }
+        }
+    }, { passive: false });
+    
+    // Optimize message taps
+    var chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        var lastTap = 0;
+        chatMessages.addEventListener('touchend', function(e) {
+            var now = Date.now();
+            if (now - lastTap < 300) {
+                e.preventDefault();
+            }
+            lastTap = now;
+        }, { passive: false });
+    }
+});
+
+// Simplified render for mobile
+function renderMessagesMobile(chatId) {
+    var messages = Storage.get('messages') || [];
+    var container = document.getElementById('chat-messages');
+    if (!container) return;
+    
+    var chatMessages = messages.filter(function(m) { return m.chatId === chatId; });
+    
+    // Mark as read
+    chatMessages.forEach(function(msg) {
+        if (!msg.read && msg.senderId !== currentUser.id) {
+            msg.read = true;
+            msg.status = 'read';
+        }
+    });
+    Storage.set('messages', messages);
+    
+    // Build HTML efficiently
+    var html = '';
+    var isMobile = window.innerWidth <= 768;
+    
+    chatMessages.forEach(function(msg) {
+        var isSent = msg.senderId === currentUser.id;
+        var text = msg.text || (msg.gifUrl ? 'GIF' : msg.fileData ? 'File' : msg.audioData ? 'Voice' : '');
+        
+        html += '<div class="message ' + (isSent ? 'sent' : 'received') + '" data-message-id="' + msg.id + '">';
+        html += '<div class="message-bubble">';
+        
+        // Content
+        if (msg.gifUrl) {
+            html += '<div class="message-gif"><img src="' + msg.gifUrl + '" alt="GIF"></div>';
+        } else if (msg.fileData && msg.fileType && msg.fileType.startsWith('image/')) {
+            html += '<div class="message-media"><img src="' + msg.fileData + '" alt="Image"></div>';
+        } else if (msg.audioData) {
+            html += '<div class="message-audio"><audio controls src="' + msg.audioData + '"></audio></div>';
+        } else if (msg.fileData) {
+            html += '<div class="message-file"><a href="' + msg.fileData + '" download>?? ' + (msg.fileName || 'File') + '</a></div>';
+        } else if (msg.poll) {
+            html += '<div class="poll-message"><div class="poll-question">?? ' + escapeHtml(msg.poll.question) + '</div></div>';
+        } else {
+            html += '<div class="message-text">' + escapeHtml(text) + '</div>';
+        }
+        
+        // Time
+        html += '<div class="message-time">' + formatTime(msg.timestamp) + '</div>';
+        
+        html += '</div></div>';
+    });
+    
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+}
+
+// Use mobile render on mobile devices
+if (window.innerWidth <= 768) {
+    window.renderMessages = renderMessagesMobile;
+}
+
+// Optimize scroll performance
+var scrollTimeout;
+document.addEventListener('scroll', function() {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+        // Re-enable pointer events after scroll
+        document.body.style.pointerEvents = 'auto';
+    }, 100);
+}, { passive: true });
+
+// Prevent scroll during tap
+document.addEventListener('touchstart', function(e) {
+    if (e.target.closest('.btn, .btn-icon, .chat-item, .message')) {
+        document.body.style.pointerEvents = 'none';
+    }
+}, { passive: true });
+
+document.addEventListener('touchend', function() {
+    setTimeout(function() {
+        document.body.style.pointerEvents = 'auto';
+    }, 50);
+}, { passive: true });
