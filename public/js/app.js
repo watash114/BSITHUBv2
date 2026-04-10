@@ -6837,7 +6837,7 @@ var callSeconds = 0;
 var localStream = null;
 var peerConnection = null;
 
-function startVideoCall() {
+window.startVideoCall = function() {
     if (!activeChat) {
         showToast('Select a chat first', 'info');
         return;
@@ -6849,13 +6849,73 @@ function startVideoCall() {
     }
     
     showModal('<div class="video-call-setup"><h3><i class="fas fa-video"></i> Video Call</h3><p>Start a video call using Jitsi (free)</p><button class="btn btn-primary" onclick="initVideoCall()"><i class="fas fa-phone"></i> Start Call</button><button class="btn" onclick="closeModal()">Cancel</button></div>');
-}
+};
 
-function initVideoCall() {
+window.startVoiceCall = function() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    if (isVideoCallActive) {
+        showToast('Already in a call', 'info');
+        return;
+    }
+    
+    showModal('<div class="video-call-setup"><h3><i class="fas fa-phone"></i> Voice Call</h3><p>Start a voice call using Jitsi (free)</p><button class="btn btn-primary" onclick="initVoiceCall()"><i class="fas fa-phone"></i> Start Call</button><button class="btn" onclick="closeModal()">Cancel</button></div>');
+};
+
+window.initVoiceCall = function() {
+    closeModal();
+    
+    var roomName = 'bsithub-voice-' + activeChat.id.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
+    showJitsiContainer(roomName, false);
+    
+    setTimeout(function() {
+        var domain = 'meet.jit.si';
+        var options = {
+            roomName: roomName,
+            width: '100%',
+            height: '100%',
+            parentNode: document.getElementById('jitsi-container'),
+            userInfo: {
+                displayName: currentUser.name
+            },
+            configOverwrite: {
+                startWithAudioMuted: false,
+                startWithVideoMuted: true,
+                prejoinPageEnabled: false
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: [
+                    'microphone', 'hangup', 'chat', 'settings', 'raisehand', 'stats'
+                ],
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_WATERMARK_FOR_GUESTS: false
+            }
+        };
+        
+        jitsiApi = new JitsiMeetExternalAPI(domain, options);
+        
+        jitsiApi.addEventListener('videoConferenceJoined', function() {
+            console.log('Joined voice conference');
+            document.getElementById('call-status').textContent = 'Connected';
+            startCallTimer();
+        });
+        
+        jitsiApi.addEventListener('readyToClose', function() {
+            endVideoCall();
+        });
+        
+        isVideoCallActive = true;
+    }, 500);
+};
+
+window.initVideoCall = function() {
     closeModal();
     
     // Generate unique room name
-    var roomName = 'bsithub-' + activeChat.id + '-' + Date.now();
+    var roomName = 'bsithub-video-' + activeChat.id.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
     
     // Show Jitsi container
     showJitsiContainer(roomName);
@@ -6963,7 +7023,7 @@ function updateParticipantCount() {
     }
 }
 
-function endVideoCall() {
+window.endVideoCall = function() {
     if (jitsiApi) {
         jitsiApi.dispose();
         jitsiApi = null;
@@ -6981,7 +7041,7 @@ function endVideoCall() {
     if (overlay) overlay.remove();
     
     showToast('Call ended', 'info');
-}
+};
 
 function startVideoCall() {
     if (!activeChat) {
@@ -16321,225 +16381,4 @@ window.showQuickActionsMenu = function() {
     showModal(html);
 };
 
-// ==========================================
-// Voice/Video Calls
-// ==========================================
-var callTimer = null;
-var callSeconds = 0;
-var currentCallType = null;
 
-window.startVoiceCall = function() {
-    if (!activeChat) {
-        showToast('Select a chat first', 'info');
-        return;
-    }
-    
-    var users = Storage.get('users') || [];
-    var chats = Storage.get('chats') || [];
-    var chat = chats.find(function(c) { return c.id === activeChat.id; });
-    
-    if (!chat || chat.isGroup) {
-        showToast('Voice calls only work in 1-on-1 chats', 'info');
-        return;
-    }
-    
-    var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
-    var otherUser = users.find(function(u) { return u.id === otherUserId; });
-    
-    if (!otherUser) {
-        showToast('User not found', 'error');
-        return;
-    }
-    
-    currentCallType = 'voice';
-    showCallUI('voice', otherUser);
-};
-
-window.startVideoCall = function() {
-    if (!activeChat) {
-        showToast('Select a chat first', 'info');
-        return;
-    }
-    
-    var users = Storage.get('users') || [];
-    var chats = Storage.get('chats') || [];
-    var chat = chats.find(function(c) { return c.id === activeChat.id; });
-    
-    if (!chat || chat.isGroup) {
-        showToast('Video calls only work in 1-on-1 chats', 'info');
-        return;
-    }
-    
-    var otherUserId = chat.participants.find(function(p) { return p !== currentUser.id; });
-    var otherUser = users.find(function(u) { return u.id === otherUserId; });
-    
-    if (!otherUser) {
-        showToast('User not found', 'error');
-        return;
-    }
-    
-    currentCallType = 'video';
-    showCallUI('video', otherUser);
-};
-
-function showCallUI(type, user) {
-    callSeconds = 0;
-    
-    var html = '<div class="call-overlay">';
-    html += '<div class="call-container">';
-    html += '<div class="call-bg"></div>';
-    html += '<div class="call-content">';
-    html += '<div class="call-avatar-large"><i class="fas fa-user"></i></div>';
-    html += '<h2 class="call-user-name">' + escapeHtml(user.name) + '</h2>';
-    html += '<p class="call-status" id="call-status">Calling...</p>';
-    html += '<p class="call-timer" id="call-timer" style="display:none;">00:00</p>';
-    html += '<div class="call-actions">';
-    html += '<button class="call-btn call-mute" id="call-mute-btn" onclick="toggleMute()"><i class="fas fa-microphone"></i></button>';
-    html += '<button class="call-btn call-end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>';
-    if (type === 'video') {
-        html += '<button class="call-btn call-video-toggle" id="call-video-btn" onclick="toggleVideo()"><i class="fas fa-video"></i></button>';
-    }
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-    
-    showModal(html);
-    
-    // Simulate connection after 2 seconds
-    setTimeout(function() {
-        var status = document.getElementById('call-status');
-        var timer = document.getElementById('call-timer');
-        if (status) status.textContent = 'Connected';
-        if (timer) timer.style.display = 'block';
-        startCallTimer();
-        showToast('Call connected!', 'success');
-    }, 2000);
-    
-    // Play ring sound
-    playRingSound();
-}
-
-function startCallTimer() {
-    callSeconds = 0;
-    callTimer = setInterval(function() {
-        callSeconds++;
-        var mins = Math.floor(callSeconds / 60);
-        var secs = callSeconds % 60;
-        var timer = document.getElementById('call-timer');
-        if (timer) {
-            timer.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
-        }
-    }, 1000);
-}
-
-window.endCall = function() {
-    if (callTimer) {
-        clearInterval(callTimer);
-        callTimer = null;
-    }
-    
-    var duration = callSeconds;
-    var mins = Math.floor(duration / 60);
-    var secs = duration % 60;
-    
-    closeModal();
-    
-    if (duration > 0 && activeChat) {
-        showToast('Call ended - ' + mins + 'm ' + secs + 's', 'info');
-        
-        // Save call log
-        var messages = Storage.get('messages') || [];
-        var callMessage = {
-            id: generateId(),
-            chatId: activeChat.id,
-            senderId: currentUser.id,
-            senderName: currentUser.name,
-            text: (currentCallType === 'video' ? '??' : '??') + ' Call ended - ' + mins + 'm ' + secs + 's',
-            timestamp: new Date().toISOString(),
-            read: false,
-            status: 'sent',
-            reactions: {},
-            edited: false,
-            starred: false,
-            replyTo: null,
-            forwarded: false
-        };
-        messages.push(callMessage);
-        Storage.set('messages', messages);
-        renderMessages(activeChat.id);
-    } else {
-        showToast('Call cancelled', 'info');
-    }
-    
-    currentCallType = null;
-};
-
-window.toggleMute = function() {
-    var btn = document.getElementById('call-mute-btn');
-    if (btn) {
-        btn.classList.toggle('active');
-        var icon = btn.querySelector('i');
-        if (btn.classList.contains('active')) {
-            icon.className = 'fas fa-microphone-slash';
-            showToast('Microphone muted', 'info');
-        } else {
-            icon.className = 'fas fa-microphone';
-            showToast('Microphone unmuted', 'info');
-        }
-    }
-};
-
-window.toggleVideo = function() {
-    var btn = document.getElementById('call-video-btn');
-    if (btn) {
-        btn.classList.toggle('active');
-        var icon = btn.querySelector('i');
-        if (btn.classList.contains('active')) {
-            icon.className = 'fas fa-video-slash';
-            showToast('Camera off', 'info');
-        } else {
-            icon.className = 'fas fa-video';
-            showToast('Camera on', 'info');
-        }
-    }
-};
-
-function playRingSound() {
-    try {
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 440;
-        gain.gain.value = 0.1;
-        osc.start();
-        setTimeout(function() { 
-            osc.stop();
-            ctx.close();
-        }, 2000);
-    } catch(e) {}
-}
-
-// Call overlay CSS
-var callStyle = document.createElement('style');
-callStyle.textContent = 
-'.call-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;display:flex;align-items:center;justify-content:center}' +
-'.call-container{width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e,#16213e);position:relative}' +
-'.call-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxyYWRpYWxHcmFkaWVudCBpZD0iZyI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzY2N2VlYSIgc3RvcC1vcGFjaXR5PSIwLjEiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM2NjdlZWEiIHN0b3Atb3BhY2l0eT0iMCIvPjwvcmFkaWFsR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZykiLz48L3N2Zz4=) center/cover}' +
-'.call-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:white}' +
-'.call-avatar-large{width:120px;height:120px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:24px;animation:pulse 2s infinite}' +
-'@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(102,126,234,0.4)}50%{box-shadow:0 0 0 30px rgba(102,126,234,0)}}' +
-'.call-user-name{font-size:28px;font-weight:600;margin-bottom:8px}' +
-'.call-status{font-size:16px;opacity:0.8;margin-bottom:8px}' +
-'.call-timer{font-size:32px;font-weight:600;margin-bottom:40px}' +
-'.call-actions{display:flex;gap:24px}' +
-'.call-btn{width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}' +
-'.call-mute{background:rgba(255,255,255,0.2);color:white}' +
-'.call-mute:hover,.call-mute.active{background:rgba(255,255,255,0.3)}' +
-'.call-end{background:#ef4444;color:white}' +
-'.call-end:hover{background:#dc2626;transform:scale(1.1)}' +
-'.call-video-toggle{background:rgba(255,255,255,0.2);color:white}' +
-'.call-video-toggle:hover,.call-video-toggle.active{background:rgba(255,255,255,0.3)}';
-document.head.appendChild(callStyle);
