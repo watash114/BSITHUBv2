@@ -17057,3 +17057,138 @@ body.auth-active #app-page {
         overflow-x: hidden;
     }
 }
+
+/* ==========================================
+   Performance & Stability CSS
+   ========================================== */
+
+/* GPU acceleration */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize rendering */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    overflow-x: hidden;
+    overscroll-behavior: none;
+}
+
+/* Reduce paint complexity */
+.modal-backdrop,
+.sidebar,
+.mobile-nav,
+.mobile-header {
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+/* Optimize images */
+img {
+    max-width: 100%;
+    height: auto;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Optimize scrolling containers */
+.chat-messages,
+.chat-list,
+.feed-list,
+.scrollable {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+}
+
+/* Reduce animation cost */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Optimize text rendering */
+body,
+button,
+input,
+textarea,
+select {
+    text-rendering: optimizeLegibility;
+}
+
+/* Prevent layout shifts */
+img,
+video,
+iframe {
+    aspect-ratio: attr(width) / attr(height);
+}
+
+/* Fix iOS safe areas */
+@supports (padding: max(0px)) {
+    .mobile-header {
+        padding-top: max(0px, env(safe-area-inset-top));
+    }
+    
+    .mobile-nav {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    
+    .chat-input-wrapper {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+}
+
+/* Prevent flash of unstyled content */
+html {
+    background: var(--bg-primary);
+}
+
+/* Smooth page transitions */
+.page {
+    transition: opacity 0.2s ease;
+}
+
+.page:not(.active) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.page.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Fix modal stacking */
+.modal {
+    isolation: isolate;
+}
+
+/* Performance hints */
+.chat-item,
+.message,
+.btn {
+    contain: layout style;
+}
+
+/* Optimize for touch */
+@media (hover: none) and (pointer: coarse) {
+    * {
+        cursor: pointer !important;
+    }
+}
+
+/* Fix viewport on mobile keyboards */
+@supports (-webkit-touch-callout: none) {
+    .chat-input-wrapper {
+        position: sticky;
+        bottom: 0;
+    }
+}

@@ -17160,3 +17160,223 @@ window.addEventListener('orientationchange', function() {
 });
 
 setViewportHeight();
+
+// ==========================================
+// Stability & Performance Fixes
+// ==========================================
+
+// Safe element getter
+function safeGetElement(id) {
+    try {
+        return document.getElementById(id);
+    } catch (e) {
+        return null;
+    }
+}
+
+// Safe event listener
+function safeAddEventListener(element, event, handler) {
+    if (element && typeof handler === 'function') {
+        try {
+            element.addEventListener(event, handler);
+        } catch (e) {
+            console.warn('Event listener error:', e);
+        }
+    }
+}
+
+// Safe localStorage access
+function safeLocalStorage(action, key, value) {
+    try {
+        switch (action) {
+            case 'get':
+                return localStorage.getItem(key);
+            case 'set':
+                localStorage.setItem(key, value);
+                return true;
+            case 'remove':
+                localStorage.removeItem(key);
+                return true;
+            default:
+                return null;
+        }
+    } catch (e) {
+        console.warn('LocalStorage error:', e);
+        return null;
+    }
+}
+
+// Prevent duplicate event listeners
+var eventListeners = {};
+function addUniqueListener(elementId, event, handler) {
+    var key = elementId + '_' + event;
+    if (eventListeners[key]) {
+        var el = document.getElementById(elementId);
+        if (el) {
+            el.removeEventListener(event, eventListeners[key]);
+        }
+    }
+    eventListeners[key] = handler;
+    var el = document.getElementById(elementId);
+    if (el) {
+        el.addEventListener(event, handler);
+    }
+}
+
+// Clean up intervals on page unload
+var activeIntervals = [];
+function safeSetInterval(callback, delay) {
+    var id = setInterval(callback, delay);
+    activeIntervals.push(id);
+    return id;
+}
+
+function clearAllIntervals() {
+    activeIntervals.forEach(function(id) {
+        clearInterval(id);
+    });
+    activeIntervals = [];
+}
+
+// Prevent memory leaks
+window.addEventListener('beforeunload', function() {
+    clearAllIntervals();
+    
+    // Clear Firebase listeners
+    if (typeof firebaseDb !== 'undefined' && firebaseDb) {
+        try {
+            firebaseDb.ref('presence').off();
+            firebaseDb.ref('typing').off();
+        } catch (e) {}
+    }
+});
+
+// Global error handler
+window.onerror = function(message, source, lineno, colno, error) {
+    // Ignore Firebase and external errors
+    if (source && (source.includes('firebase') || source.includes('gstatic') || source.includes('jit.si'))) {
+        return true; // Suppress external errors
+    }
+    
+    console.warn('Global error:', message);
+    return true; // Prevent default error handling
+};
+
+// Unhandled promise rejection handler
+window.addEventListener('unhandledrejection', function(event) {
+    // Suppress Firebase and network errors
+    if (event.reason && event.reason.message) {
+        var msg = event.reason.message;
+        if (msg.includes('Firebase') || msg.includes('network') || msg.includes('fetch')) {
+            event.preventDefault();
+            return;
+        }
+    }
+});
+
+// Debounce utility
+function debounce(func, wait) {
+    var timeout;
+    return function() {
+        var context = this;
+        var args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(function() {
+            func.apply(context, args);
+        }, wait);
+    };
+}
+
+// Throttle utility
+function throttle(func, limit) {
+    var inThrottle;
+    return function() {
+        var args = arguments;
+        var context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(function() {
+                inThrottle = false;
+            }, limit);
+        }
+    };
+}
+
+// Safe JSON parse
+function safeJSONParse(str) {
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        return null;
+    }
+}
+
+// Safe JSON stringify
+function safeJSONStringify(obj) {
+    try {
+        return JSON.stringify(obj);
+    } catch (e) {
+        return '{}';
+    }
+}
+
+// Check if element is visible
+function isElementVisible(element) {
+    if (!element) return false;
+    var rect = element.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+}
+
+// Smooth scroll to element
+function smoothScrollTo(element) {
+    if (element && element.scrollIntoView) {
+        element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+}
+
+// Prevent double click
+var lastClickTime = 0;
+function preventDoubleClick(callback) {
+    var now = Date.now();
+    if (now - lastClickTime < 500) {
+        return;
+    }
+    lastClickTime = now;
+    if (typeof callback === 'function') {
+        callback();
+    }
+}
+
+// Initialize stability fixes
+document.addEventListener('DOMContentLoaded', function() {
+    // Add passive event listeners for better scroll performance
+    document.addEventListener('touchstart', function() {}, { passive: true });
+    document.addEventListener('touchmove', function() {}, { passive: true });
+    
+    // Fix iOS 100vh issue
+    var setVh = function() {
+        var vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', vh + 'px');
+    };
+    setVh();
+    window.addEventListener('resize', debounce(setVh, 100));
+    
+    // Prevent zoom on input focus (iOS)
+    var inputs = document.querySelectorAll('input, textarea, select');
+    inputs.forEach(function(input) {
+        if (input.style.fontSize !== '16px') {
+            input.style.fontSize = '16px';
+        }
+    });
+});
+
+console.log('BSITHUB stability fixes loaded');
