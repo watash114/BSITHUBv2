@@ -16281,3 +16281,124 @@ body.offline .post-composer {
     align-items: center;
     padding: 40px;
 }
+
+/* ==========================================
+   Mobile Performance Optimizations
+   ========================================== */
+
+/* GPU acceleration for smooth animations */
+.chat-item,
+.btn,
+.btn-icon,
+.message,
+.modal-content,
+.nav-item,
+.mobile-nav-item {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* Reduce paint complexity */
+.chat-list,
+.feed-list,
+.groups-container {
+    contain: layout style paint;
+}
+
+/* Optimize scrolling */
+.chat-messages,
+.chat-list,
+.scrollable {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* Faster tap response */
+button,
+a,
+.chat-item,
+.nav-item,
+.mobile-nav-item,
+.btn-icon {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+}
+
+/* Reduce animation complexity on mobile */
+@media (max-width: 768px) {
+    /* Disable expensive animations */
+    * {
+        animation-duration: 0.15s !important;
+        transition-duration: 0.15s !important;
+    }
+    
+    /* Simplify shadows */
+    .modal-content,
+    .chat-item:hover,
+    .btn:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Reduce blur effects */
+    .modal-backdrop {
+        backdrop-filter: none;
+        background: rgba(0,0,0,0.5);
+    }
+    
+    /* Optimize message rendering */
+    .message {
+        contain: layout style;
+    }
+    
+    /* Reduce repaints on input focus */
+    .chat-input,
+    textarea,
+    input {
+        contain: layout;
+    }
+    
+    /* Simplify gradients */
+    .call-avatar-large,
+    .profile-cover,
+    .auth-left {
+        background: var(--primary);
+    }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Optimize for low-end devices */
+@media (max-width: 480px) {
+    /* Reduce blur and shadows */
+    * {
+        filter: none !important;
+        backdrop-filter: none !important;
+    }
+    
+    /* Simpler borders */
+    .chat-item,
+    .setting-item,
+    .message {
+        border-width: 0 0 1px 0;
+        border-radius: 0;
+    }
+    
+    /* Reduce padding */
+    .chat-item {
+        padding: 12px;
+    }
+    
+    .message-bubble {
+        padding: 8px 12px;
+    }
+}

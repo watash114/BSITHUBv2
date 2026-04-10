@@ -16545,3 +16545,175 @@ document.addEventListener('touchend', function(e) {
         e.target.click();
     }
 }, { passive: false });
+
+// ==========================================
+// Mobile Performance Optimizations
+// ==========================================
+
+// Debounce function for performance
+function debounce(func, wait) {
+    var timeout;
+    return function() {
+        var context = this, args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(function() {
+            func.apply(context, args);
+        }, wait);
+    };
+}
+
+// Throttle function for scroll events
+function throttle(func, limit) {
+    var inThrottle;
+    return function() {
+        var args = arguments;
+        var context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(function() { inThrottle = false; }, limit);
+        }
+    };
+}
+
+// Optimize chat list rendering
+var renderChatListDebounced = debounce(function() {
+    if (typeof loadChats === 'function') {
+        loadChats();
+    }
+}, 300);
+
+// Optimize message rendering
+var renderMessagesDebounced = debounce(function(chatId) {
+    if (typeof renderMessages === 'function') {
+        renderMessages(chatId);
+    }
+}, 100);
+
+// Use passive event listeners for scroll
+document.addEventListener('scroll', throttle(function() {
+    // Handle scroll events
+}, 100), { passive: true });
+
+// Optimize touch events
+document.addEventListener('touchstart', function() {}, { passive: true });
+document.addEventListener('touchmove', function() {}, { passive: true });
+
+// Lazy load images
+function lazyLoadImages() {
+    var images = document.querySelectorAll('img[data-src]');
+    var imageObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                var img = entry.target;
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                imageObserver.unobserve(img);
+            }
+        });
+    });
+    
+    images.forEach(function(img) {
+        imageObserver.observe(img);
+    });
+}
+
+// Virtual scrolling for long lists
+function virtualScroll(container, items, renderItem, itemHeight) {
+    if (!container || items.length === 0) return;
+    
+    var visibleCount = Math.ceil(container.clientHeight / itemHeight) + 2;
+    var scrollTop = container.scrollTop;
+    var startIndex = Math.floor(scrollTop / itemHeight);
+    var endIndex = Math.min(startIndex + visibleCount, items.length);
+    
+    container.innerHTML = '';
+    container.style.height = (items.length * itemHeight) + 'px';
+    container.style.position = 'relative';
+    
+    for (var i = startIndex; i < endIndex; i++) {
+        var item = renderItem(items[i], i);
+        item.style.position = 'absolute';
+        item.style.top = (i * itemHeight) + 'px';
+        item.style.width = '100%';
+        container.appendChild(item);
+    }
+}
+
+// Optimize modal animations
+function showModalOptimized(content) {
+    var modal = document.getElementById('modal');
+    var modalContent = document.getElementById('modal-content');
+    
+    if (!modal || !modalContent) return;
+    
+    // Use requestAnimationFrame for smooth rendering
+    requestAnimationFrame(function() {
+        modalContent.innerHTML = content;
+        modal.style.display = 'flex';
+        
+        // Force reflow
+        modal.offsetHeight;
+        
+        modal.classList.add('active');
+    });
+}
+
+// Reduce DOM reflows
+function batchDOMUpdates(updates) {
+    requestAnimationFrame(function() {
+        updates.forEach(function(update) {
+            update();
+        });
+    });
+}
+
+// Optimize input handling
+var messageInput = document.getElementById('message-input');
+if (messageInput) {
+    var inputTimeout;
+    messageInput.addEventListener('input', function() {
+        clearTimeout(inputTimeout);
+        inputTimeout = setTimeout(function() {
+            // Handle input
+            if (typeof sendTypingIndicator === 'function') {
+                sendTypingIndicator();
+            }
+        }, 500);
+    }, { passive: true });
+}
+
+// Preload critical resources
+function preloadResources() {
+    var criticalResources = [
+        'css/style.css'
+    ];
+    
+    criticalResources.forEach(function(url) {
+        var link = document.createElement('link');
+        link.rel = 'preload';
+        link.href = url;
+        link.as = url.endsWith('.css') ? 'style' : 'script';
+        document.head.appendChild(link);
+    });
+}
+
+// Initialize performance optimizations
+document.addEventListener('DOMContentLoaded', function() {
+    preloadResources();
+    lazyLoadImages();
+    
+    // Optimize scroll containers
+    document.querySelectorAll('.chat-list, .chat-messages, .feed-list').forEach(function(el) {
+        el.style.webkitOverflowScrolling = 'touch';
+        el.style.overscrollBehavior = 'contain';
+    });
+});
+
+// Clean up on page unload
+window.addEventListener('beforeunload', function() {
+    // Clear intervals
+    if (typeof realtimeInterval !== 'undefined' && realtimeInterval) {
+        clearInterval(realtimeInterval);
+    }
+});
