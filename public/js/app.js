@@ -16411,3 +16411,137 @@ window.showQuickActionsMenu = function() {
 };
 
 
+
+// ==========================================
+// Mobile Navigation
+// ==========================================
+var mobileCurrentSection = 'chats';
+var mobileInChat = false;
+
+window.mobileNavigate = function(section) {
+    // Update nav items
+    document.querySelectorAll('.mobile-nav-item').forEach(function(item) {
+        item.classList.remove('active');
+        if (item.dataset.section === section) {
+            item.classList.add('active');
+        }
+    });
+    
+    // Hide chat main if visible
+    var chatMain = document.getElementById('chat-main');
+    if (chatMain) chatMain.classList.remove('active-mobile');
+    mobileInChat = false;
+    
+    // Show sidebar for chats section
+    var chatSidebar = document.querySelector('.chat-sidebar');
+    if (chatSidebar) chatSidebar.classList.remove('hidden-mobile');
+    
+    // Update header title
+    var titles = {
+        'chats': 'Chats',
+        'groups': 'Groups',
+        'feed': 'Postings',
+        'profile': 'Profile',
+        'settings': 'Settings'
+    };
+    document.getElementById('mobile-header-title').textContent = titles[section] || 'BSITHUB';
+    
+    // Navigate to section
+    mobileCurrentSection = section;
+    
+    // Trigger existing navigation
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+        item.classList.remove('active');
+        if (item.dataset.section === section) {
+            item.classList.add('active');
+            item.click();
+        }
+    });
+};
+
+window.mobileOpenChat = function(chatId, userId) {
+    mobileInChat = true;
+    
+    // Hide sidebar
+    var chatSidebar = document.querySelector('.chat-sidebar');
+    if (chatSidebar) chatSidebar.classList.add('hidden-mobile');
+    
+    // Show chat main
+    var chatMain = document.getElementById('chat-main');
+    if (chatMain) chatMain.classList.add('active-mobile');
+    
+    // Update header
+    var users = Storage.get('users') || [];
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === chatId; });
+    
+    if (chat) {
+        if (chat.isGroup) {
+            document.getElementById('mobile-header-title').textContent = chat.groupName || 'Group';
+        } else {
+            var otherUser = users.find(function(u) { return u.id === userId; });
+            document.getElementById('mobile-header-title').textContent = otherUser ? otherUser.name : 'Chat';
+        }
+    }
+    
+    // Open the chat
+    openChat(chatId, userId);
+};
+
+window.mobileGoBack = function() {
+    if (mobileInChat) {
+        // Go back to chat list
+        mobileInChat = false;
+        
+        var chatSidebar = document.querySelector('.chat-sidebar');
+        if (chatSidebar) chatSidebar.classList.remove('hidden-mobile');
+        
+        var chatMain = document.getElementById('chat-main');
+        if (chatMain) chatMain.classList.remove('active-mobile');
+        
+        document.getElementById('mobile-header-title').textContent = 'Chats';
+        
+        // Update nav
+        document.querySelectorAll('.mobile-nav-item').forEach(function(item) {
+            item.classList.remove('active');
+            if (item.dataset.section === 'chats') item.classList.add('active');
+        });
+    }
+};
+
+// Override openChat for mobile
+var originalOpenChat = window.openChat;
+window.openChat = function(chatId, userId) {
+    if (window.innerWidth <= 768) {
+        mobileOpenChat(chatId, userId);
+    } else {
+        originalOpenChat(chatId, userId);
+    }
+};
+
+// Handle orientation change
+window.addEventListener('orientationchange', function() {
+    setTimeout(function() {
+        window.scrollTo(0, 0);
+    }, 100);
+});
+
+// Handle viewport changes
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        // Reset mobile state on desktop
+        var chatSidebar = document.querySelector('.chat-sidebar');
+        if (chatSidebar) chatSidebar.classList.remove('hidden-mobile');
+        
+        var chatMain = document.getElementById('chat-main');
+        if (chatMain) chatMain.classList.remove('active-mobile');
+    }
+});
+
+// Prevent double-tap zoom on buttons
+document.addEventListener('touchend', function(e) {
+    if (e.target.closest('.btn-icon, .btn, .mobile-nav-item, .chat-item')) {
+        e.preventDefault();
+        e.target.click();
+    }
+}, { passive: false });

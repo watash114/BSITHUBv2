@@ -15875,3 +15875,409 @@ body.offline .post-composer {
     display: flex;
     gap: 8px;
 }
+
+/* ==========================================
+   Mobile Responsive Design
+   ========================================== */
+
+/* Mobile Navigation Bar */
+.mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border);
+    z-index: 1000;
+    padding: 8px 0;
+    padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+.mobile-nav-items {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item i {
+    font-size: 20px;
+}
+
+.mobile-nav-item.active {
+    color: var(--primary);
+}
+
+.mobile-nav-item .badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    background: var(--danger);
+    color: white;
+    font-size: 10px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile Header */
+.mobile-header {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+    z-index: 999;
+    padding: 0 16px;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: env(safe-area-inset-top, 0);
+}
+
+.mobile-header-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.mobile-header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Back Button for Mobile */
+.mobile-back-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 8px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+    /* Hide sidebar on mobile */
+    .sidebar {
+        display: none !important;
+    }
+    
+    /* Show mobile nav */
+    .mobile-nav {
+        display: block;
+    }
+    
+    /* Show mobile header */
+    .mobile-header {
+        display: flex;
+    }
+    
+    /* Main content takes full width */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        height: 100vh;
+        height: 100dvh;
+    }
+    
+    /* App page layout */
+    .app-page {
+        flex-direction: column;
+    }
+    
+    /* Chat sidebar becomes full screen */
+    .chat-sidebar {
+        width: 100% !important;
+        height: calc(100vh - 56px - 60px);
+        height: calc(100dvh - 56px - 60px);
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        bottom: 60px;
+        z-index: 100;
+        background: var(--bg-primary);
+    }
+    
+    .chat-sidebar.hidden-mobile {
+        display: none !important;
+    }
+    
+    /* Chat main area */
+    .chat-main {
+        width: 100% !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 200;
+        background: var(--bg-primary);
+        display: none;
+    }
+    
+    .chat-main.active-mobile {
+        display: flex !important;
+    }
+    
+    /* Back button visible on mobile */
+    .mobile-back-btn {
+        display: block;
+    }
+    
+    /* Adjust chat header for mobile */
+    .chat-main-header {
+        padding: 12px 16px;
+    }
+    
+    .chat-actions {
+        gap: 4px;
+    }
+    
+    .chat-actions .btn-icon {
+        width: 36px;
+        height: 36px;
+    }
+    
+    /* Adjust chat input for mobile */
+    .chat-input-wrapper {
+        padding: 8px 12px;
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+    
+    .chat-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Adjust messages for mobile */
+    .message-bubble {
+        max-width: 85%;
+    }
+    
+    /* Adjust modals for mobile */
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+        margin: auto 2.5%;
+        border-radius: 16px;
+    }
+    
+    /* Settings page */
+    .settings-container {
+        padding: 16px;
+        padding-bottom: 80px;
+    }
+    
+    /* Profile page */
+    .profile-container {
+        padding: 16px;
+        padding-bottom: 80px;
+    }
+    
+    /* Admin page */
+    .admin-container {
+        padding: 16px;
+        padding-bottom: 80px;
+    }
+    
+    /* Feed/Postings page */
+    .feed-container {
+        padding: 16px;
+        padding-bottom: 80px;
+    }
+    
+    /* Groups page */
+    .groups-container {
+        padding: 16px;
+        padding-bottom: 80px;
+    }
+    
+    /* Starred page */
+    .starred-container {
+        padding: 16px;
+        padding-bottom: 80px;
+    }
+    
+    /* Auth page */
+    .auth-container {
+        flex-direction: column;
+        padding: 20px;
+    }
+    
+    .auth-left {
+        padding: 20px 0;
+    }
+    
+    .auth-right {
+        padding: 20px;
+    }
+    
+    /* Emoji picker */
+    .emoji-picker {
+        width: 100%;
+        left: 0;
+        right: 0;
+        bottom: 60px;
+        border-radius: 16px 16px 0 0;
+        max-height: 50vh;
+    }
+    
+    /* GIF picker */
+    .gif-picker {
+        width: 100%;
+        left: 0;
+        right: 0;
+        bottom: 60px;
+        border-radius: 16px 16px 0 0;
+        max-height: 50vh;
+    }
+    
+    /* Composer tools */
+    .composer-tools {
+        flex-wrap: wrap;
+    }
+    
+    /* Section headers */
+    .section-header {
+        padding: 16px;
+    }
+    
+    /* Hide desktop-only elements */
+    .desktop-only {
+        display: none !important;
+    }
+}
+
+/* Small phones */
+@media (max-width: 375px) {
+    .chat-actions .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+    
+    .message-bubble {
+        max-width: 90%;
+    }
+    
+    .emoji-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+/* Touch-friendly styles */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger touch targets */
+    .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .chat-item {
+        padding: 14px 16px;
+    }
+    
+    .nav-item {
+        padding: 12px 16px;
+    }
+    
+    .setting-item {
+        padding: 16px;
+    }
+    
+    /* Remove hover effects on touch devices */
+    .chat-item:hover {
+        background: transparent;
+    }
+    
+    .chat-item:active {
+        background: var(--bg-secondary);
+    }
+    
+    .btn:hover {
+        transform: none;
+    }
+    
+    .btn:active {
+        transform: scale(0.98);
+    }
+    
+    /* Swipe actions hint */
+    .chat-item {
+        position: relative;
+        overflow: hidden;
+    }
+}
+
+/* Safe area support for notched phones */
+@supports (padding: max(0px)) {
+    .mobile-nav {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    
+    .mobile-header {
+        padding-top: max(0px, env(safe-area-inset-top));
+    }
+    
+    .chat-input-wrapper {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+}
+
+/* Prevent text selection on buttons */
+.mobile-nav-item,
+.btn-icon,
+.btn {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Smooth scrolling on iOS */
+.chat-messages,
+.chat-list,
+.scrollable {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Pull to refresh indicator */
+.pull-to-refresh {
+    display: none;
+    text-align: center;
+    padding: 16px;
+    color: var(--text-secondary);
+}
+
+.pull-to-refresh.active {
+    display: block;
+}
+
+/* Mobile loading spinner */
+.mobile-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}

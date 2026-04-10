@@ -2,25 +2,57 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>BSITHUB v2.5.0 - Connect & Chat</title>
-    <meta name="description" content="BSITHUB - Connect, Chat, Collaborate">
+    <meta name="description" content="BSITHUB - Connect, Chat, Collaborate. A modern chat app with voice/video calls.">
+    
+    <!-- Security -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; connect-src 'self' https: wss: ws:; script-src 'self' https: 'unsafe-inline' 'unsafe-eval'; style-src 'self' https: 'unsafe-inline';">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <meta name="referrer" content="strict-origin-when-cross-origin">
+    
+    <!-- Mobile Web App -->
     <meta name="theme-color" content="#667eea">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BSITHUB">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- Android -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="BSITHUB">
+    
+    <!-- Microsoft -->
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="BSITHUB - Connect & Chat">
+    <meta property="og:description" content="A modern chat application with voice/video calls">
+    <meta property="og:type" content="website">
+    
+    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23667eea' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>B</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23667eea' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>B</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180' rx='36'/><text x='90' y='120' font-size='100' font-family='Arial' font-weight='bold' text-anchor='middle' fill='white'>B</text></svg>">
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    
+    <!-- Prevent phone number detection -->
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        html { -webkit-text-size-adjust: 100%; }
+    </style>
 </head>
 <body>
     <!-- Login/Register Page -->
@@ -340,7 +372,7 @@
                                 <h3>Select a conversation</h3>
                                 <p>Choose a chat from the list or start a new conversation</p>
                             </div>
-                            <div class="chat-active" id="chat-active" style="display:none;">
+                            <div class="chat-main chat-active" id="chat-main chat-active" style="display:none;">
                                 <div class="chat-main-header">
                                     <div class="chat-user-info">
                                         <div class="chat-avatar" id="chat-avatar">
@@ -1100,6 +1132,45 @@
             <span>New Post</span>
         </div>
     </div>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header" id="mobile-header">
+        <button class="mobile-back-btn" id="mobile-back-btn" onclick="mobileGoBack()">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <span class="mobile-header-title" id="mobile-header-title">BSITHUB</span>
+        <div class="mobile-header-actions">
+            <button class="btn-icon" onclick="showUserSearch()" title="Search">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation Bar -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <div class="mobile-nav-items">
+            <button class="mobile-nav-item active" data-section="chats" onclick="mobileNavigate('chats')">
+                <i class="fas fa-comment"></i>
+                <span>Chats</span>
+            </button>
+            <button class="mobile-nav-item" data-section="groups" onclick="mobileNavigate('groups')">
+                <i class="fas fa-users"></i>
+                <span>Groups</span>
+            </button>
+            <button class="mobile-nav-item" data-section="feed" onclick="mobileNavigate('feed')">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Posts</span>
+            </button>
+            <button class="mobile-nav-item" data-section="profile" onclick="mobileNavigate('profile')">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </button>
+            <button class="mobile-nav-item" data-section="settings" onclick="mobileNavigate('settings')">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </button>
+        </div>
+    </nav>
 
     <!-- Toast Notifications -->
     <div class="toast-container" id="toast-container"></div>
