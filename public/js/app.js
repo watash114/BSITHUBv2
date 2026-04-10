@@ -6844,12 +6844,14 @@ window.startVideoCall = function() {
         return;
     }
     
-    if (isVideoCallActive) {
-        showToast('Already in a call', 'info');
-        return;
-    }
+    var roomName = 'bsithub-video-' + activeChat.id.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
+    var url = 'https://meet.jit.si/' + roomName + '#userInfo.displayName="' + encodeURIComponent(currentUser.name) + '"';
     
-    showModal('<div class="video-call-setup"><h3><i class="fas fa-video"></i> Video Call</h3><p>Start a video call using Jitsi (free)</p><button class="btn btn-primary" onclick="initVideoCall()"><i class="fas fa-phone"></i> Start Call</button><button class="btn" onclick="closeModal()">Cancel</button></div>');
+    window.open(url, '_blank', 'width=1200,height=800');
+    showToast('Video call opened in new window!', 'success');
+    
+    // Log the call
+    logCallToChat('video', roomName);
 };
 
 window.startVoiceCall = function() {
@@ -6858,13 +6860,39 @@ window.startVoiceCall = function() {
         return;
     }
     
-    if (isVideoCallActive) {
-        showToast('Already in a call', 'info');
-        return;
-    }
+    var roomName = 'bsithub-voice-' + activeChat.id.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
+    var url = 'https://meet.jit.si/' + roomName + '#config.startWithVideoMuted=true&userInfo.displayName="' + encodeURIComponent(currentUser.name) + '"';
     
-    showModal('<div class="video-call-setup"><h3><i class="fas fa-phone"></i> Voice Call</h3><p>Start a voice call using Jitsi (free)</p><button class="btn btn-primary" onclick="initVoiceCall()"><i class="fas fa-phone"></i> Start Call</button><button class="btn" onclick="closeModal()">Cancel</button></div>');
+    window.open(url, '_blank', 'width=800,height=600');
+    showToast('Voice call opened in new window!', 'success');
+    
+    // Log the call
+    logCallToChat('voice', roomName);
 };
+
+function logCallToChat(type, roomName) {
+    if (!activeChat) return;
+    
+    var messages = Storage.get('messages') || [];
+    var callMessage = {
+        id: generateId(),
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        text: (type === 'video' ? '📹' : '📞') + ' Started a ' + type + ' call. Room: ' + roomName,
+        timestamp: new Date().toISOString(),
+        read: false,
+        status: 'sent',
+        reactions: {},
+        edited: false,
+        starred: false,
+        replyTo: null,
+        forwarded: false
+    };
+    messages.push(callMessage);
+    Storage.set('messages', messages);
+    renderMessages(activeChat.id);
+}
 
 window.initVoiceCall = function() {
     closeModal();
