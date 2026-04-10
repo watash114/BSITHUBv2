@@ -17070,3 +17070,93 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 });
+
+// ==========================================
+// Fix Page Switching on Mobile
+// ==========================================
+
+// Override showAuthPage to properly hide app page
+var originalShowAuthPage = window.showAuthPage;
+window.showAuthPage = function() {
+    document.getElementById('auth-page').classList.add('active');
+    document.getElementById('app-page').classList.remove('active');
+    document.body.classList.add('auth-active');
+    document.body.classList.remove('app-active');
+    
+    // Hide mobile nav when on auth page
+    var mobileNav = document.getElementById('mobile-nav');
+    if (mobileNav) mobileNav.style.display = 'none';
+    
+    var mobileHeader = document.getElementById('mobile-header');
+    if (mobileHeader) mobileHeader.style.display = 'none';
+};
+
+// Override showApp to properly hide auth page
+var originalShowApp = window.showApp;
+window.showApp = function() {
+    document.getElementById('auth-page').classList.remove('active');
+    document.getElementById('app-page').classList.add('active');
+    document.body.classList.add('app-active');
+    document.body.classList.remove('auth-active');
+    
+    // Show mobile nav when on app page
+    if (window.innerWidth <= 768) {
+        var mobileNav = document.getElementById('mobile-nav');
+        if (mobileNav) mobileNav.style.display = 'block';
+        
+        var mobileHeader = document.getElementById('mobile-header');
+        if (mobileHeader) mobileHeader.style.display = 'flex';
+    }
+    
+    // Call original if exists
+    if (originalShowApp) originalShowApp();
+};
+
+// Initialize page state on load
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is logged in
+    var savedUser = localStorage.getItem('currentUser');
+    
+    if (savedUser) {
+        // User is logged in - show app
+        document.getElementById('auth-page').classList.remove('active');
+        document.getElementById('app-page').classList.add('active');
+        document.body.classList.add('app-active');
+        document.body.classList.remove('auth-active');
+        
+        // Show mobile nav
+        if (window.innerWidth <= 768) {
+            var mobileNav = document.getElementById('mobile-nav');
+            if (mobileNav) mobileNav.style.display = 'block';
+            
+            var mobileHeader = document.getElementById('mobile-header');
+            if (mobileHeader) mobileHeader.style.display = 'flex';
+        }
+    } else {
+        // User not logged in - show auth
+        document.getElementById('auth-page').classList.add('active');
+        document.getElementById('app-page').classList.remove('active');
+        document.body.classList.add('auth-active');
+        document.body.classList.remove('app-active');
+        
+        // Hide mobile nav
+        var mobileNav = document.getElementById('mobile-nav');
+        if (mobileNav) mobileNav.style.display = 'none';
+        
+        var mobileHeader = document.getElementById('mobile-header');
+        if (mobileHeader) mobileHeader.style.display = 'none';
+    }
+});
+
+// Fix for iOS viewport height
+function setViewportHeight() {
+    var vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', vh + 'px');
+}
+
+window.addEventListener('resize', setViewportHeight);
+window.addEventListener('orientationchange', function() {
+    setTimeout(setViewportHeight, 100);
+});
+
+setViewportHeight();

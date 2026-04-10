@@ -16921,3 +16921,139 @@ a,
         padding-bottom: 50px;
     }
 }
+
+/* ==========================================
+   Fix Page Separation on Mobile
+   ========================================== */
+
+/* Ensure pages don't overlap */
+.page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.page.active {
+    display: flex;
+    z-index: 10;
+}
+
+/* Auth Page - Full screen, above everything */
+#auth-page {
+    z-index: 1000;
+    background: var(--bg-primary);
+}
+
+#auth-page.active {
+    display: flex !important;
+}
+
+/* App Page - Below auth page */
+#app-page {
+    z-index: 1;
+}
+
+#app-page.active {
+    display: flex !important;
+}
+
+/* When app page is active, hide auth page */
+#app-page.active ~ #auth-page,
+body.app-active #auth-page {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* When auth page is active, hide app page */
+#auth-page.active ~ #app-page,
+body.auth-active #app-page {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Mobile specific fixes */
+@media (max-width: 768px) {
+    /* Auth page full screen */
+    #auth-page {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        z-index: 9999;
+        background: var(--bg-primary);
+        overflow-y: auto;
+    }
+    
+    /* App page full screen */
+    #app-page {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        z-index: 1;
+        background: var(--bg-primary);
+    }
+    
+    /* Auth container */
+    .auth-container {
+        height: 100%;
+        min-height: 100%;
+        min-height: 100dvh;
+    }
+    
+    /* App container */
+    .app-container {
+        height: 100%;
+        min-height: 100%;
+        min-height: 100dvh;
+    }
+    
+    /* Ensure main content doesn't overlap */
+    .main-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Mobile header above content */
+    .mobile-header {
+        z-index: 100;
+    }
+    
+    /* Mobile nav at bottom */
+    .mobile-nav {
+        z-index: 100;
+    }
+    
+    /* Sidebar hidden on mobile */
+    .sidebar {
+        display: none !important;
+        z-index: 0;
+    }
+}
+
+/* Extra small phones */
+@media (max-width: 375px) {
+    #auth-page,
+    #app-page {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+}
