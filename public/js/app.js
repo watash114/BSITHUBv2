@@ -2216,7 +2216,8 @@ function openChat(chatId, userId) {
                 // Play sound if not our message
                 if (msg.senderId !== currentUser.id) {
                     playReceiveSound();
-                    addNotification('message', msg.senderId, msg.senderName || 'Someone', null, msg.text.substring(0, 100), null, chatId);
+                    var msgPreview = msg.text ? msg.text.substring(0, 100) : (msg.gifUrl ? '[GIF]' : msg.fileData ? '[File]' : '[Message]');
+                    addNotification('message', msg.senderId, msg.senderName || 'Someone', null, msgPreview, null, chatId);
                     // Hide typing indicator when message arrives
                     var typingEl = document.getElementById('typing-indicator');
                     if (typingEl) typingEl.style.display = 'none';
