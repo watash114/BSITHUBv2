@@ -16398,6 +16398,10 @@ window.clearLoginHistory = function() {
 window.showQuickActionsMenu = function() {
     var html = '<div class="quick-actions-modal"><h3>Quick Actions</h3>';
     html += '<div class="quick-actions-grid">';
+    html += '<div class="quick-action-item" onclick="showStories()"><i class="fas fa-circle-notch"></i><span>Stories</span></div>';
+    html += '<div class="quick-action-item" onclick="shareLocation()"><i class="fas fa-map-marker-alt"></i><span>Location</span></div>';
+    html += '<div class="quick-action-item" onclick="show2FA()"><i class="fas fa-shield-alt"></i><span>2FA</span></div>';
+    html += '<div class="quick-action-item" onclick="showAppLock()"><i class="fas fa-lock"></i><span>App Lock</span></div>';
     html += '<div class="quick-action-item" onclick="showChatBackup()"><i class="fas fa-download"></i><span>Backup</span></div>';
     html += '<div class="quick-action-item" onclick="showThemePicker()"><i class="fas fa-palette"></i><span>Themes</span></div>';
     html += '<div class="quick-action-item" onclick="showAutoReplySettings()"><i class="fas fa-robot"></i><span>Auto-Reply</span></div>';
@@ -17380,3 +17384,513 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('BSITHUB stability fixes loaded');
+
+// ==========================================
+// 31. Stories/Status Updates
+// ==========================================
+window.showStories = function() {
+    var stories = Storage.get('stories') || [];
+    var now = Date.now();
+    
+    // Filter out expired stories (24 hours)
+    stories = stories.filter(function(s) {
+        return now - new Date(s.timestamp).getTime() < 24 * 60 * 60 * 1000;
+    });
+    Storage.set('stories', stories);
+    
+    var myStories = stories.filter(function(s) { return s.userId === currentUser.id; });
+    var otherStories = stories.filter(function(s) { return s.userId !== currentUser.id; });
+    
+    var html = '<div class="stories-modal"><h3>Stories</h3>';
+    
+    // My stories
+    html += '<div class="stories-section">';
+    html += '<h4>My Stories</h4>';
+    if (myStories.length === 0) {
+        html += '<div class="story-add-btn" onclick="showCreateStory()"><i class="fas fa-plus"></i> Add Story</div>';
+    } else {
+        myStories.forEach(function(story) {
+            html += '<div class="story-item-view" onclick="viewStory(\'' + story.id + '\')">';
+            html += '<div class="story-preview">' + (story.type === 'image' ? '<img src="' + story.content + '">' : '<span>' + escapeHtml(story.content) + '</span>') + '</div>';
+            html += '<div class="story-time">' + getTimeAgo(story.timestamp) + '</div>';
+            html += '</div>';
+        });
+        html += '<div class="story-add-small" onclick="showCreateStory()"><i class="fas fa-plus"></i></div>';
+    }
+    html += '</div>';
+    
+    // Other stories
+    html += '<div class="stories-section">';
+    html += '<h4>Recent Updates</h4>';
+    if (otherStories.length === 0) {
+        html += '<p class="no-stories">No stories yet</p>';
+    } else {
+        otherStories.forEach(function(story) {
+            var users = Storage.get('users') || [];
+            var user = users.find(function(u) { return u.id === story.userId; });
+            html += '<div class="story-item-view" onclick="viewStory(\'' + story.id + '\')">';
+            html += '<div class="story-avatar">' + (user ? user.name.charAt(0) : '?') + '</div>';
+            html += '<div class="story-info">';
+            html += '<div class="story-name">' + (user ? escapeHtml(user.name) : 'Unknown') + '</div>';
+            html += '<div class="story-time">' + getTimeAgo(story.timestamp) + '</div>';
+            html += '</div></div>';
+        });
+    }
+    html += '</div></div>';
+    
+    showModal(html);
+};
+
+window.showCreateStory = function() {
+    var html = '<div class="create-story-modal"><h3>Create Story</h3>';
+    html += '<div class="story-type-selector">';
+    html += '<button class="story-type-btn active" data-type="text" onclick="selectStoryType(\'text\')"><i class="fas fa-font"></i> Text</button>';
+    html += '<button class="story-type-btn" data-type="image" onclick="selectStoryType(\'image\')"><i class="fas fa-image"></i> Image</button>';
+    html += '</div>';
+    html += '<div id="story-text-input" class="story-input">';
+    html += '<textarea id="story-text" placeholder="What\'s on your mind?" rows="4"></textarea>';
+    html += '<div class="story-bg-selector">';
+    html += '<div class="bg-option" style="background:#667eea" onclick="selectStoryBg(this)"></div>';
+    html += '<div class="bg-option" style="background:#e74c3c" onclick="selectStoryBg(this)"></div>';
+    html += '<div class="bg-option" style="background:#2ecc71" onclick="selectStoryBg(this)"></div>';
+    html += '<div class="bg-option" style="background:#f39c12" onclick="selectStoryBg(this)"></div>';
+    html += '<div class="bg-option" style="background:#9b59b6" onclick="selectStoryBg(this)"></div>';
+    html += '</div></div>';
+    html += '<div id="story-image-input" class="story-input" style="display:none">';
+    html += '<input type="file" id="story-image-file" accept="image/*" onchange="previewStoryImage(this)">';
+    html += '<div id="story-image-preview" class="story-image-preview"></div>';
+    html += '</div>';
+    html += '<button class="btn btn-primary" onclick="createStory()"><i class="fas fa-paper-plane"></i> Share Story</button>';
+    html += '</div>';
+    showModal(html);
+    window.selectedStoryBg = '#667eea';
+};
+
+window.selectStoryType = function(type) {
+    document.querySelectorAll('.story-type-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+        if (btn.dataset.type === type) btn.classList.add('active');
+    });
+    document.getElementById('story-text-input').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('story-image-input').style.display = type === 'image' ? 'block' : 'none';
+};
+
+window.selectStoryBg = function(el) {
+    document.querySelectorAll('.bg-option').forEach(function(opt) { opt.classList.remove('selected'); });
+    el.classList.add('selected');
+    window.selectedStoryBg = el.style.background;
+};
+
+window.previewStoryImage = function(input) {
+    var file = input.files[0];
+    if (file) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('story-image-preview').innerHTML = '<img src="' + e.target.result + '">';
+            window.selectedStoryImage = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+window.createStory = function() {
+    var textEl = document.getElementById('story-text');
+    var imageInput = document.getElementById('story-image-file');
+    var isImage = imageInput && imageInput.files.length > 0;
+    
+    var stories = Storage.get('stories') || [];
+    var story = {
+        id: generateId(),
+        userId: currentUser.id,
+        userName: currentUser.name,
+        type: isImage ? 'image' : 'text',
+        content: isImage ? window.selectedStoryImage : (textEl ? textEl.value : ''),
+        background: window.selectedStoryBg || '#667eea',
+        timestamp: new Date().toISOString(),
+        views: []
+    };
+    
+    if (!story.content) {
+        showToast('Add some content to your story', 'error');
+        return;
+    }
+    
+    stories.push(story);
+    Storage.set('stories', stories);
+    closeModal();
+    showToast('Story shared!', 'success');
+};
+
+window.viewStory = function(storyId) {
+    var stories = Storage.get('stories') || [];
+    var story = stories.find(function(s) { return s.id === storyId; });
+    if (!story) return;
+    
+    var html = '<div class="story-viewer" style="background:' + (story.type === 'image' ? 'transparent' : story.background) + '">';
+    if (story.type === 'image') {
+        html += '<img src="' + story.content + '" class="story-full-image">';
+    } else {
+        html += '<div class="story-text-content">' + escapeHtml(story.content) + '</div>';
+    }
+    html += '<div class="story-viewer-header">';
+    html += '<div class="story-viewer-user">' + escapeHtml(story.userName) + '</div>';
+    html += '<div class="story-viewer-time">' + getTimeAgo(story.timestamp) + '</div>';
+    html += '</div>';
+    html += '<button class="story-close" onclick="closeModal()">&times;</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+function getTimeAgo(timestamp) {
+    var seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+    return Math.floor(seconds / 86400) + 'd ago';
+}
+
+// ==========================================
+// 32. Two-Factor Authentication
+// ==========================================
+window.show2FA = function() {
+    var settings = Storage.get('settings') || {};
+    var is2FAEnabled = settings.twoFactorEnabled || false;
+    var has2FACode = settings.twoFactorSecret;
+    
+    var html = '<div class="twofa-modal"><h3>Two-Factor Authentication</h3>';
+    
+    if (is2FAEnabled) {
+        html += '<div class="twofa-status enabled"><i class="fas fa-shield-alt"></i> 2FA is Enabled</div>';
+        html += '<p>Your account is protected with two-factor authentication.</p>';
+        html += '<button class="btn danger" onclick="disable2FA()">Disable 2FA</button>';
+    } else {
+        html += '<div class="twofa-status disabled"><i class="fas fa-shield-alt"></i> 2FA is Disabled</div>';
+        html += '<p>Add an extra layer of security to your account.</p>';
+        html += '<div class="twofa-setup">';
+        html += '<h4>Setup 2FA</h4>';
+        html += '<p>1. Enter a 6-digit PIN that you will use to verify your identity.</p>';
+        html += '<input type="password" id="twofa-pin" placeholder="Enter 6-digit PIN" maxlength="6" pattern="[0-9]*">';
+        html += '<input type="password" id="twofa-pin-confirm" placeholder="Confirm PIN" maxlength="6" pattern="[0-9]*">';
+        html += '<p class="twofa-note">Remember this PIN! You will need it to login.</p>';
+        html += '<button class="btn btn-primary" onclick="enable2FA()"><i class="fas fa-shield-alt"></i> Enable 2FA</button>';
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    showModal(html);
+};
+
+window.enable2FA = function() {
+    var pin = document.getElementById('twofa-pin').value;
+    var confirmPin = document.getElementById('twofa-pin-confirm').value;
+    
+    if (!pin || pin.length !== 6) {
+        showToast('PIN must be 6 digits', 'error');
+        return;
+    }
+    
+    if (pin !== confirmPin) {
+        showToast('PINs do not match', 'error');
+        return;
+    }
+    
+    if (!/^\d{6}$/.test(pin)) {
+        showToast('PIN must contain only numbers', 'error');
+        return;
+    }
+    
+    var settings = Storage.get('settings') || {};
+    settings.twoFactorEnabled = true;
+    settings.twoFactorSecret = btoa(pin); // Simple encoding
+    Storage.set('settings', settings);
+    
+    closeModal();
+    showToast('2FA enabled successfully!', 'success');
+};
+
+window.disable2FA = function() {
+    var settings = Storage.get('settings') || {};
+    settings.twoFactorEnabled = false;
+    delete settings.twoFactorSecret;
+    Storage.set('settings', settings);
+    
+    closeModal();
+    showToast('2FA disabled', 'info');
+};
+
+window.verify2FA = function(callback) {
+    var html = '<div class="twofa-verify"><h3>Verify Identity</h3>';
+    html += '<p>Enter your 6-digit 2FA PIN to continue.</p>';
+    html += '<input type="password" id="verify-pin" placeholder="Enter PIN" maxlength="6">';
+    html += '<button class="btn btn-primary" onclick="check2FAPin()">Verify</button>';
+    html += '</div>';
+    showModal(html);
+    window.twofaCallback = callback;
+};
+
+window.check2FAPin = function() {
+    var pin = document.getElementById('verify-pin').value;
+    var settings = Storage.get('settings') || {};
+    var storedPin = atob(settings.twoFactorSecret || '');
+    
+    if (pin === storedPin) {
+        closeModal();
+        if (typeof window.twofaCallback === 'function') {
+            window.twofaCallback(true);
+        }
+        showToast('Verified!', 'success');
+    } else {
+        showToast('Incorrect PIN', 'error');
+    }
+};
+
+// ==========================================
+// 33. Screen Sharing in Calls
+// ==========================================
+window.startScreenShare = function() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        showToast('Screen sharing not supported', 'error');
+        return;
+    }
+    
+    navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        .then(function(stream) {
+            window.screenStream = stream;
+            showToast('Screen sharing started!', 'success');
+            
+            // Show screen share indicator
+            var indicator = document.createElement('div');
+            indicator.id = 'screen-share-indicator';
+            indicator.innerHTML = '<div class="screen-share-badge"><i class="fas fa-desktop"></i> Sharing Screen <button onclick="stopScreenShare()"><i class="fas fa-times"></i></button></div>';
+            document.body.appendChild(indicator);
+            
+            // Handle stream end
+            stream.getVideoTracks()[0].onended = function() {
+                stopScreenShare();
+            };
+        })
+        .catch(function(err) {
+            console.error('Screen share error:', err);
+            showToast('Could not start screen sharing', 'error');
+        });
+};
+
+window.stopScreenShare = function() {
+    if (window.screenStream) {
+        window.screenStream.getTracks().forEach(function(track) {
+            track.stop();
+        });
+        window.screenStream = null;
+    }
+    
+    var indicator = document.getElementById('screen-share-indicator');
+    if (indicator) indicator.remove();
+    
+    showToast('Screen sharing stopped', 'info');
+};
+
+// ==========================================
+// 34. Location Sharing
+// ==========================================
+window.shareLocation = function() {
+    if (!activeChat) {
+        showToast('Select a chat first', 'info');
+        return;
+    }
+    
+    if (!navigator.geolocation) {
+        showToast('Geolocation not supported', 'error');
+        return;
+    }
+    
+    showToast('Getting your location...', 'info');
+    
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            var mapsUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+            
+            var messages = Storage.get('messages') || [];
+            var locationMessage = {
+                id: generateId(),
+                chatId: activeChat.id,
+                senderId: currentUser.id,
+                senderName: currentUser.name,
+                text: '?? Location shared',
+                location: { lat: lat, lng: lng, url: mapsUrl },
+                timestamp: new Date().toISOString(),
+                read: false,
+                status: 'sent',
+                reactions: {},
+                edited: false,
+                starred: false,
+                replyTo: null,
+                forwarded: false
+            };
+            
+            messages.push(locationMessage);
+            Storage.set('messages', messages);
+            
+            if (typeof sendMsgToFirebase === 'function') {
+                sendMsgToFirebase(locationMessage);
+            }
+            
+            renderMessages(activeChat.id);
+            showToast('Location shared!', 'success');
+        },
+        function(error) {
+            showToast('Could not get location: ' + error.message, 'error');
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+};
+
+// ==========================================
+// 35. App Lock with PIN
+// ==========================================
+window.showAppLock = function() {
+    var settings = Storage.get('settings') || {};
+    var isLocked = settings.appLockEnabled || false;
+    
+    var html = '<div class="app-lock-modal"><h3>App Lock</h3>';
+    
+    if (isLocked) {
+        html += '<div class="lock-status enabled"><i class="fas fa-lock"></i> App Lock is Enabled</div>';
+        html += '<p>Your app is protected with a PIN.</p>';
+        html += '<button class="btn danger" onclick="disableAppLock()">Disable App Lock</button>';
+        html += '<button class="btn" onclick="changeAppLockPIN()">Change PIN</button>';
+    } else {
+        html += '<div class="lock-status disabled"><i class="fas fa-lock-open"></i> App Lock is Disabled</div>';
+        html += '<p>Protect your app with a PIN lock.</p>';
+        html += '<div class="lock-setup">';
+        html += '<input type="password" id="lock-pin" placeholder="Enter 4-digit PIN" maxlength="4" pattern="[0-9]*">';
+        html += '<input type="password" id="lock-pin-confirm" placeholder="Confirm PIN" maxlength="4" pattern="[0-9]*">';
+        html += '<button class="btn btn-primary" onclick="enableAppLock()"><i class="fas fa-lock"></i> Enable App Lock</button>';
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    showModal(html);
+};
+
+window.enableAppLock = function() {
+    var pin = document.getElementById('lock-pin').value;
+    var confirmPin = document.getElementById('lock-pin-confirm').value;
+    
+    if (!pin || pin.length !== 4) {
+        showToast('PIN must be 4 digits', 'error');
+        return;
+    }
+    
+    if (pin !== confirmPin) {
+        showToast('PINs do not match', 'error');
+        return;
+    }
+    
+    var settings = Storage.get('settings') || {};
+    settings.appLockEnabled = true;
+    settings.appLockPIN = btoa(pin);
+    Storage.set('settings', settings);
+    
+    closeModal();
+    showToast('App lock enabled!', 'success');
+};
+
+window.disableAppLock = function() {
+    var settings = Storage.get('settings') || {};
+    settings.appLockEnabled = false;
+    delete settings.appLockPIN;
+    Storage.set('settings', settings);
+    
+    closeModal();
+    showToast('App lock disabled', 'info');
+};
+
+window.changeAppLockPIN = function() {
+    var html = '<div class="change-pin-modal"><h3>Change PIN</h3>';
+    html += '<input type="password" id="old-pin" placeholder="Current PIN" maxlength="4">';
+    html += '<input type="password" id="new-pin" placeholder="New PIN" maxlength="4">';
+    html += '<input type="password" id="new-pin-confirm" placeholder="Confirm New PIN" maxlength="4">';
+    html += '<button class="btn btn-primary" onclick="updateAppLockPIN()">Update PIN</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.updateAppLockPIN = function() {
+    var oldPin = document.getElementById('old-pin').value;
+    var newPin = document.getElementById('new-pin').value;
+    var confirmPin = document.getElementById('new-pin-confirm').value;
+    
+    var settings = Storage.get('settings') || {};
+    var storedPin = atob(settings.appLockPIN || '');
+    
+    if (oldPin !== storedPin) {
+        showToast('Current PIN is incorrect', 'error');
+        return;
+    }
+    
+    if (newPin !== confirmPin) {
+        showToast('New PINs do not match', 'error');
+        return;
+    }
+    
+    if (newPin.length !== 4) {
+        showToast('PIN must be 4 digits', 'error');
+        return;
+    }
+    
+    settings.appLockPIN = btoa(newPin);
+    Storage.set('settings', settings);
+    
+    closeModal();
+    showToast('PIN updated!', 'success');
+};
+
+window.showAppLockScreen = function() {
+    var html = '<div class="app-lock-screen">';
+    html += '<div class="lock-icon"><i class="fas fa-lock"></i></div>';
+    html += '<h2>BSITHUB Locked</h2>';
+    html += '<p>Enter your PIN to unlock</p>';
+    html += '<input type="password" id="unlock-pin" placeholder="Enter PIN" maxlength="4" autofocus>';
+    html += '<button class="btn btn-primary" onclick="unlockApp()"><i class="fas fa-unlock"></i> Unlock</button>';
+    html += '</div>';
+    
+    document.body.innerHTML = html;
+    document.body.style.display = 'flex';
+    document.body.style.justifyContent = 'center';
+    document.body.style.alignItems = 'center';
+    document.body.style.minHeight = '100vh';
+};
+
+window.unlockApp = function() {
+    var pin = document.getElementById('unlock-pin').value;
+    var settings = Storage.get('settings') || {};
+    var storedPin = atob(settings.appLockPIN || '');
+    
+    if (pin === storedPin) {
+        location.reload();
+    } else {
+        showToast('Incorrect PIN', 'error');
+    }
+};
+
+// Check app lock on load
+(function() {
+    var settings = Storage.get('settings') || {};
+    if (settings.appLockEnabled && settings.appLockPIN) {
+        var isUnlocked = sessionStorage.getItem('appUnlocked');
+        if (!isUnlocked) {
+            document.addEventListener('DOMContentLoaded', function() {
+                showAppLockScreen();
+            });
+        }
+    }
+})();
+
+// Mark app as unlocked after successful login
+var originalShowApp = window.showApp;
+window.showApp = function() {
+    sessionStorage.setItem('appUnlocked', 'true');
+    if (originalShowApp) originalShowApp();
+};

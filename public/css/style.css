@@ -17192,3 +17192,383 @@ html {
         bottom: 0;
     }
 }
+
+/* ==========================================
+   Stories/Status Styles
+   ========================================== */
+.stories-modal {
+    padding: 20px;
+    max-width: 400px;
+}
+
+.stories-section {
+    margin-bottom: 20px;
+}
+
+.stories-section h4 {
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.story-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    color: var(--primary);
+    transition: all 0.2s;
+}
+
+.story-add-btn:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary);
+}
+
+.story-item-view {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.story-preview {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    overflow: hidden;
+}
+
+.story-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.story-avatar {
+    width: 44px;
+    height: 44px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+}
+
+.story-add-small {
+    width: 44px;
+    height: 44px;
+    border: 2px dashed var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--primary);
+}
+
+.create-story-modal {
+    padding: 20px;
+}
+
+.story-type-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.story-type-btn {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.story-type-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.story-input textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    resize: none;
+    font-family: inherit;
+}
+
+.story-bg-selector {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.bg-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+}
+
+.bg-option.selected {
+    border-color: var(--text-primary);
+}
+
+.story-viewer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.story-full-image {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.story-text-content {
+    font-size: 24px;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+
+.story-viewer-header {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+}
+
+.story-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* ==========================================
+   Two-Factor Auth Styles
+   ========================================== */
+.twofa-modal {
+    padding: 20px;
+    max-width: 400px;
+}
+
+.twofa-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.twofa-status.enabled {
+    background: rgba(46, 204, 113, 0.1);
+    color: #2ecc71;
+}
+
+.twofa-status.disabled {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+.twofa-setup input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 18px;
+    text-align: center;
+    letter-spacing: 8px;
+}
+
+.twofa-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 12px 0;
+}
+
+/* ==========================================
+   Screen Share Styles
+   ========================================== */
+.screen-share-badge {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #e74c3c;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10000;
+    animation: pulse 2s infinite;
+}
+
+.screen-share-badge button {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* ==========================================
+   Location Sharing Styles
+   ========================================== */
+.message-location {
+    margin: 8px 0;
+}
+
+.location-card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.location-icon {
+    width: 44px;
+    height: 44px;
+    background: #e74c3c;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+}
+
+.location-info {
+    flex: 1;
+}
+
+.location-title {
+    font-weight: 500;
+}
+
+.location-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* ==========================================
+   App Lock Styles
+   ========================================== */
+.app-lock-modal {
+    padding: 20px;
+    max-width: 400px;
+}
+
+.lock-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.lock-status.enabled {
+    background: rgba(46, 204, 113, 0.1);
+    color: #2ecc71;
+}
+
+.lock-status.disabled {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+.lock-setup input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 24px;
+    text-align: center;
+    letter-spacing: 12px;
+}
+
+.app-lock-screen {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.lock-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    color: white;
+    font-size: 36px;
+}
+
+.app-lock-screen h2 {
+    margin-bottom: 8px;
+}
+
+.app-lock-screen p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.app-lock-screen input {
+    width: 200px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 24px;
+    text-align: center;
+    letter-spacing: 12px;
+    margin-bottom: 16px;
+}
