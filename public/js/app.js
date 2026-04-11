@@ -1050,6 +1050,43 @@ function getDeviceName() {
     return 'Unknown Device';
 }
 
+// Functions called by login() - must be defined before login()
+function trackDevice() {
+    if (typeof window.trackDevice === 'function' && window.trackDevice !== trackDevice) {
+        window.trackDevice();
+    }
+}
+
+function sendLoginAlert(user) {
+    if (typeof window.sendLoginAlert === 'function' && window.sendLoginAlert !== sendLoginAlert) {
+        window.sendLoginAlert(user);
+    }
+}
+
+function addLoginHistory(success, method) {
+    if (typeof window.addLoginHistory === 'function' && window.addLoginHistory !== addLoginHistory) {
+        window.addLoginHistory(success, method);
+    }
+}
+
+function getBrowserInfo() {
+    if (typeof window.getBrowserInfo === 'function' && window.getBrowserInfo !== getBrowserInfo) {
+        return window.getBrowserInfo();
+    }
+    var ua = navigator.userAgent;
+    if (ua.includes('Chrome')) return 'Chrome';
+    if (ua.includes('Firefox')) return 'Firefox';
+    if (ua.includes('Safari')) return 'Safari';
+    return 'Browser';
+}
+
+function getDeviceFingerprint() {
+    if (typeof window.getDeviceFingerprint === 'function' && window.getDeviceFingerprint !== getDeviceFingerprint) {
+        return window.getDeviceFingerprint();
+    }
+    return navigator.userAgent + screen.width + screen.height;
+}
+
 // Handle failed login - must be defined before login() is called
 function handleFailedLogin(emailOrUsername) {
     var lockouts = Storage.get('accountLockouts') || {};
@@ -7889,23 +7926,26 @@ document.addEventListener('DOMContentLoaded', function() {
         sendMessage(input.value);
         input.value = '';
     };
-    document.getElementById('chat-input').onkeypress = function(e) {
-        if (e.key === 'Enter') {
-            sendMessage(this.value);
-            this.value = '';
-        }
-    };
-    
-    document.getElementById('chat-input').oninput = function() {
-        sendTypingIndicator();
-        handleMentionInput(this);
-    };
-    
-    document.getElementById('chat-input').onkeydown = function(e) {
-        if (e.key === 'Escape') {
-            hideMentionsDropdown();
-        }
-    };
+    var chatInput = document.getElementById('chat-input') || document.getElementById('message-input');
+    if (chatInput) {
+        chatInput.onkeypress = function(e) {
+            if (e.key === 'Enter') {
+                sendMessage(this.value);
+                this.value = '';
+            }
+        };
+        
+        chatInput.oninput = function() {
+            sendTypingIndicator();
+            handleMentionInput(this);
+        };
+        
+        chatInput.onkeydown = function(e) {
+            if (e.key === 'Escape') {
+                hideMentionsDropdown();
+            }
+        };
+    }
     
     // Image/file upload
     document.getElementById('image-btn').onclick = function() {
