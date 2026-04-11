@@ -4,15 +4,7 @@
    ========================================== */
 
 /* ===== PAGE SEPARATION ===== */
-#auth-page {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 9999;
-    background: var(--bg-primary);
-}
-
-body.app-active #auth-page { display: none !important; }
-body.auth-active #app-page { display: none !important; }
+/* Pages are controlled by JS .active class - do not hide by default */
 
 /* ===== MESSENGER BUBBLES - FINAL ===== */
 .message {

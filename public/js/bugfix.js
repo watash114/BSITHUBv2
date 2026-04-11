@@ -133,48 +133,20 @@
     // Fix page separation
     // ==========================================
     function fixPageSeparation() {
-        var authPage = document.getElementById('auth-page');
-        var appPage = document.getElementById('app-page');
-        var savedUser = localStorage.getItem('currentUser');
-        
-        if (savedUser && savedUser !== 'null') {
-            // User logged in - show app
-            if (authPage) {
-                authPage.style.display = 'none';
-                authPage.classList.remove('active');
-            }
-            if (appPage) {
-                appPage.style.display = 'flex';
-                appPage.classList.add('active');
-            }
-            document.body.classList.add('app-active');
-            document.body.classList.remove('auth-active');
-            
-            // Show mobile nav
-            if (window.innerWidth <= 768) {
-                var mobileNav = document.getElementById('mobile-nav');
-                var mobileHeader = document.getElementById('mobile-header');
-                if (mobileNav) mobileNav.style.display = 'block';
-                if (mobileHeader) mobileHeader.style.display = 'flex';
-            }
-        } else {
-            // Not logged in - show auth
-            if (authPage) {
-                authPage.style.display = 'flex';
-                authPage.classList.add('active');
-            }
-            if (appPage) {
-                appPage.style.display = 'none';
-                appPage.classList.remove('active');
-            }
-            document.body.classList.add('auth-active');
-            document.body.classList.remove('app-active');
-            
-            // Hide mobile nav
+        // Don't override page visibility - let app.js handle it
+        // Just ensure mobile nav visibility is correct
+        if (window.innerWidth <= 768) {
+            var savedUser = localStorage.getItem('currentUser');
             var mobileNav = document.getElementById('mobile-nav');
             var mobileHeader = document.getElementById('mobile-header');
-            if (mobileNav) mobileNav.style.display = 'none';
-            if (mobileHeader) mobileHeader.style.display = 'none';
+            
+            if (savedUser && savedUser !== 'null') {
+                if (mobileNav) mobileNav.style.display = 'block';
+                if (mobileHeader) mobileHeader.style.display = 'flex';
+            } else {
+                if (mobileNav) mobileNav.style.display = 'none';
+                if (mobileHeader) mobileHeader.style.display = 'none';
+            }
         }
     }
     
