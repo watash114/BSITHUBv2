@@ -17032,18 +17032,53 @@ function shareContent(title, text, url) {
     }
 }
 
-// App Install Prompt
+// App Install Prompt - Enhanced Banner
 var deferredPrompt;
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
     
-    // Show install button or banner
+    // Don't show if already dismissed or installed
+    if (localStorage.getItem('installBannerDismissed')) return;
+    if (window.matchMedia('(display-mode: standalone)').matches) return;
+    
+    // Show enhanced install banner
     var installBanner = document.getElementById('install-banner');
     if (!installBanner) {
         installBanner = document.createElement('div');
         installBanner.id = 'install-banner';
-        installBanner.innerHTML = '<div style="position:fixed;bottom:80px;left:16px;right:16px;background:var(--primary);color:white;padding:16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);"><div><strong>Install BSITHUB</strong><br><small>Add to home screen for the best experience</small></div><button onclick="installApp()" style="background:white;color:var(--primary);border:none;padding:10px 20px;border-radius:10px;font-weight:600;cursor:pointer;">Install</button><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;margin-left:10px;">&times;</button></div>';
+        installBanner.className = 'install-banner';
+        installBanner.innerHTML = 
+            '<button class="install-close-btn" onclick="dismissInstallBanner()">&times;</button>' +
+            '<div class="install-banner-content">' +
+                '<div class="install-banner-icon">' +
+                    '<i class="fas fa-comments"></i>' +
+                '</div>' +
+                '<div class="install-banner-text">' +
+                    '<div class="install-banner-title">' +
+                        'BSITHUB' +
+                        '<span class="install-banner-badge">APP</span>' +
+                    '</div>' +
+                    '<div class="install-banner-subtitle">' +
+                        'Install for faster access, offline support & notifications' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="install-banner-features">' +
+                '<span class="install-banner-feature"><i class="fas fa-bolt"></i> Fast</span>' +
+                '<span class="install-banner-feature"><i class="fas fa-wifi-slash"></i> Offline</span>' +
+                '<span class="install-banner-feature"><i class="fas fa-bell"></i> Alerts</span>' +
+                '<span class="install-banner-feature"><i class="fas fa-shield-alt"></i> Secure</span>' +
+            '</div>' +
+            '<div class="install-banner-actions">' +
+                '<button class="install-btn" onclick="installApp()">' +
+                    '<i class="fas fa-download"></i> Install Now' +
+                '</button>' +
+                '<button class="install-btn install-btn-secondary" onclick="dismissInstallBanner()">' +
+                    'Later' +
+                '</button>' +
+            '</div>' +
+            '<div class="install-banner-progress"></div>';
         document.body.appendChild(installBanner);
     }
 });
@@ -17053,11 +17088,27 @@ window.installApp = function() {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(function(choiceResult) {
             if (choiceResult.outcome === 'installed') {
-                showToast('App installed!', 'success');
+                showToast('App installed successfully!', 'success');
+                var banner = document.getElementById('install-banner');
+                if (banner) banner.remove();
             }
             deferredPrompt = null;
         });
+    } else {
+        // Fallback for browsers that don't support install prompt
+        showToast('Use your browser menu to "Add to Home Screen"', 'info');
     }
+};
+
+window.dismissInstallBanner = function() {
+    var banner = document.getElementById('install-banner');
+    if (banner) {
+        banner.classList.add('hiding');
+        setTimeout(function() {
+            banner.remove();
+        }, 400);
+    }
+    localStorage.setItem('installBannerDismissed', 'true');
 };
 
 // Initialize mobile features

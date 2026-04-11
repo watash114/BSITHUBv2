@@ -17572,3 +17572,250 @@ html {
     letter-spacing: 12px;
     margin-bottom: 16px;
 }
+
+/* ==========================================
+   Enhanced Install Banner
+   ========================================== */
+.install-banner {
+    position: fixed;
+    bottom: 80px;
+    left: 16px;
+    right: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0;
+    border-radius: 20px;
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+    overflow: hidden;
+    animation: slideUpBounce 0.5s ease;
+    backdrop-filter: blur(10px);
+}
+
+@keyframes slideUpBounce {
+    0% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    60% {
+        transform: translateY(-10px);
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.install-banner-content {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 14px;
+}
+
+.install-banner-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+    backdrop-filter: blur(5px);
+}
+
+.install-banner-icon img {
+    width: 40px;
+    height: 40px;
+}
+
+.install-banner-text {
+    flex: 1;
+}
+
+.install-banner-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.install-banner-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.install-banner-subtitle {
+    font-size: 13px;
+    opacity: 0.9;
+    line-height: 1.4;
+}
+
+.install-banner-features {
+    display: flex;
+    gap: 16px;
+    padding: 0 16px 12px;
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.install-banner-feature {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.install-banner-feature i {
+    font-size: 10px;
+}
+
+.install-banner-actions {
+    display: flex;
+    gap: 10px;
+    padding: 0 16px 16px;
+}
+
+.install-btn {
+    flex: 1;
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.install-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.install-btn:active {
+    transform: scale(0.98);
+}
+
+.install-btn-secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    flex: 0;
+    padding: 14px 18px;
+}
+
+.install-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.install-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.install-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* Progress bar animation */
+.install-banner-progress {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.install-banner-progress::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30%;
+    background: white;
+    animation: progressSlide 2s infinite;
+}
+
+@keyframes progressSlide {
+    0% { left: -30%; }
+    100% { left: 100%; }
+}
+
+/* Dark mode support */
+[data-theme="dark"] .install-banner {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .install-btn {
+    background: #667eea;
+    color: white;
+}
+
+/* Mobile optimized */
+@media (max-width: 400px) {
+    .install-banner {
+        left: 12px;
+        right: 12px;
+        bottom: 75px;
+    }
+    
+    .install-banner-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+    }
+    
+    .install-banner-title {
+        font-size: 15px;
+    }
+    
+    .install-banner-subtitle {
+        font-size: 12px;
+    }
+    
+    .install-banner-features {
+        display: none;
+    }
+}
+
+/* Slide out animation */
+.install-banner.hiding {
+    animation: slideDownBounce 0.4s ease forwards;
+}
+
+@keyframes slideDownBounce {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(150%);
+        opacity: 0;
+    }
+}
