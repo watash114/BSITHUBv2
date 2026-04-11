@@ -3354,7 +3354,7 @@ function replyToMessage(messageId) {
     preview.style.display = 'flex';
     
     // Focus input
-    document.getElementById('chat-input').focus();
+    document.getElementById('message-input').focus();
 }
 
 function editMessage(messageId) {
@@ -6968,7 +6968,7 @@ window.initVideoCall = function() {
     
     // Wait for container to render
     setTimeout(function() {
-        var domain = 'meet.jitsi.si';
+        var domain = 'meet.jit.si';
         var options = {
             roomName: roomName,
             width: '100%',
@@ -7291,6 +7291,10 @@ function copyCallId() {
     }
 }
 
+var isMuted = false;
+var isCameraOff = false;
+var currentCallId = null;
+
 function toggleMic() {
     if (!localStream) return;
     var audioTrack = localStream.getAudioTracks()[0];
@@ -7298,7 +7302,7 @@ function toggleMic() {
         audioTrack.enabled = !audioTrack.enabled;
         isMuted = !audioTrack.enabled;
         var btn = document.getElementById('toggle-mic');
-        btn.classList.toggle('disabled', isMuted);
+        if (btn) btn.classList.toggle('disabled', isMuted);
     }
 }
 
@@ -7309,7 +7313,7 @@ function toggleCamera() {
         videoTrack.enabled = !videoTrack.enabled;
         isCameraOff = !videoTrack.enabled;
         var btn = document.getElementById('toggle-camera');
-        btn.classList.toggle('disabled', isCameraOff);
+        if (btn) btn.classList.toggle('disabled', isCameraOff);
     }
 }
 
@@ -7950,9 +7954,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Quick Actions
     document.getElementById('quick-actions-btn').onclick = showQuickActions;
     
-    // Video Call (temporarily disabled)
+    // Video Call - Jitsi Meet
     document.getElementById('video-call-btn').onclick = function() {
-        showToast('Video calling temporarily unavailable', 'info');
+        if (typeof startVideoCall === 'function') {
+            startVideoCall();
+        }
     };
     
     // Chat Options
@@ -8980,8 +8986,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     window.sendQuickReply = function(text) {
         if (!activeChat) return;
-        document.getElementById('chat-input').value = text;
-        document.getElementById('chat-input').focus();
+        document.getElementById('message-input').value = text;
+        document.getElementById('message-input').focus();
     };
     
     // ==========================================
@@ -14888,7 +14894,7 @@ function initImagePinchZoom() {
 
 // 4. Draft Auto-save
 function initDraftAutoSave() {
-    var chatInput = document.getElementById('chat-input');
+    var chatInput = document.getElementById('message-input');
     if (!chatInput) return;
     
     // Load draft when opening chat
@@ -14898,7 +14904,7 @@ function initDraftAutoSave() {
             originalOpenChat(chatId, userId);
             setTimeout(function() {
                 var drafts = Storage.get('messageDrafts') || {};
-                var input = document.getElementById('chat-input');
+                var input = document.getElementById('message-input');
                 if (input && drafts[chatId]) {
                     input.value = drafts[chatId];
                 }
@@ -14908,7 +14914,7 @@ function initDraftAutoSave() {
     
     // Save draft on input
     setInterval(function() {
-        var input = document.getElementById('chat-input');
+        var input = document.getElementById('message-input');
         if (input && activeChat) {
             var drafts = Storage.get('messageDrafts') || {};
             if (input.value.trim()) {
@@ -15405,7 +15411,7 @@ window.setChatWallpaper = function(color) {
 // 18. Draft Messages
 window.saveDraft = function() {
     if (!activeChat) return;
-    var input = document.getElementById('chat-input');
+    var input = document.getElementById('message-input');
     if (!input || !input.value.trim()) return;
     var drafts = Storage.get('drafts') || {};
     drafts[activeChat.id] = input.value;
@@ -15761,7 +15767,7 @@ window.showQuickReplies = function() {
 };
 
 window.useQuickReply = function(text) {
-    var input = document.getElementById('chat-input');
+    var input = document.getElementById('message-input');
     if (input) {
         input.value = text;
         input.focus();
@@ -17003,7 +17009,7 @@ function hapticFeedback(type) {
 
 // Mobile Keyboard Handling
 function handleMobileKeyboard() {
-    var chatInput = document.getElementById('chat-input');
+    var chatInput = document.getElementById('message-input');
     if (!chatInput) return;
     
     chatInput.addEventListener('focus', function() {
