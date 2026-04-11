@@ -3,15 +3,45 @@
    Facebook Messenger Style
    ========================================== */
 
-/* ===== MESSENGER BUBBLES ===== */
+/* ===== RESET MESSAGE ROW - Remove old bubble styles from .message ===== */
 .message {
     display: flex !important;
     padding: 1px 16px !important;
     margin-bottom: 1px !important;
+    max-width: 100% !important;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    animation: none !important;
 }
 
-.message.sent { justify-content: flex-end !important; }
-.message.received { justify-content: flex-start !important; }
+.message:hover {
+    box-shadow: none !important;
+}
+
+.message.sent {
+    justify-content: flex-end !important;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    align-self: auto !important;
+}
+
+.message.received {
+    justify-content: flex-start !important;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    align-self: auto !important;
+}
 
 .message-bubble {
     display: inline-block !important;
