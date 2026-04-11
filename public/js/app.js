@@ -2112,61 +2112,78 @@ function openChat(chatId, userId) {
     var chatsNavItem = document.querySelector('.nav-item[data-section="chats"]');
     if (chatsNavItem) chatsNavItem.classList.add('active');
     
-    document.getElementById('chat-placeholder').style.display = 'none';
-    document.getElementById('chat-active').style.display = 'flex';
+    var chatPlaceholder = document.getElementById('chat-placeholder');
+    var chatActive = document.getElementById('chat-active');
+    
+    if (chatPlaceholder) chatPlaceholder.style.display = 'none';
+    if (chatActive) chatActive.style.display = 'flex';
     
     if (chat.isGroup) {
-        document.getElementById('chat-user-name').textContent = chat.groupName || 'Group';
-        document.getElementById('chat-user-status').textContent = chat.participants.length + ' members';
+        var nameEl = document.getElementById('chat-user-name');
+        var statusEl = document.getElementById('chat-user-status');
+        if (nameEl) nameEl.textContent = chat.groupName || 'Group';
+        if (statusEl) statusEl.textContent = chat.participants.length + ' members';
         // Set group avatar in header
         var headerAvatar = document.getElementById('chat-avatar');
-        if (chat.groupAvatar) {
-            headerAvatar.innerHTML = '<img src="' + chat.groupAvatar + '" alt="Group">';
-        } else {
-            headerAvatar.innerHTML = '<i class="fas fa-users"></i>';
+        if (headerAvatar) {
+            if (chat.groupAvatar) {
+                headerAvatar.innerHTML = '<img src="' + chat.groupAvatar + '" alt="Group">';
+            } else {
+                headerAvatar.innerHTML = '<i class="fas fa-users"></i>';
+            }
         }
     } else {
         var users = Storage.get('users') || [];
         var otherUser = users.find(function(u) { return u.id === userId; });
         
         if (otherUser) {
-            document.getElementById('chat-user-name').textContent = otherUser.name;
+            var nameEl = document.getElementById('chat-user-name');
+            var statusEl = document.getElementById('chat-user-status');
+            if (nameEl) nameEl.textContent = otherUser.name;
             // Set user avatar in header
             var headerAvatar = document.getElementById('chat-avatar');
-            if (otherUser.avatar) {
-                headerAvatar.innerHTML = '<img src="' + otherUser.avatar + '" alt="Avatar">';
-            } else {
-                headerAvatar.innerHTML = otherUser.name.charAt(0).toUpperCase();
+            if (headerAvatar) {
+                if (otherUser.avatar) {
+                    headerAvatar.innerHTML = '<img src="' + otherUser.avatar + '" alt="Avatar">';
+                } else {
+                    headerAvatar.innerHTML = otherUser.name.charAt(0).toUpperCase();
+                }
             }
             
-            // Get user status from Firebase
-            var userStatus = getUserStatus(userId);
-            
-            if (userStatus.online) {
-                var statusLabels = {
-                    'online': 'Online',
-                    'away': 'Away',
-                    'busy': 'Do Not Disturb'
-                };
-                var statusText = userStatus.statusMessage || statusLabels[userStatus.status] || 'Online';
-                document.getElementById('chat-user-status').textContent = statusText;
-                document.getElementById('chat-user-status').className = 'chat-status ' + (userStatus.status || 'online');
-            } else if (userStatus.lastSeen) {
-                document.getElementById('chat-user-status').textContent = formatLastSeen(userStatus.lastSeen);
-                document.getElementById('chat-user-status').className = 'chat-status offline';
-            } else {
-                document.getElementById('chat-user-status').textContent = 'Offline';
-                document.getElementById('chat-user-status').className = 'chat-status offline';
+            // Get user status
+            var statusEl = document.getElementById('chat-user-status');
+            if (statusEl) {
+                var userStatus = getUserStatus(userId);
+                
+                if (userStatus && userStatus.online) {
+                    var statusLabels = {
+                        'online': 'Online',
+                        'away': 'Away',
+                        'busy': 'Do Not Disturb'
+                    };
+                    var statusText = userStatus.statusMessage || statusLabels[userStatus.status] || 'Online';
+                    statusEl.textContent = statusText;
+                    statusEl.className = 'chat-status ' + (userStatus.status || 'online');
+                } else if (userStatus && userStatus.lastSeen) {
+                    statusEl.textContent = formatLastSeen(userStatus.lastSeen);
+                    statusEl.className = 'chat-status offline';
+                } else {
+                    statusEl.textContent = 'Offline';
+                    statusEl.className = 'chat-status offline';
+                }
             }
         } else {
-            document.getElementById('chat-user-name').textContent = 'Chat';
-            document.getElementById('chat-user-status').textContent = '';
+            var nameEl = document.getElementById('chat-user-name');
+            var statusEl = document.getElementById('chat-user-status');
+            if (nameEl) nameEl.textContent = 'Chat';
+            if (statusEl) statusEl.textContent = '';
         }
     }
     
     // Apply wallpaper
     var wallpaper = chat.wallpaper || (Storage.get('settings') || {}).wallpaper || 'none';
-    document.getElementById('chat-wallpaper').style.background = wallpaper;
+    var chatWallpaper = document.getElementById('chat-wallpaper');
+    if (chatWallpaper) chatWallpaper.style.background = wallpaper;
     
     // Render current messages
     renderMessages(chatId);
