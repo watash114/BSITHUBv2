@@ -18296,6 +18296,9 @@ window.openChat = function(chatId, userId) {
         
         console.log('=== OPEN CHAT COMPLETE ===');
         
+        // ADD BODY CLASS TO FORCE DISPLAY
+        document.body.classList.add('chat-is-open');
+        
     } catch (err) {
         console.error('Error opening chat:', err);
         showToast('Error opening chat', 'error');
@@ -18304,6 +18307,13 @@ window.openChat = function(chatId, userId) {
     setTimeout(function() {
         chatOpening = false;
     }, 300);
+};
+
+// Also update mobileGoBack to remove the class
+var originalMobileGoBack = window.mobileGoBack;
+window.mobileGoBack = function() {
+    document.body.classList.remove('chat-is-open');
+    if (originalMobileGoBack) originalMobileGoBack();
 };
 
 console.log('Chat open function loaded');
