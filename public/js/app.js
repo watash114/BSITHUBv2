@@ -18163,3 +18163,130 @@ document.addEventListener('touchend', function(e) {
         }
     }
 }, false);
+
+// ==========================================
+// Debug Chat Opening
+// ==========================================
+
+// Make openChat more robust with error handling
+var chatOpening = false;
+
+window.openChat = function(chatId, userId) {
+    if (chatOpening) {
+        console.log('Chat already opening, skipping');
+        return;
+    }
+    chatOpening = true;
+    
+    console.log('=== OPEN CHAT START ===');
+    console.log('Chat ID:', chatId);
+    console.log('User ID:', userId);
+    
+    try {
+        // Get chat data
+        var chats = Storage.get('chats') || [];
+        var chat = chats.find(function(c) { return c.id === chatId; });
+        
+        if (!chat) {
+            console.error('Chat not found!');
+            showToast('Chat not found', 'error');
+            chatOpening = false;
+            return;
+        }
+        
+        console.log('Chat found:', chat);
+        
+        // Set active chat
+        activeChat = { id: chatId, userId: userId };
+        console.log('Active chat set:', activeChat);
+        
+        // Hide placeholder, show chat
+        var placeholder = document.getElementById('chat-placeholder');
+        var chatActive = document.getElementById('chat-active');
+        
+        if (placeholder) {
+            placeholder.style.display = 'none';
+            console.log('Placeholder hidden');
+        }
+        
+        if (chatActive) {
+            chatActive.style.display = 'flex';
+            console.log('Chat active shown');
+        }
+        
+        // Update header
+        var users = Storage.get('users') || [];
+        
+        if (chat.isGroup) {
+            var nameEl = document.getElementById('chat-user-name');
+            var statusEl = document.getElementById('chat-user-status');
+            if (nameEl) nameEl.textContent = chat.groupName || 'Group';
+            if (statusEl) statusEl.textContent = chat.participants.length + ' members';
+        } else {
+            var otherUser = users.find(function(u) { return u.id === userId; });
+            var nameEl = document.getElementById('chat-user-name');
+            var statusEl = document.getElementById('chat-user-status');
+            
+            if (otherUser) {
+                if (nameEl) nameEl.textContent = otherUser.name;
+                if (statusEl) statusEl.textContent = 'Online';
+            }
+        }
+        
+        // Render messages
+        if (typeof renderMessages === 'function') {
+            renderMessages(chatId);
+            console.log('Messages rendered');
+        }
+        
+        // Mobile: Hide sidebar, show chat
+        if (window.innerWidth <= 768) {
+            var sidebar = document.querySelector('.chat-sidebar');
+            var chatMain = document.getElementById('chat-main');
+            
+            if (sidebar) {
+                sidebar.style.display = 'none';
+                console.log('Sidebar hidden');
+            }
+            
+            if (chatMain) {
+                chatMain.style.display = 'flex';
+                chatMain.style.visibility = 'visible';
+                chatMain.style.opacity = '1';
+                chatMain.classList.add('active-mobile');
+                console.log('Chat main shown');
+            }
+            
+            // Update mobile header
+            var headerTitle = document.getElementById('mobile-header-title');
+            if (headerTitle) {
+                if (chat.isGroup) {
+                    headerTitle.textContent = chat.groupName || 'Group';
+                } else {
+                    var otherUser = users.find(function(u) { return u.id === userId; });
+                    headerTitle.textContent = otherUser ? otherUser.name : 'Chat';
+                }
+            }
+        }
+        
+        // Update chat list selection
+        document.querySelectorAll('.chat-item').forEach(function(item) {
+            item.classList.remove('active');
+            if (item.dataset.chatId === chatId) {
+                item.classList.add('active');
+            }
+        });
+        
+        console.log('=== OPEN CHAT COMPLETE ===');
+        
+    } catch (err) {
+        console.error('Error opening chat:', err);
+        showToast('Error opening chat', 'error');
+    }
+    
+    setTimeout(function() {
+        chatOpening = false;
+    }, 300);
+};
+
+console.log('Chat open function loaded');
