@@ -17936,3 +17936,122 @@ window.unlockApp = function() {
 document.addEventListener('DOMContentLoaded', function() {
     sessionStorage.setItem('appUnlocked', 'true');
 });
+
+// ==========================================
+// Fix Chat Item Clicks - CRITICAL FIX
+// ==========================================
+
+// Make chat items clickable
+document.addEventListener('DOMContentLoaded', function() {
+    // Delegate click events for chat items
+    document.addEventListener('click', function(e) {
+        // Find the closest chat-item
+        var chatItem = e.target.closest('.chat-item');
+        if (chatItem && !e.target.closest('.swipe-action')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var chatId = chatItem.dataset.chatId;
+            var userId = chatItem.dataset.userId;
+            
+            if (chatId) {
+                // Call openChat directly
+                if (typeof openChat === 'function') {
+                    openChat(chatId, userId);
+                }
+            }
+            return false;
+        }
+    }, { passive: false });
+});
+
+// Archive chat from swipe action
+window.archiveChatFromSwipe = function(chatId) {
+    event.stopPropagation();
+    
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === chatId; });
+    if (chat) {
+        chat.archived = true;
+        Storage.set('chats', chats);
+        
+        // Animate removal
+        var wrapper = document.querySelector('.chat-item-wrapper[data-chat-id="' + chatId + '"]');
+        if (wrapper) {
+            wrapper.style.transform = 'translateX(-100%)';
+            wrapper.style.opacity = '0';
+            setTimeout(function() {
+                wrapper.remove();
+            }, 300);
+        }
+        
+        showToast('Chat archived', 'success');
+    }
+};
+
+// Delete chat from swipe action
+window.deleteChatFromSwipe = function(chatId) {
+    event.stopPropagation();
+    
+    if (!confirm('Delete this chat?')) return;
+    
+    var chats = Storage.get('chats') || [];
+    chats = chats.filter(function(c) { return c.id !== chatId; });
+    Storage.set('chats', chats);
+    
+    var messages = Storage.get('messages') || [];
+    messages = messages.filter(function(m) { return m.chatId !== chatId; });
+    Storage.set('messages', messages);
+    
+    // Animate removal
+    var wrapper = document.querySelector('.chat-item-wrapper[data-chat-id="' + chatId + '"]');
+    if (wrapper) {
+        wrapper.style.transform = 'translateX(100%)';
+        wrapper.style.opacity = '0';
+        setTimeout(function() {
+            wrapper.remove();
+        }, 300);
+    }
+    
+    showToast('Chat deleted', 'success');
+};
+
+// Fix for touch delay on chat items
+(function() {
+    var touchStartTime = 0;
+    var touchStartX = 0;
+    var touchStartY = 0;
+    
+    document.addEventListener('touchstart', function(e) {
+        var chatItem = e.target.closest('.chat-item');
+        if (chatItem) {
+            touchStartTime = Date.now();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        var chatItem = e.target.closest('.chat-item');
+        if (chatItem && !e.target.closest('.swipe-action')) {
+            var touchEndTime = Date.now();
+            var touchEndX = e.changedTouches[0].clientX;
+            var touchEndY = e.changedTouches[0].clientY;
+            
+            var timeDiff = touchEndTime - touchStartTime;
+            var xDiff = Math.abs(touchEndX - touchStartX);
+            var yDiff = Math.abs(touchEndY - touchStartY);
+            
+            // If it's a tap (not a swipe)
+            if (timeDiff < 500 && xDiff < 30 && yDiff < 30) {
+                e.preventDefault();
+                var chatId = chatItem.dataset.chatId;
+                var userId = chatItem.dataset.userId;
+                
+                if (chatId && typeof openChat === 'function') {
+                    openChat(chatId, userId);
+                }
+            }
+        }
+    }, { passive: false });
+})();

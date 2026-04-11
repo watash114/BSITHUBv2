@@ -17819,3 +17819,129 @@ html {
         opacity: 0;
     }
 }
+
+/* ==========================================
+   Fix Chat Item Clicks - CRITICAL
+   ========================================== */
+
+/* Chat item wrapper */
+.chat-item-wrapper {
+    position: relative;
+    overflow: hidden;
+    touch-action: pan-y;
+}
+
+/* Make chat item clickable */
+.chat-item {
+    position: relative;
+    z-index: 2;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Ensure chat item takes full width for clicking */
+.chat-item > * {
+    pointer-events: none;
+}
+
+.chat-item-avatar-wrapper,
+.chat-item-info,
+.chat-item-meta {
+    pointer-events: auto;
+}
+
+/* Swipe actions behind the chat item */
+.swipe-actions {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    z-index: 1;
+}
+
+.swipe-action {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.swipe-action i {
+    font-size: 20px;
+}
+
+.swipe-action.archive {
+    right: 0;
+    background: var(--primary);
+}
+
+.swipe-action.delete {
+    left: 0;
+    background: #e74c3c;
+}
+
+/* Chat item active/pressed state */
+.chat-item:active {
+    background: var(--bg-secondary);
+    transform: scale(0.98);
+}
+
+/* Ensure chat item name is clickable */
+.chat-item-name {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Fix for online indicator blocking clicks */
+.online-indicator {
+    pointer-events: none;
+}
+
+/* Chat list container */
+.chat-list {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent swipe actions from blocking main content */
+.chat-item-wrapper > .chat-item {
+    background: var(--bg-primary);
+    position: relative;
+    z-index: 10;
+}
+
+/* Mobile specific fixes */
+@media (max-width: 768px) {
+    .chat-item {
+        padding: 14px 16px;
+    }
+    
+    .chat-item:active {
+        background: var(--bg-secondary) !important;
+    }
+    
+    /* Disable swipe on mobile if causing issues */
+    .swipe-actions {
+        display: none;
+    }
+}
+
+/* Fix tap delay */
+.chat-item,
+.chat-item * {
+    touch-action: manipulation;
+}
