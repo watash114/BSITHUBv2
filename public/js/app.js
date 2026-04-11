@@ -18055,3 +18055,111 @@ window.deleteChatFromSwipe = function(chatId) {
         }
     }, { passive: false });
 })();
+
+// ==========================================
+// CRITICAL FIX: Force Chat to Open on Mobile
+// ==========================================
+
+// Override openChat for mobile - FORCE DISPLAY
+var chatOpenInProgress = false;
+var originalOpenChatFunc = window.openChat;
+
+window.openChat = function(chatId, userId) {
+    if (chatOpenInProgress) return;
+    chatOpenInProgress = true;
+    
+    console.log('Opening chat:', chatId, userId);
+    
+    // Call the original function
+    if (typeof originalOpenChatFunc === 'function') {
+        originalOpenChatFunc(chatId, userId);
+    }
+    
+    // Force display on mobile
+    setTimeout(function() {
+        var chatPlaceholder = document.getElementById('chat-placeholder');
+        var chatActive = document.getElementById('chat-active');
+        var chatMain = document.getElementById('chat-main');
+        var chatSidebar = document.querySelector('.chat-sidebar');
+        
+        if (chatPlaceholder) chatPlaceholder.style.display = 'none';
+        if (chatActive) {
+            chatActive.style.display = 'flex';
+            chatActive.style.visibility = 'visible';
+            chatActive.style.opacity = '1';
+        }
+        
+        if (window.innerWidth <= 768) {
+            // Mobile specific
+            if (chatMain) {
+                chatMain.style.display = 'flex';
+                chatMain.style.visibility = 'visible';
+                chatMain.style.opacity = '1';
+                chatMain.classList.add('active-mobile');
+            }
+            if (chatSidebar) {
+                chatSidebar.style.display = 'none';
+            }
+            
+            // Update mobile header
+            var users = Storage.get('users') || [];
+            var chats = Storage.get('chats') || [];
+            var chat = chats.find(function(c) { return c.id === chatId; });
+            
+            if (chat) {
+                var headerTitle = document.getElementById('mobile-header-title');
+                if (chat.isGroup) {
+                    if (headerTitle) headerTitle.textContent = chat.groupName || 'Group';
+                } else {
+                    var otherUser = users.find(function(u) { return u.id === userId; });
+                    if (headerTitle) headerTitle.textContent = otherUser ? otherUser.name : 'Chat';
+                }
+            }
+        }
+        
+        chatOpenInProgress = false;
+        
+        // Scroll to bottom of messages
+        var messagesContainer = document.getElementById('chat-messages');
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }, 100);
+};
+
+// Also add a direct click handler for chat items
+document.addEventListener('click', function(e) {
+    var chatItem = e.target.closest('.chat-item');
+    if (chatItem && !e.target.closest('.swipe-action') && !e.target.closest('.swipe-actions')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var chatId = chatItem.dataset.chatId;
+        var userId = chatItem.dataset.userId;
+        
+        console.log('Chat item clicked:', chatId, userId);
+        
+        if (chatId && window.openChat) {
+            window.openChat(chatId, userId);
+        }
+        
+        return false;
+    }
+}, true); // Use capture phase
+
+// Touch handler for mobile
+document.addEventListener('touchend', function(e) {
+    var chatItem = e.target.closest('.chat-item');
+    if (chatItem && !e.target.closest('.swipe-action') && !e.target.closest('.swipe-actions')) {
+        e.preventDefault();
+        
+        var chatId = chatItem.dataset.chatId;
+        var userId = chatItem.dataset.userId;
+        
+        console.log('Chat item touched:', chatId, userId);
+        
+        if (chatId && window.openChat) {
+            window.openChat(chatId, userId);
+        }
+    }
+}, false);
