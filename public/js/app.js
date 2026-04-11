@@ -16705,17 +16705,7 @@ if (messageInput) {
 
 // Preload critical resources
 function preloadResources() {
-    var criticalResources = [
-        'css/style.css'
-    ];
-    
-    criticalResources.forEach(function(url) {
-        var link = document.createElement('link');
-        link.rel = 'preload';
-        link.href = url;
-        link.as = url.endsWith('.css') ? 'style' : 'script';
-        document.head.appendChild(link);
-    });
+    // Resources already loaded via link tags, no need to preload
 }
 
 // Initialize performance optimizations

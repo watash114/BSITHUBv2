@@ -44,6 +44,7 @@
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/bugfix.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
@@ -1197,13 +1198,12 @@
     <script src="js/firebase.js"></script>
     <script src="js/app.js"></script>
     <script src="js/mobile-nav.js"></script>
+    <script src="js/bugfix.js"></script>
     <script>
         // Initialize EmailJS
         (function() {
-            emailjs.init('Vh6RYIAfd7D1Lq9E2');
+            try { emailjs.init('Vh6RYIAfd7D1Lq9E2'); } catch(e) {}
         })();
     </script>
 </body>
-</html><!-- Quick Actions Buttons - Add to sidebar footer area -->
-<!-- These are already in the code, just documenting for reference -->
-<!-- Enhanced Install Banner - Will be shown dynamically -->
+</html>
