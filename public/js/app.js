@@ -16513,13 +16513,12 @@ window.mobileGoBack = function() {
     }
 };
 
-// Override openChat for mobile
-var originalOpenChat = window.openChat;
-window.openChat = function(chatId, userId) {
+// Safe mobile openChat - Use different function name to avoid recursion
+window.openChatMobile = function(chatId, userId) {
     if (window.innerWidth <= 768) {
         mobileOpenChat(chatId, userId);
-    } else {
-        originalOpenChat(chatId, userId);
+    } else if (typeof window.openChat === 'function') {
+        window.openChat(chatId, userId);
     }
 };
 
@@ -17117,12 +17116,12 @@ document.addEventListener('DOMContentLoaded', function() {
         pullToRefresh.init();
         handleMobileKeyboard();
         
-        // Re-init swipe on chat load
-        var originalLoadChats = window.loadChats;
-        window.loadChats = function() {
-            if (originalLoadChats) originalLoadChats();
-            setTimeout(swipeActions.init, 100);
-        };
+        // Safe swipe init - no override
+        setTimeout(function() {
+            if (typeof swipeActions !== 'undefined' && swipeActions.init) {
+                swipeActions.init();
+            }
+        }, 500);
     }
 });
 
@@ -17130,25 +17129,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // Fix Page Switching on Mobile
 // ==========================================
 
-// Override showAuthPage to properly hide app page
-var originalShowAuthPage = window.showAuthPage;
-window.showAuthPage = function() {
-    document.getElementById('auth-page').classList.add('active');
-    document.getElementById('app-page').classList.remove('active');
-    document.body.classList.add('auth-active');
-    document.body.classList.remove('app-active');
-    
-    // Hide mobile nav when on auth page
-    var mobileNav = document.getElementById('mobile-nav');
-    if (mobileNav) mobileNav.style.display = 'none';
-    
-    var mobileHeader = document.getElementById('mobile-header');
-    if (mobileHeader) mobileHeader.style.display = 'none';
-};
-
-// Override showApp to properly hide auth page
-var originalShowApp = window.showApp;
-window.showApp = function() {
+// Safe page switching - NO OVERRIDE
+window.showAppPage = function() {
     document.getElementById('auth-page').classList.remove('active');
     document.getElementById('app-page').classList.add('active');
     document.body.classList.add('app-active');
@@ -17162,9 +17144,20 @@ window.showApp = function() {
         var mobileHeader = document.getElementById('mobile-header');
         if (mobileHeader) mobileHeader.style.display = 'flex';
     }
+};
+
+window.showAuthPageSafe = function() {
+    document.getElementById('auth-page').classList.add('active');
+    document.getElementById('app-page').classList.remove('active');
+    document.body.classList.add('auth-active');
+    document.body.classList.remove('app-active');
     
-    // Call original if exists
-    if (originalShowApp) originalShowApp();
+    // Hide mobile nav when on auth page
+    var mobileNav = document.getElementById('mobile-nav');
+    if (mobileNav) mobileNav.style.display = 'none';
+    
+    var mobileHeader = document.getElementById('mobile-header');
+    if (mobileHeader) mobileHeader.style.display = 'none';
 };
 
 // Initialize page state on load
@@ -17939,9 +17932,7 @@ window.unlockApp = function() {
     }
 })();
 
-// Mark app as unlocked after successful login
-var originalShowApp = window.showApp;
-window.showApp = function() {
+// Mark app as unlocked - NO OVERRIDE to prevent recursion
+document.addEventListener('DOMContentLoaded', function() {
     sessionStorage.setItem('appUnlocked', 'true');
-    if (originalShowApp) originalShowApp();
-};
+});
