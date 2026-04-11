@@ -75,6 +75,28 @@
         // ==========================================
         fixNullErrors();
         
+        // ==========================================
+        // 6. Mobile: Tap message to show actions
+        // ==========================================
+        if (window.innerWidth <= 768) {
+            document.addEventListener('click', function(e) {
+                var msg = e.target.closest('.message');
+                if (msg && !e.target.closest('.message-action-btn')) {
+                    // Remove from all other messages
+                    document.querySelectorAll('.message.show-actions').forEach(function(m) {
+                        if (m !== msg) m.classList.remove('show-actions');
+                    });
+                    // Toggle on tapped message
+                    msg.classList.toggle('show-actions');
+                } else if (!e.target.closest('.message')) {
+                    // Tap outside - hide all
+                    document.querySelectorAll('.message.show-actions').forEach(function(m) {
+                        m.classList.remove('show-actions');
+                    });
+                }
+            });
+        }
+        
         console.log('BSITHUB Bug Fix Patch loaded');
     });
     
