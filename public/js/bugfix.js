@@ -15,6 +15,16 @@
     window.addEventListener('load', function() {
         
         // ==========================================
+        // 0. Fix input element ID mismatch
+        // ==========================================
+        var msgInput = document.getElementById('message-input');
+        if (msgInput && !document.getElementById('chat-input')) {
+            // Create alias - JS uses chat-input, HTML has message-input
+            msgInput.id = 'chat-input';
+            msgInput.setAttribute('data-original-id', 'message-input');
+        }
+        
+        // ==========================================
         // 1. Fix openChat - Single clean override
         // ==========================================
         _originalOpenChat = window.openChat;
