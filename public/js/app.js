@@ -1024,6 +1024,61 @@ let currentReplyTo = null;
 // ==========================================
 // Authentication
 // ==========================================
+
+// Safe logSecurityEvent - may not be defined yet when login runs
+function logSecurityEvent(type, id, details) {
+    if (typeof window.logSecurityEvent === 'function' && window.logSecurityEvent !== logSecurityEvent) {
+        window.logSecurityEvent(type, id, details);
+    } else {
+        try {
+            var log = Storage.get('securityAuditLog') || [];
+            log.unshift({ type: type, identifier: id, details: details, timestamp: new Date().toISOString(), device: navigator.userAgent.substring(0, 50), browser: 'Unknown' });
+            if (log.length > 100) log = log.slice(0, 100);
+            Storage.set('securityAuditLog', log);
+        } catch(e) {}
+    }
+}
+
+// Safe getDeviceName
+function getDeviceName() {
+    var ua = navigator.userAgent;
+    if (ua.includes('iPhone')) return 'iPhone';
+    if (ua.includes('iPad')) return 'iPad';
+    if (ua.includes('Android')) return 'Android';
+    if (ua.includes('Windows')) return 'Windows PC';
+    if (ua.includes('Mac')) return 'Mac';
+    return 'Unknown Device';
+}
+
+// Handle failed login - must be defined before login() is called
+function handleFailedLogin(emailOrUsername) {
+    var lockouts = Storage.get('accountLockouts') || {};
+    var now = Date.now();
+    
+    if (!lockouts[emailOrUsername]) {
+        lockouts[emailOrUsername] = { attempts: 1, firstAttempt: now, lockedUntil: null };
+    } else {
+        if (now - lockouts[emailOrUsername].firstAttempt > 15 * 60 * 1000) {
+            lockouts[emailOrUsername] = { attempts: 1, firstAttempt: now, lockedUntil: null };
+        } else {
+            lockouts[emailOrUsername].attempts++;
+        }
+    }
+    
+    if (lockouts[emailOrUsername].attempts >= 5) {
+        lockouts[emailOrUsername].lockedUntil = now + (15 * 60 * 1000);
+    }
+    
+    Storage.set('accountLockouts', lockouts);
+}
+
+// Handle successful login
+function handleSuccessfulLogin(emailOrUsername) {
+    var lockouts = Storage.get('accountLockouts') || {};
+    delete lockouts[emailOrUsername];
+    Storage.set('accountLockouts', lockouts);
+}
+
 async function login(emailOrUsername, password) {
     console.log('Login attempt:', emailOrUsername);
 
