@@ -18139,3 +18139,267 @@ html {
     display: flex !important;
     visibility: visible !important;
 }
+
+/* ==========================================
+   Facebook Messenger Style Messages
+   ========================================== */
+
+/* Message Container */
+.message {
+    margin-bottom: 4px;
+    padding: 0 16px;
+}
+
+.message.sent {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.message.received {
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Message Bubble - Facebook Style */
+.message-bubble {
+    max-width: 65%;
+    padding: 8px 12px;
+    border-radius: 18px;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.message.sent .message-bubble {
+    background: #0084ff;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.message.received .message-bubble {
+    background: #e4e6eb;
+    color: #050505;
+    border-bottom-left-radius: 4px;
+}
+
+/* Message Text */
+.message-text {
+    font-size: 15px;
+    line-height: 1.35;
+    margin: 0;
+}
+
+/* Message Time - Hidden by default */
+.message-time {
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.message:hover .message-time,
+.message.sent:hover .message-time {
+    opacity: 0.7;
+}
+
+/* Message Status */
+.message-status {
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+.message.sent .message-status {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Message Actions - Hidden until hover */
+.message-actions {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s;
+    background: var(--bg-primary);
+    border-radius: 20px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.message.sent .message-actions {
+    left: -8px;
+    transform: translateX(-100%) translateY(-50%);
+}
+
+.message.received .message-actions {
+    right: -8px;
+    transform: translateX(100%) translateY(-50%);
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Message Action Buttons - Smaller */
+.message-action-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.15s;
+}
+
+.message-action-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--primary);
+}
+
+.message-action-btn.delete-btn:hover {
+    color: #e74c3c;
+}
+
+/* Message Footer - Compact */
+.message-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+/* Images in Messages */
+.message-media img {
+    max-width: 200px;
+    max-height: 250px;
+    border-radius: 12px;
+    display: block;
+}
+
+/* GIF in Messages */
+.message-gif img {
+    max-width: 180px;
+    border-radius: 12px;
+    display: block;
+}
+
+/* Audio in Messages */
+.message-audio audio {
+    max-width: 200px;
+    height: 36px;
+}
+
+/* Reactions on Messages */
+.message-reactions {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.reaction-badge {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.message.sent .reaction-badge {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Edited Label */
+.message-edited {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-left: 4px;
+}
+
+/* Reply Quote */
+.message-reply-quote {
+    background: rgba(0, 0, 0, 0.05);
+    border-left: 3px solid #0084ff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.message.sent .message-reply-quote {
+    background: rgba(255, 255, 255, 0.15);
+    border-left-color: white;
+}
+
+.reply-quote-sender {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.reply-quote-text {
+    opacity: 0.8;
+}
+
+/* Date Separator */
+.date-separator {
+    text-align: center;
+    margin: 16px 0;
+}
+
+.date-separator span {
+    background: var(--bg-secondary);
+    padding: 4px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Typing Indicator */
+.typing-indicator {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .message-bubble {
+        max-width: 80%;
+    }
+    
+    .message-actions {
+        opacity: 1;
+        visibility: visible;
+        position: static;
+        transform: none;
+        margin-top: 4px;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        gap: 4px;
+    }
+    
+    .message.sent .message-actions,
+    .message.received .message-actions {
+        transform: none;
+        justify-content: flex-end;
+    }
+    
+    .message-action-btn {
+        width: 32px;
+        height: 32px;
+    }
+}

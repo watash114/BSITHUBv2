@@ -18317,3 +18317,110 @@ window.mobileGoBack = function() {
 };
 
 console.log('Chat open function loaded');
+
+// ==========================================
+// Facebook-Style Message Renderer
+// ==========================================
+
+window.renderMessagesSimple = function(chatId) {
+    var messages = Storage.get('messages') || [];
+    var container = document.getElementById('chat-messages');
+    if (!container) return;
+    
+    var chatMessages = messages.filter(function(m) { return m.chatId === chatId; });
+    
+    // Mark as read
+    chatMessages.forEach(function(msg) {
+        if (!msg.read && msg.senderId !== currentUser.id) {
+            msg.read = true;
+            msg.status = 'read';
+        }
+    });
+    Storage.set('messages', messages);
+    
+    // Limit messages on mobile
+    var isMobile = window.innerWidth <= 768;
+    var maxMessages = isMobile ? 50 : 100;
+    if (chatMessages.length > maxMessages) {
+        chatMessages = chatMessages.slice(-maxMessages);
+    }
+    
+    var html = '';
+    var lastDate = '';
+    
+    chatMessages.forEach(function(msg) {
+        var isSent = msg.senderId === currentUser.id;
+        
+        // Date separator
+        var msgDate = new Date(msg.timestamp).toLocaleDateString();
+        if (msgDate !== lastDate) {
+            html += '<div class="date-separator"><span>' + formatMessageDate(msg.timestamp) + '</span></div>';
+            lastDate = msgDate;
+        }
+        
+        // Message start
+        html += '<div class="message ' + (isSent ? 'sent' : 'received') + '" data-message-id="' + msg.id + '">';
+        html += '<div class="message-bubble">';
+        
+        // Content
+        if (msg.gifUrl) {
+            html += '<div class="message-gif"><img src="' + msg.gifUrl + '" alt="GIF"></div>';
+        } else if (msg.isEmoji) {
+            html += '<span class="message-emoji-large">' + msg.text + '</span>';
+        } else if (msg.fileData && msg.fileType && msg.fileType.startsWith('image/')) {
+            html += '<div class="message-media"><img src="' + msg.fileData + '" alt="Image"></div>';
+        } else if (msg.audioData) {
+            html += '<div class="message-audio"><audio controls src="' + msg.audioData + '"></audio></div>';
+        } else if (msg.location) {
+            html += '<a href="' + msg.location.url + '" target="_blank" class="location-link">?? Location</a>';
+        } else {
+            html += '<div class="message-text">' + escapeHtml(msg.text || '') + '</div>';
+        }
+        
+        // Time and status
+        html += '<div class="message-footer">';
+        html += '<span class="message-time">' + formatTime(msg.timestamp) + '</span>';
+        if (isSent) {
+            html += '<span class="message-status"><i class="fas fa-check-double"></i></span>';
+        }
+        html += '</div>';
+        
+        html += '</div>'; // end message-bubble
+        
+        // Quick actions (only on mobile)
+        if (isMobile) {
+            html += '<div class="message-actions">';
+            html += '<button class="message-action-btn" onclick="replyToMessage(\'' + msg.id + '\')" title="Reply"><i class="fas fa-reply"></i></button>';
+            html += '<button class="message-action-btn" onclick="showReactionPicker(\'' + msg.id + '\')" title="React"><i class="far fa-smile"></i></button>';
+            if (isSent) {
+                html += '<button class="message-action-btn delete-btn" onclick="deleteMessage(\'' + msg.id + '\')" title="Delete"><i class="fas fa-trash"></i></button>';
+            }
+            html += '</div>';
+        }
+        
+        html += '</div>'; // end message
+    });
+    
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+};
+
+function formatMessageDate(timestamp) {
+    var date = new Date(timestamp);
+    var today = new Date();
+    var yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+    } else {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+}
+
+// Use simple renderer on mobile
+if (window.innerWidth <= 768) {
+    window.renderMessages = renderMessagesSimple;
+}
