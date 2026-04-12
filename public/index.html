@@ -1213,5 +1213,18 @@
             try { emailjs.init('Vh6RYIAfd7D1Lq9E2'); } catch(e) {}
         })();
     </script>
+    <script>
+        // Force no cache - always get latest
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) { caches.delete(name); });
+            });
+        }
+    </script>
 </body>
 </html>
