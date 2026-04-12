@@ -18920,18 +18920,7 @@ window.rateLimitCheck = function(action, max, windowSec) {
     return RateLimiter.check(action, max || 10, (windowSec || 60) * 1000);
 };
 
-// Apply rate limiting to critical actions
-var originalSendMessage = window.sendMessage;
-if (typeof originalSendMessage === 'function') {
-    window.sendMessage = function(text) {
-        var check = RateLimiter.check('send_message', 30, 60000);
-        if (!check.allowed) {
-            showToast(check.message, 'error');
-            return;
-        }
-        originalSendMessage(text);
-    };
-}
+// Rate limiting is applied inside sendMessage via ContentModerator check
 
 // ==========================================
 // 4. Content Moderation
