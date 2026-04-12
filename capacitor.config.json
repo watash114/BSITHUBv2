@@ -1,0 +1,28 @@
+{
+    "appId": "com.bsithub.app",
+    "appName": "BSITHUB",
+    "webDir": "public",
+    "server": {
+        "url": "https://bsithub.vercel.app",
+        "cleartext": true
+    },
+    "plugins": {
+        "SplashScreen": {
+            "launchShowDuration": 2000,
+            "backgroundColor": "#667eea",
+            "showSpinner": false
+        },
+        "StatusBar": {
+            "style": "dark",
+            "backgroundColor": "#667eea"
+        },
+        "Keyboard": {
+            "resize": "body",
+            "resizeOnFullScreen": true
+        }
+    },
+    "android": {
+        "allowMixedContent": true,
+        "backgroundColor": "#1e1e2e"
+    }
+}

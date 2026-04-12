@@ -18167,75 +18167,7 @@ window.deleteChatFromSwipe = function(chatId) {
 })();
 
 // ==========================================
-// CRITICAL FIX: Force Chat to Open on Mobile
-// ==========================================
-
-// Override openChat for mobile - FORCE DISPLAY
-var chatOpenInProgress = false;
-var originalOpenChatFunc = window.openChat;
-
-window.openChat = function(chatId, userId) {
-    if (chatOpenInProgress) return;
-    chatOpenInProgress = true;
-    
-    console.log('Opening chat:', chatId, userId);
-    
-    // Call the original function
-    if (typeof originalOpenChatFunc === 'function') {
-        originalOpenChatFunc(chatId, userId);
-    }
-    
-    // Force display on mobile
-    setTimeout(function() {
-        var chatPlaceholder = document.getElementById('chat-placeholder');
-        var chatActive = document.getElementById('chat-active');
-        var chatMain = document.getElementById('chat-main');
-        var chatSidebar = document.querySelector('.chat-sidebar');
-        
-        if (chatPlaceholder) chatPlaceholder.style.display = 'none';
-        if (chatActive) {
-            chatActive.style.display = 'flex';
-            chatActive.style.visibility = 'visible';
-            chatActive.style.opacity = '1';
-        }
-        
-        if (window.innerWidth <= 768) {
-            // Mobile specific
-            if (chatMain) {
-                chatMain.style.display = 'flex';
-                chatMain.style.visibility = 'visible';
-                chatMain.style.opacity = '1';
-                chatMain.classList.add('active-mobile');
-            }
-            if (chatSidebar) {
-                chatSidebar.style.display = 'none';
-            }
-            
-            // Update mobile header
-            var users = Storage.get('users') || [];
-            var chats = Storage.get('chats') || [];
-            var chat = chats.find(function(c) { return c.id === chatId; });
-            
-            if (chat) {
-                var headerTitle = document.getElementById('mobile-header-title');
-                if (chat.isGroup) {
-                    if (headerTitle) headerTitle.textContent = chat.groupName || 'Group';
-                } else {
-                    var otherUser = users.find(function(u) { return u.id === userId; });
-                    if (headerTitle) headerTitle.textContent = otherUser ? otherUser.name : 'Chat';
-                }
-            }
-        }
-        
-        chatOpenInProgress = false;
-        
-        // Scroll to bottom of messages
-        var messagesContainer = document.getElementById('chat-messages');
-        if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    }, 100);
-};
+// REMOVED: Duplicate openChat override - handled in Debug section below
 
 // Also add a direct click handler for chat items
 document.addEventListener('click', function(e) {
@@ -18278,15 +18210,9 @@ document.addEventListener('touchend', function(e) {
 // Debug Chat Opening
 // ==========================================
 
-// Make openChat more robust with error handling
-var chatOpening = false;
-
+// openChat - Single clean implementation
 window.openChat = function(chatId, userId) {
-    if (chatOpening) {
-        console.log('Chat already opening, skipping');
-        return;
-    }
-    chatOpening = true;
+    if (!chatId) return;
     
     console.log('=== OPEN CHAT START ===');
     console.log('Chat ID:', chatId);
@@ -18406,12 +18332,7 @@ window.openChat = function(chatId, userId) {
         
     } catch (err) {
         console.error('Error opening chat:', err);
-        showToast('Error opening chat', 'error');
     }
-    
-    setTimeout(function() {
-        chatOpening = false;
-    }, 300);
 };
 
 // Also update mobileGoBack to remove the class
