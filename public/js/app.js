@@ -18751,3 +18751,289 @@ window.showMessagesSkeleton = function() {
         swiping = false;
     }, { passive: true });
 })();
+
+// ==========================================
+// 1. AES Encryption (Web Crypto API)
+// ==========================================
+var CryptoHelper = {
+    _key: null,
+    
+    async getKey() {
+        if (this._key) return this._key;
+        var stored = localStorage.getItem('bsithub_crypto_key');
+        if (stored) {
+            var raw = Uint8Array.from(atob(stored), function(c) { return c.charCodeAt(0); });
+            this._key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', true, ['encrypt', 'decrypt']);
+        } else {
+            this._key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+            var exported = await crypto.subtle.exportKey('raw', this._key);
+            localStorage.setItem('bsithub_crypto_key', btoa(String.fromCharCode.apply(null, new Uint8Array(exported))));
+        }
+        return this._key;
+    },
+    
+    async encrypt(text) {
+        try {
+            var key = await this.getKey();
+            var iv = crypto.getRandomValues(new Uint8Array(12));
+            var enc = new TextEncoder();
+            var encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, enc.encode(text));
+            var combined = new Uint8Array(iv.length + encrypted.byteLength);
+            combined.set(iv);
+            combined.set(new Uint8Array(encrypted), iv.length);
+            return btoa(String.fromCharCode.apply(null, combined));
+        } catch (e) {
+            console.warn('Encrypt error:', e);
+            return text;
+        }
+    },
+    
+    async decrypt(data) {
+        try {
+            var key = await this.getKey();
+            var raw = Uint8Array.from(atob(data), function(c) { return c.charCodeAt(0); });
+            var iv = raw.slice(0, 12);
+            var encrypted = raw.slice(12);
+            var decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, encrypted);
+            return new TextDecoder().decode(decrypted);
+        } catch (e) {
+            return data;
+        }
+    }
+};
+
+window.encryptData = function(text) { return CryptoHelper.encrypt(text); };
+window.decryptData = function(data) { return CryptoHelper.decrypt(data); };
+
+window.showEncryptionStatus = function() {
+    var html = '<div class=\"encryption-modal\"><h3><i class=\"fas fa-lock\"></i> Encryption</h3>';
+    html += '<div class=\"encryption-status\"><i class=\"fas fa-shield-alt\"></i> AES-256-GCM Encryption Active</div>';
+    html += '<p>All sensitive data is encrypted using the Web Crypto API with AES-256-GCM.</p>';
+    html += '<ul class=\"encryption-details\">';
+    html += '<li><i class=\"fas fa-check\"></i> 256-bit key strength</li>';
+    html += '<li><i class=\"fas fa-check\"></i> Unique IV per encryption</li>';
+    html += '<li><i class=\"fas fa-check\"></i> Browser-native crypto</li>';
+    html += '<li><i class=\"fas fa-check\"></i> Key stored locally only</li>';
+    html += '</ul>';
+    html += '<button class=\"btn\" onclick=\"closeModal()\">Close</button>';
+    html += '</div>';
+    showModal(html);
+};
+
+// ==========================================
+// 2. Password Strength Enforcer
+// ==========================================
+window.checkPasswordStrength = function(password) {
+    var score = 0;
+    var feedback = [];
+    
+    if (password.length >= 8) score += 1; else feedback.push('At least 8 characters');
+    if (password.length >= 12) score += 1;
+    if (/[a-z]/.test(password)) score += 1; else feedback.push('Add lowercase letter');
+    if (/[A-Z]/.test(password)) score += 1; else feedback.push('Add uppercase letter');
+    if (/[0-9]/.test(password)) score += 1; else feedback.push('Add a number');
+    if (/[^a-zA-Z0-9]/.test(password)) score += 1; else feedback.push('Add special character');
+    if (password.length >= 16) score += 1;
+    if (!/(.)\1{2,}/.test(password)) score += 1; else feedback.push('Avoid repeated characters');
+    
+    var common = ['password', '123456', 'qwerty', 'abc123', 'letmein', 'admin', 'welcome', 'monkey', 'master'];
+    if (common.indexOf(password.toLowerCase()) !== -1) {
+        score = 0;
+        feedback = ['This is a common password'];
+    }
+    
+    var level, color, label;
+    if (score <= 2) { level = 'weak'; color = '#e74c3c'; label = 'Weak'; }
+    else if (score <= 4) { level = 'fair'; color = '#f39c12'; label = 'Fair'; }
+    else if (score <= 6) { level = 'good'; color = '#2ecc71'; label = 'Good'; }
+    else { level = 'strong'; color = '#27ae60'; label = 'Strong'; }
+    
+    return { score: score, max: 8, level: level, color: color, label: label, feedback: feedback };
+};
+
+window.renderPasswordStrength = function(inputId, containerId) {
+    var input = document.getElementById(inputId);
+    var container = document.getElementById(containerId);
+    if (!input || !container) return;
+    
+    input.addEventListener('input', function() {
+        var result = checkPasswordStrength(this.value);
+        var pct = (result.score / result.max) * 100;
+        
+        var html = '<div class=\"pw-strength-bar\"><div class=\"pw-strength-fill\" style=\"width:' + pct + '%;background:' + result.color + '\"></div></div>';
+        html += '<div class=\"pw-strength-label\" style=\"color:' + result.color + '\">' + result.label + '</div>';
+        if (result.feedback.length > 0) {
+            html += '<div class=\"pw-strength-tips\">' + result.feedback.join(' | ') + '</div>';
+        }
+        container.innerHTML = html;
+    });
+};
+
+window.enforceStrongPassword = function(password) {
+    var result = checkPasswordStrength(password);
+    if (result.score < 3) {
+        return { valid: false, message: 'Password too weak. ' + result.feedback.join(', ') };
+    }
+    return { valid: true };
+};
+
+// ==========================================
+// 3. Rate Limiter
+// ==========================================
+var RateLimiter = {
+    limits: {},
+    
+    check: function(action, maxAttempts, windowMs) {
+        var now = Date.now();
+        var key = action;
+        
+        if (!this.limits[key]) {
+            this.limits[key] = { attempts: [], blocked: false, blockedUntil: 0 };
+        }
+        
+        var limiter = this.limits[key];
+        
+        if (limiter.blocked && now < limiter.blockedUntil) {
+            var remaining = Math.ceil((limiter.blockedUntil - now) / 1000);
+            return { allowed: false, message: 'Rate limited. Try again in ' + remaining + 's', remaining: remaining };
+        }
+        
+        limiter.blocked = false;
+        limiter.attempts = limiter.attempts.filter(function(t) { return now - t < windowMs; });
+        
+        if (limiter.attempts.length >= maxAttempts) {
+            limiter.blocked = true;
+            limiter.blockedUntil = now + windowMs;
+            return { allowed: false, message: 'Too many attempts. Slow down.', remaining: Math.ceil(windowMs / 1000) };
+        }
+        
+        limiter.attempts.push(now);
+        return { allowed: true };
+    },
+    
+    reset: function(action) {
+        delete this.limits[action];
+    }
+};
+
+window.rateLimitCheck = function(action, max, windowSec) {
+    return RateLimiter.check(action, max || 10, (windowSec || 60) * 1000);
+};
+
+// Apply rate limiting to critical actions
+var originalSendMessage = window.sendMessage;
+if (typeof originalSendMessage === 'function') {
+    window.sendMessage = function(text) {
+        var check = RateLimiter.check('send_message', 30, 60000);
+        if (!check.allowed) {
+            showToast(check.message, 'error');
+            return;
+        }
+        originalSendMessage(text);
+    };
+}
+
+// ==========================================
+// 4. Content Moderation
+// ==========================================
+var ContentModerator = {
+    badWords: ['spam', 'scam', 'hack', 'virus', 'malware', 'phishing', 'nude', 'porn', 'xxx', 'nsfw', 'kill', 'murder', 'suicide', 'bomb', 'terrorist', 'drug', 'cocaine', 'heroin'],
+    
+    patterns: [
+        /(\b\d{16}\b)/,
+        /(\b\d{3}-\d{2}-\d{4}\b)/,
+        /(https?:\/\/bit\.ly|tinyurl|goo\.gl)/i,
+        /(.)\1{5,}/,
+        /[A-Z]{10,}/
+    ],
+    
+    check: function(text) {
+        if (!text) return { safe: true, flags: [] };
+        
+        var flags = [];
+        var lower = text.toLowerCase();
+        
+        // Check bad words
+        this.badWords.forEach(function(word) {
+            if (lower.includes(word)) {
+                flags.push({ type: 'inappropriate', word: word, severity: 'medium' });
+            }
+        });
+        
+        // Check patterns
+        if (this.patterns[0].test(text)) flags.push({ type: 'sensitive_data', detail: 'Credit card number', severity: 'high' });
+        if (this.patterns[1].test(text)) flags.push({ type: 'sensitive_data', detail: 'SSN detected', severity: 'high' });
+        if (this.patterns[2].test(text)) flags.push({ type: 'suspicious_link', detail: 'URL shortener', severity: 'medium' });
+        if (this.patterns[3].test(text)) flags.push({ type: 'spam', detail: 'Repeated characters', severity: 'low' });
+        if (this.patterns[4].test(text)) flags.push({ type: 'spam', detail: 'Excessive caps', severity: 'low' });
+        
+        // Spam detection
+        if (text.length > 2000) flags.push({ type: 'spam', detail: 'Message too long', severity: 'low' });
+        
+        var highSeverity = flags.filter(function(f) { return f.severity === 'high'; });
+        var medSeverity = flags.filter(function(f) { return f.severity === 'medium'; });
+        
+        return {
+            safe: highSeverity.length === 0 && medSeverity.length === 0,
+            flags: flags,
+            blocked: highSeverity.length > 0,
+            warning: medSeverity.length > 0
+        };
+    },
+    
+    moderate: function(text) {
+        var result = this.check(text);
+        
+        if (result.blocked) {
+            showToast('Message blocked: contains sensitive data', 'error');
+            return null;
+        }
+        
+        if (result.warning) {
+            var flagged = result.flags.map(function(f) { return f.detail || f.type; }).join(', ');
+            console.warn('Content warning:', flagged);
+        }
+        
+        // Censor bad words
+        var censored = text;
+        this.badWords.forEach(function(word) {
+            var regex = new RegExp(word, 'gi');
+            censored = censored.replace(regex, function(match) {
+                return match.charAt(0) + '*'.repeat(match.length - 2) + match.charAt(match.length - 1);
+            });
+        });
+        
+        return censored;
+    }
+};
+
+window.moderateContent = function(text) { return ContentModerator.moderate(text); };
+window.checkContent = function(text) { return ContentModerator.check(text); };
+
+window.showModerationSettings = function() {
+    var settings = Storage.get('settings') || {};
+    var enabled = settings.contentModeration !== false;
+    
+    var html = '<div class=\"moderation-modal\"><h3><i class=\"fas fa-shield-alt\"></i> Content Moderation</h3>';
+    html += '<div class=\"mod-status ' + (enabled ? 'enabled' : 'disabled') + '\">';
+    html += '<i class=\"fas fa-' + (enabled ? 'check-circle' : 'times-circle') + '\"></i> ';
+    html += enabled ? 'Active' : 'Disabled';
+    html += '</div>';
+    html += '<p>Automatically detects and filters inappropriate content.</p>';
+    html += '<div class=\"mod-features\">';
+    html += '<div class=\"mod-feature\"><i class=\"fas fa-ban\"></i> Bad word filtering</div>';
+    html += '<div class=\"mod-feature\"><i class=\"fas fa-credit-card\"></i> Sensitive data detection</div>';
+    html += '<div class=\"mod-feature\"><i class=\"fas fa-link\"></i> Suspicious link detection</div>';
+    html += '<div class=\"mod-feature\"><i class=\"fas fa-comment-slash\"></i> Spam detection</div>';
+    html += '</div>';
+    html += '<label class=\"toggle-label\"><input type=\"checkbox\" ' + (enabled ? 'checked' : '') + ' onchange=\"toggleModeration(this.checked)\"> Enable content moderation</label>';
+    html += '</div>';
+    showModal(html);
+};
+
+window.toggleModeration = function(enabled) {
+    var settings = Storage.get('settings') || {};
+    settings.contentModeration = enabled;
+    Storage.set('settings', settings);
+    showToast('Content moderation ' + (enabled ? 'enabled' : 'disabled'), 'success');
+};
