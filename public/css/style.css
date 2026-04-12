@@ -19064,3 +19064,45 @@ html:not([data-theme="dark"]) .message.received > .message-bubble {
 .mod-features { margin: 16px 0; }
 .mod-feature { display: flex; align-items: center; gap: 10px; padding: 10px; font-size: 14px; }
 .mod-feature i { color: var(--primary); width: 20px; text-align: center; }
+
+/* ==========================================
+   Global Search
+   ========================================== */
+.global-search-modal { padding: 20px; max-width: 450px; }
+.global-search-modal input { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 15px; margin-bottom: 16px; background: var(--bg-secondary); }
+.global-search-results { max-height: 400px; overflow-y: auto; }
+.search-section h4 { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; margin: 12px 0 8px; }
+.search-result-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; cursor: pointer; }
+.search-result-item:hover { background: var(--bg-secondary); }
+.search-result-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+.search-result-info { flex: 1; min-width: 0; }
+.search-result-name { font-weight: 500; font-size: 14px; }
+.search-result-sub { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-result-time { font-size: 11px; color: var(--text-muted); }
+
+/* ==========================================
+   Nav Badges
+   ========================================== */
+.nav-badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; background: #e74c3c; color: white; font-size: 10px; font-weight: 700; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+
+/* ==========================================
+   Read Receipts
+   ========================================== */
+.read-receipts-modal { padding: 20px; max-width: 350px; }
+.receipt-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.receipt-item:last-child { border-bottom: none; }
+.receipt-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+.receipt-info { flex: 1; }
+.receipt-name { font-weight: 500; font-size: 14px; }
+.receipt-time { font-size: 12px; color: var(--text-secondary); }
+.receipt-time.unread { color: var(--text-muted); }
+
+/* ==========================================
+   Saved Messages
+   ========================================== */
+.saved-messages-modal { padding: 20px; max-width: 400px; }
+.saved-msg-item { padding: 12px; background: var(--bg-secondary); border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
+.saved-msg-item:hover { background: var(--bg-tertiary); }
+.saved-msg-sender { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.saved-msg-text { font-size: 14px; margin-bottom: 4px; }
+.saved-msg-time { font-size: 11px; color: var(--text-muted); }

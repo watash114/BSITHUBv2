@@ -18339,7 +18339,19 @@ window.openChat = function(chatId, userId) {
             
             if (otherUser) {
                 if (nameEl) nameEl.textContent = otherUser.name;
-                if (statusEl) statusEl.textContent = 'Online';
+                if (statusEl) {
+                    var userStatus = getUserStatus(userId);
+                    if (userStatus && userStatus.online) {
+                        statusEl.textContent = userStatus.statusMessage || 'Online';
+                        statusEl.style.color = '#2ecc71';
+                    } else if (userStatus && userStatus.lastSeen) {
+                        statusEl.textContent = 'Last seen ' + formatLastSeen(userStatus.lastSeen);
+                        statusEl.style.color = '';
+                    } else {
+                        statusEl.textContent = 'Offline';
+                        statusEl.style.color = '';
+                    }
+                }
             }
         }
         
@@ -19025,4 +19037,261 @@ window.toggleModeration = function(enabled) {
     settings.contentModeration = enabled;
     Storage.set('settings', settings);
     showToast('Content moderation ' + (enabled ? 'enabled' : 'disabled'), 'success');
+};
+
+// ==========================================
+// Fix Online Status + New Features
+// ==========================================
+
+// Refresh chat header status every 10 seconds
+setInterval(function() {
+    if (!activeChat || !currentUser) return;
+    
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (!chat || chat.isGroup) return;
+    
+    var statusEl = document.getElementById('chat-user-status');
+    if (!statusEl) return;
+    
+    var userStatus = getUserStatus(activeChat.userId);
+    if (userStatus && userStatus.online) {
+        statusEl.textContent = userStatus.statusMessage || 'Online';
+        statusEl.style.color = '#2ecc71';
+    } else if (userStatus && userStatus.lastSeen) {
+        statusEl.textContent = 'Last seen ' + formatLastSeen(userStatus.lastSeen);
+        statusEl.style.color = '';
+    } else {
+        statusEl.textContent = 'Offline';
+        statusEl.style.color = '';
+    }
+}, 10000);
+
+// ==========================================
+// Global Message Search
+// ==========================================
+window.showGlobalSearch = function() {
+    var html = '<div class=\"global-search-modal\"><h3><i class=\"fas fa-search\"></i> Search All Messages</h3>';
+    html += '<input type=\"text\" id=\"global-search-input\" placeholder=\"Search messages, chats, users...\" autofocus>';
+    html += '<div id=\"global-search-results\" class=\"global-search-results\"><p class=\"search-hint\">Type to search across all chats</p></div>';
+    html += '</div>';
+    showModal(html);
+    
+    setTimeout(function() {
+        var input = document.getElementById('global-search-input');
+        if (input) {
+            input.focus();
+            input.oninput = function() {
+                performGlobalSearch(this.value.trim());
+            };
+        }
+    }, 100);
+};
+
+function performGlobalSearch(query) {
+    var results = document.getElementById('global-search-results');
+    if (!results) return;
+    
+    if (!query || query.length < 2) {
+        results.innerHTML = '<p class=\"search-hint\">Type at least 2 characters</p>';
+        return;
+    }
+    
+    var messages = Storage.get('messages') || [];
+    var users = Storage.get('users') || [];
+    var chats = Storage.get('chats') || [];
+    var lower = query.toLowerCase();
+    var html = '';
+    var count = 0;
+    
+    // Search users
+    var matchedUsers = users.filter(function(u) {
+        return u.name.toLowerCase().includes(lower) || u.username.toLowerCase().includes(lower);
+    }).slice(0, 3);
+    
+    if (matchedUsers.length > 0) {
+        html += '<div class=\"search-section\"><h4>Users</h4>';
+        matchedUsers.forEach(function(u) {
+            html += '<div class=\"search-result-item\" onclick=\"closeModal(); showUserSearch();\">';
+            html += '<div class=\"search-result-avatar\">' + u.name.charAt(0) + '</div>';
+            html += '<div class=\"search-result-info\"><div class=\"search-result-name\">' + escapeHtml(u.name) + '</div>';
+            html += '<div class=\"search-result-sub\">@' + escapeHtml(u.username) + '</div></div></div>';
+        });
+        html += '</div>';
+    }
+    
+    // Search messages
+    var matchedMsgs = messages.filter(function(m) {
+        return m.text && m.text.toLowerCase().includes(lower);
+    }).slice(-10).reverse();
+    
+    if (matchedMsgs.length > 0) {
+        html += '<div class=\"search-section\"><h4>Messages</h4>';
+        matchedMsgs.forEach(function(m) {
+            var sender = users.find(function(u) { return u.id === m.senderId; });
+            var chat = chats.find(function(c) { return c.id === m.chatId; });
+            var chatName = chat ? (chat.isGroup ? chat.groupName : '') : '';
+            
+            html += '<div class=\"search-result-item\" onclick=\"closeModal(); openChat(\x27' + m.chatId + '\x27, \x27' + m.senderId + '\x27);\">';
+            html += '<div class=\"search-result-avatar\"><i class=\"fas fa-comment\"></i></div>';
+            html += '<div class=\"search-result-info\">';
+            html += '<div class=\"search-result-name\">' + (sender ? escapeHtml(sender.name) : 'Unknown') + (chatName ? ' in ' + escapeHtml(chatName) : '') + '</div>';
+            html += '<div class=\"search-result-sub\">' + escapeHtml(m.text.substring(0, 60)) + '</div>';
+            html += '<div class=\"search-result-time\">' + formatTime(m.timestamp) + '</div>';
+            html += '</div></div>';
+            count++;
+        });
+        html += '</div>';
+    }
+    
+    if (count === 0 && matchedUsers.length === 0) {
+        html = '<p class=\"no-results\">No results for \"' + escapeHtml(query) + '\"</p>';
+    }
+    
+    results.innerHTML = html;
+}
+
+// ==========================================
+// Unread Count Badges
+// ==========================================
+function updateAllBadges() {
+    if (!currentUser) return;
+    
+    var messages = Storage.get('messages') || [];
+    var chats = Storage.get('chats') || [];
+    
+    var totalUnread = 0;
+    chats.forEach(function(chat) {
+        if (chat.participants.indexOf(currentUser.id) === -1) return;
+        var unread = messages.filter(function(m) {
+            return m.chatId === chat.id && !m.read && m.senderId !== currentUser.id;
+        }).length;
+        totalUnread += unread;
+    });
+    
+    // Update chat badge
+    var chatBadge = document.getElementById('chat-badge');
+    if (chatBadge) {
+        chatBadge.textContent = totalUnread;
+        chatBadge.style.display = totalUnread > 0 ? 'inline-flex' : 'none';
+    }
+    
+    // Update mobile nav badge
+    var mobileChatsBtn = document.querySelector('.mobile-nav-item[data-section=\"chats\"]');
+    if (mobileChatsBtn) {
+        var badge = mobileChatsBtn.querySelector('.nav-badge');
+        if (totalUnread > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'nav-badge';
+                mobileChatsBtn.style.position = 'relative';
+                mobileChatsBtn.appendChild(badge);
+            }
+            badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+    
+    // Update page title
+    document.title = totalUnread > 0 ? '(' + totalUnread + ') BSITHUB' : 'BSITHUB';
+}
+
+// Update badges every 5 seconds
+setInterval(updateAllBadges, 5000);
+
+// ==========================================
+// Group Read Receipts
+// ==========================================
+window.showReadReceipts = function(messageId) {
+    var messages = Storage.get('messages') || [];
+    var msg = messages.find(function(m) { return m.id === messageId; });
+    if (!msg) return;
+    
+    var users = Storage.get('users') || [];
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === msg.chatId; });
+    if (!chat) return;
+    
+    var readBy = msg.readBy || {};
+    
+    var html = '<div class=\"read-receipts-modal\"><h3>Read by</h3>';
+    
+    chat.participants.forEach(function(pId) {
+        if (pId === msg.senderId) return;
+        var user = users.find(function(u) { return u.id === pId; });
+        if (!user) return;
+        
+        var hasRead = readBy[pId];
+        html += '<div class=\"receipt-item\">';
+        html += '<div class=\"receipt-avatar\">' + user.name.charAt(0) + '</div>';
+        html += '<div class=\"receipt-info\">';
+        html += '<div class=\"receipt-name\">' + escapeHtml(user.name) + '</div>';
+        if (hasRead) {
+            html += '<div class=\"receipt-time\">Read ' + formatTime(readBy[pId]) + '</div>';
+        } else {
+            html += '<div class=\"receipt-time unread\">Not yet</div>';
+        }
+        html += '</div>';
+        html += '<i class=\"fas fa-check-double\" style=\"color:' + (hasRead ? '#2ecc71' : 'var(--text-muted)') + '\"></i>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    showModal(html);
+};
+
+// ==========================================
+// Saved Messages / Bookmarks
+// ==========================================
+window.showSavedMessages = function() {
+    var messages = Storage.get('messages') || [];
+    var saved = messages.filter(function(m) { return m.starred; });
+    var users = Storage.get('users') || [];
+    
+    var html = '<div class=\"saved-messages-modal\"><h3><i class=\"fas fa-bookmark\"></i> Saved Messages (' + saved.length + ')</h3>';
+    
+    if (saved.length === 0) {
+        html += '<p class=\"no-results\">No saved messages. Star a message to save it.</p>';
+    } else {
+        saved.reverse().forEach(function(msg) {
+            var sender = users.find(function(u) { return u.id === msg.senderId; });
+            html += '<div class=\"saved-msg-item\" onclick=\"closeModal(); openChat(\x27' + msg.chatId + '\x27, \x27' + msg.senderId + '\x27);\">';
+            html += '<div class=\"saved-msg-sender\">' + (sender ? escapeHtml(sender.name) : 'Unknown') + '</div>';
+            html += '<div class=\"saved-msg-text\">' + escapeHtml((msg.text || '').substring(0, 80)) + '</div>';
+            html += '<div class=\"saved-msg-time\">' + formatTime(msg.timestamp) + '</div>';
+            html += '</div>';
+        });
+    }
+    
+    html += '</div>';
+    showModal(html);
+};
+
+// ==========================================  
+// Typing Status - Show who is typing
+// ==========================================
+window.showTypingInHeader = function(chatId, userName) {
+    var statusEl = document.getElementById('chat-user-status');
+    if (!statusEl) return;
+    
+    statusEl.textContent = userName + ' is typing...';
+    statusEl.style.color = 'var(--primary)';
+    statusEl.style.fontStyle = 'italic';
+    
+    clearTimeout(window.typingHeaderTimeout);
+    window.typingHeaderTimeout = setTimeout(function() {
+        // Reset to actual status
+        if (activeChat) {
+            var userStatus = getUserStatus(activeChat.userId);
+            if (userStatus && userStatus.online) {
+                statusEl.textContent = 'Online';
+                statusEl.style.color = '#2ecc71';
+            } else {
+                statusEl.textContent = 'Offline';
+                statusEl.style.color = '';
+            }
+            statusEl.style.fontStyle = '';
+        }
+    }, 3000);
 };
