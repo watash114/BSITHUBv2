@@ -18984,3 +18984,61 @@ html:not([data-theme="dark"]) .message.received > .message-bubble {
         padding: 0 !important;
     }
 }
+
+/* ==========================================
+   Media Gallery
+   ========================================== */
+.media-gallery-modal { padding: 20px; }
+.media-gallery-modal h3 { margin-bottom: 16px; }
+.media-gallery-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.media-tab { padding: 8px 16px; border: 1px solid var(--border); border-radius: 20px; background: transparent; cursor: pointer; font-size: 13px; }
+.media-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+.media-gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-height: 400px; overflow-y: auto; }
+.media-gallery-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; cursor: pointer; }
+.media-gallery-item img, .media-gallery-item video { width: 100%; height: 100%; object-fit: cover; }
+.media-gallery-item:hover { opacity: 0.85; }
+.media-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.5); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.media-date { position: absolute; bottom: 4px; right: 4px; font-size: 10px; color: white; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
+.media-fullview { display: flex; align-items: center; justify-content: center; min-height: 300px; cursor: pointer; }
+
+/* ==========================================
+   Message Reminders
+   ========================================== */
+.reminder-modal { padding: 20px; max-width: 350px; }
+.reminder-modal h3 { margin-bottom: 12px; }
+.reminder-preview { background: var(--bg-secondary); padding: 10px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+.reminder-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+.reminder-opt { padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.reminder-opt:hover { background: var(--bg-tertiary); border-color: var(--primary); }
+.reminder-opt i { color: var(--primary); }
+.reminder-custom { display: flex; gap: 8px; }
+.reminder-custom input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+
+/* ==========================================
+   Skeleton Loading
+   ========================================== */
+.skeleton { background: var(--bg-secondary); border-radius: 8px; position: relative; overflow: hidden; }
+.skeleton::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+.skeleton-chat-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.skeleton-avatar { width: 48px; height: 48px; border-radius: 50%; }
+.skeleton-text { height: 14px; border-radius: 7px; }
+.skeleton-text.w60 { width: 60%; }
+.skeleton-text.w40 { width: 40%; }
+.skeleton-text.w80 { width: 80%; }
+.skeleton-lines { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+
+.skeleton-message { display: flex; padding: 4px 16px; }
+.skeleton-message.sent { justify-content: flex-end; }
+.skeleton-bubble { height: 36px; border-radius: 18px; }
+.skeleton-bubble.short { width: 80px; }
+.skeleton-bubble.medium { width: 150px; }
+.skeleton-bubble.long { width: 220px; }
+
+/* ==========================================
+   Swipe to Reply
+   ========================================== */
+.message.swiping { transition: none !important; }
+.message .swipe-reply-indicator { position: absolute; left: -40px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity 0.15s; color: var(--primary); font-size: 18px; }
+.message.swiping .swipe-reply-indicator { opacity: 1; }

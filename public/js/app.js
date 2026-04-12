@@ -3765,7 +3765,7 @@ function handleMentionInput(input) {
 
 function showMentionsDropdown(users, mentionLength) {
     var dropdown = document.getElementById('mentions-dropdown');
-    var input = document.getElementById('chat-input');
+    var input = document.getElementById('chat-input') || document.getElementById('message-input');
     if (!dropdown || !input) return;
     
     var html = '';
@@ -3781,7 +3781,7 @@ function showMentionsDropdown(users, mentionLength) {
 }
 
 function selectMention(username, mentionLength) {
-    var input = document.getElementById('chat-input');
+    var input = document.getElementById('chat-input') || document.getElementById('message-input');
     if (!input) return;
     
     var text = input.value;
@@ -6039,10 +6039,12 @@ function initEmojiCategories() {
 }
 
 function insertEmoji(emoji) {
-    var input = document.getElementById('chat-input');
+    var input = document.getElementById('chat-input') || document.getElementById('message-input');
+    if (!input) return;
     input.value += emoji;
     input.focus();
-    document.getElementById('emoji-picker').style.display = 'none';
+    var picker = document.getElementById('emoji-picker');
+    if (picker) picker.style.display = 'none';
 }
 
 // ==========================================
@@ -18515,3 +18517,237 @@ function formatMessageDate(timestamp) {
 if (window.innerWidth <= 768) {
     window.renderMessages = renderMessagesSimple;
 }
+
+// ==========================================
+// Shared Media Gallery
+// ==========================================
+window.showMediaGallery = function() {
+    if (!activeChat) { showToast('Select a chat first', 'info'); return; }
+    
+    var messages = Storage.get('messages') || [];
+    var media = messages.filter(function(m) {
+        return m.chatId === activeChat.id && (
+            (m.fileData && m.fileType && m.fileType.startsWith('image/')) ||
+            m.gifUrl ||
+            (m.fileData && m.fileType && m.fileType.startsWith('video/'))
+        );
+    });
+    
+    if (media.length === 0) {
+        showToast('No media in this chat', 'info');
+        return;
+    }
+    
+    var html = '<div class=\"media-gallery-modal\"><h3>Shared Media (' + media.length + ')</h3>';
+    html += '<div class=\"media-gallery-tabs\">';
+    html += '<button class=\"media-tab active\" onclick=\"filterMediaGallery(\'all\')\">All</button>';
+    html += '<button class=\"media-tab\" onclick=\"filterMediaGallery(\'images\')\">Images</button>';
+    html += '<button class=\"media-tab\" onclick=\"filterMediaGallery(\'gifs\')\">GIFs</button>';
+    html += '</div>';
+    html += '<div class=\"media-gallery-grid\" id=\"media-gallery-grid\">';
+    
+    media.reverse().forEach(function(m) {
+        var src = m.fileData || m.gifUrl;
+        var type = m.gifUrl ? 'gif' : (m.fileType && m.fileType.startsWith('video/') ? 'video' : 'image');
+        html += '<div class=\"media-gallery-item\" data-type=\"' + type + '\" onclick=\"viewMediaFull(\x27' + src + '\x27)\">';
+        if (type === 'video') {
+            html += '<video src=\"' + src + '\"></video><div class=\"media-play\"><i class=\"fas fa-play\"></i></div>';
+        } else {
+            html += '<img src=\"' + src + '\" loading=\"lazy\">';
+        }
+        html += '<div class=\"media-date\">' + formatTime(m.timestamp) + '</div>';
+        html += '</div>';
+    });
+    
+    html += '</div></div>';
+    showModal(html);
+};
+
+window.filterMediaGallery = function(type) {
+    document.querySelectorAll('.media-tab').forEach(function(t) { t.classList.remove('active'); });
+    event.target.classList.add('active');
+    
+    document.querySelectorAll('.media-gallery-item').forEach(function(item) {
+        if (type === 'all') { item.style.display = ''; }
+        else if (type === 'images') { item.style.display = item.dataset.type === 'image' ? '' : 'none'; }
+        else if (type === 'gifs') { item.style.display = item.dataset.type === 'gif' ? '' : 'none'; }
+    });
+};
+
+window.viewMediaFull = function(src) {
+    var html = '<div class=\"media-fullview\" onclick=\"closeModal()\">';
+    if (src.includes('video')) {
+        html += '<video src=\"' + src + '\" controls autoplay style=\"max-width:90%;max-height:85vh;\"></video>';
+    } else {
+        html += '<img src=\"' + src + '\" style=\"max-width:90%;max-height:85vh;border-radius:8px;\">';
+    }
+    html += '</div>';
+    showModal(html);
+};
+
+// ==========================================
+// Message Reminders
+// ==========================================
+window.setMessageReminder = function(messageId) {
+    var messages = Storage.get('messages') || [];
+    var msg = messages.find(function(m) { return m.id === messageId; });
+    if (!msg) return;
+    
+    var html = '<div class=\"reminder-modal\"><h3>Set Reminder</h3>';
+    html += '<p class=\"reminder-preview\">' + escapeHtml((msg.text || '').substring(0, 60)) + '</p>';
+    html += '<div class=\"reminder-options\">';
+    html += '<button class=\"reminder-opt\" onclick=\"createReminder(\x27' + messageId + '\x27, 30)\"><i class=\"fas fa-clock\"></i> 30 min</button>';
+    html += '<button class=\"reminder-opt\" onclick=\"createReminder(\x27' + messageId + '\x27, 60)\"><i class=\"fas fa-clock\"></i> 1 hour</button>';
+    html += '<button class=\"reminder-opt\" onclick=\"createReminder(\x27' + messageId + '\x27, 180)\"><i class=\"fas fa-clock\"></i> 3 hours</button>';
+    html += '<button class=\"reminder-opt\" onclick=\"createReminder(\x27' + messageId + '\x27, 1440)\"><i class=\"fas fa-clock\"></i> Tomorrow</button>';
+    html += '</div>';
+    html += '<div class=\"reminder-custom\">';
+    html += '<input type=\"datetime-local\" id=\"reminder-datetime\">';
+    html += '<button class=\"btn btn-primary\" onclick=\"createReminderCustom(\x27' + messageId + '\x27)\">Set Custom</button>';
+    html += '</div></div>';
+    showModal(html);
+};
+
+window.createReminder = function(messageId, minutesFromNow) {
+    var reminders = Storage.get('messageReminders') || [];
+    reminders.push({
+        id: generateId(),
+        messageId: messageId,
+        chatId: activeChat ? activeChat.id : null,
+        time: new Date(Date.now() + minutesFromNow * 60000).toISOString(),
+        notified: false
+    });
+    Storage.set('messageReminders', reminders);
+    closeModal();
+    showToast('Reminder set!', 'success');
+};
+
+window.createReminderCustom = function(messageId) {
+    var dt = document.getElementById('reminder-datetime');
+    if (!dt || !dt.value) { showToast('Select a date/time', 'error'); return; }
+    
+    var reminders = Storage.get('messageReminders') || [];
+    reminders.push({
+        id: generateId(),
+        messageId: messageId,
+        chatId: activeChat ? activeChat.id : null,
+        time: new Date(dt.value).toISOString(),
+        notified: false
+    });
+    Storage.set('messageReminders', reminders);
+    closeModal();
+    showToast('Reminder set!', 'success');
+};
+
+// Check reminders every 30 seconds
+setInterval(function() {
+    var reminders = Storage.get('messageReminders') || [];
+    var now = Date.now();
+    var changed = false;
+    
+    reminders.forEach(function(r) {
+        if (!r.notified && new Date(r.time).getTime() <= now) {
+            r.notified = true;
+            changed = true;
+            
+            var messages = Storage.get('messages') || [];
+            var msg = messages.find(function(m) { return m.id === r.messageId; });
+            var text = msg ? (msg.text || '').substring(0, 50) : 'Message';
+            
+            showToast('Reminder: ' + text, 'info');
+            
+            if (typeof sendBrowserNotification === 'function') {
+                sendBrowserNotification('Message Reminder', text);
+            }
+        }
+    });
+    
+    if (changed) {
+        reminders = reminders.filter(function(r) { return !r.notified; });
+        Storage.set('messageReminders', reminders);
+    }
+}, 30000);
+
+// ==========================================
+// Skeleton Loading
+// ==========================================
+window.showChatListSkeleton = function() {
+    var list = document.getElementById('chat-list');
+    if (!list) return;
+    var html = '';
+    for (var i = 0; i < 6; i++) {
+        html += '<div class="skeleton-chat-item">';
+        html += '<div class="skeleton skeleton-avatar"></div>';
+        html += '<div class="skeleton-lines">';
+        html += '<div class="skeleton skeleton-text w60"></div>';
+        html += '<div class="skeleton skeleton-text w40"></div>';
+        html += '</div></div>';
+    }
+    list.innerHTML = html;
+};
+
+window.showMessagesSkeleton = function() {
+    var container = document.getElementById('chat-messages');
+    if (!container) return;
+    var html = '';
+    var patterns = ['sent short', 'received medium', 'sent long', 'received short', 'sent medium'];
+    patterns.forEach(function(p) {
+        var parts = p.split(' ');
+        html += '<div class="skeleton-message ' + parts[0] + '">';
+        html += '<div class="skeleton skeleton-bubble ' + parts[1] + '"></div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+};
+
+// ==========================================
+// Swipe to Reply (Mobile)
+// ==========================================
+(function() {
+    if (window.innerWidth > 768) return;
+    
+    var startX = 0, startY = 0, currentMsg = null, swiping = false;
+    
+    document.addEventListener('touchstart', function(e) {
+        var msg = e.target.closest('.message');
+        if (!msg) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        currentMsg = msg;
+        swiping = false;
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function(e) {
+        if (!currentMsg) return;
+        var dx = e.touches[0].clientX - startX;
+        var dy = Math.abs(e.touches[0].clientY - startY);
+        
+        if (dy > 30) { currentMsg = null; return; }
+        if (dx > 15) {
+            swiping = true;
+            currentMsg.classList.add('swiping');
+            var move = Math.min(dx * 0.4, 60);
+            currentMsg.style.transform = 'translateX(' + move + 'px)';
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function() {
+        if (!currentMsg) return;
+        if (swiping) {
+            var dx = parseFloat(currentMsg.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            if (dx > 30) {
+                var msgId = currentMsg.dataset.messageId;
+                if (msgId && typeof replyToMessage === 'function') {
+                    replyToMessage(msgId);
+                    if (navigator.vibrate) navigator.vibrate(15);
+                }
+            }
+        }
+        if (currentMsg) {
+            currentMsg.classList.remove('swiping');
+            currentMsg.style.transform = '';
+        }
+        currentMsg = null;
+        swiping = false;
+    }, { passive: true });
+})();
