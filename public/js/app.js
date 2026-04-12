@@ -16932,27 +16932,7 @@ if (window.innerWidth <= 768) {
 }
 
 // Optimize scroll performance
-var scrollTimeout;
-document.addEventListener('scroll', function() {
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(function() {
-        // Re-enable pointer events after scroll
-        document.body.style.pointerEvents = 'auto';
-    }, 100);
-}, { passive: true });
-
-// Prevent scroll during tap
-document.addEventListener('touchstart', function(e) {
-    if (e.target.closest('.btn, .btn-icon, .chat-item, .message')) {
-        document.body.style.pointerEvents = 'none';
-    }
-}, { passive: true });
-
-document.addEventListener('touchend', function() {
-    setTimeout(function() {
-        document.body.style.pointerEvents = 'auto';
-    }, 50);
-}, { passive: true });
+// REMOVED: pointerEvents manipulation was causing lag and blocking clicks
 
 // ==========================================
 // Enhanced Mobile Features
@@ -18053,26 +18033,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Make chat items clickable
 document.addEventListener('DOMContentLoaded', function() {
-    // Delegate click events for chat items
-    document.addEventListener('click', function(e) {
-        // Find the closest chat-item
-        var chatItem = e.target.closest('.chat-item');
-        if (chatItem && !e.target.closest('.swipe-action')) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            var chatId = chatItem.dataset.chatId;
-            var userId = chatItem.dataset.userId;
-            
-            if (chatId) {
-                // Call openChat directly
-                if (typeof openChat === 'function') {
-                    openChat(chatId, userId);
-                }
-            }
-            return false;
-        }
-    }, { passive: false });
+    // Chat item clicks handled by bugfix.js - REMOVED duplicate
 });
 
 // Archive chat from swipe action
@@ -18127,84 +18088,12 @@ window.deleteChatFromSwipe = function(chatId) {
 };
 
 // Fix for touch delay on chat items
-(function() {
-    var touchStartTime = 0;
-    var touchStartX = 0;
-    var touchStartY = 0;
-    
-    document.addEventListener('touchstart', function(e) {
-        var chatItem = e.target.closest('.chat-item');
-        if (chatItem) {
-            touchStartTime = Date.now();
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }
-    }, { passive: true });
-    
-    document.addEventListener('touchend', function(e) {
-        var chatItem = e.target.closest('.chat-item');
-        if (chatItem && !e.target.closest('.swipe-action')) {
-            var touchEndTime = Date.now();
-            var touchEndX = e.changedTouches[0].clientX;
-            var touchEndY = e.changedTouches[0].clientY;
-            
-            var timeDiff = touchEndTime - touchStartTime;
-            var xDiff = Math.abs(touchEndX - touchStartX);
-            var yDiff = Math.abs(touchEndY - touchStartY);
-            
-            // If it's a tap (not a swipe)
-            if (timeDiff < 500 && xDiff < 30 && yDiff < 30) {
-                e.preventDefault();
-                var chatId = chatItem.dataset.chatId;
-                var userId = chatItem.dataset.userId;
-                
-                if (chatId && typeof openChat === 'function') {
-                    openChat(chatId, userId);
-                }
-            }
-        }
-    }, { passive: false });
-})();
+// Touch handler for chat items - REMOVED, handled by bugfix.js
 
 // ==========================================
 // REMOVED: Duplicate openChat override - handled in Debug section below
 
-// Also add a direct click handler for chat items
-document.addEventListener('click', function(e) {
-    var chatItem = e.target.closest('.chat-item');
-    if (chatItem && !e.target.closest('.swipe-action') && !e.target.closest('.swipe-actions')) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        var chatId = chatItem.dataset.chatId;
-        var userId = chatItem.dataset.userId;
-        
-        console.log('Chat item clicked:', chatId, userId);
-        
-        if (chatId && window.openChat) {
-            window.openChat(chatId, userId);
-        }
-        
-        return false;
-    }
-}, true); // Use capture phase
-
-// Touch handler for mobile
-document.addEventListener('touchend', function(e) {
-    var chatItem = e.target.closest('.chat-item');
-    if (chatItem && !e.target.closest('.swipe-action') && !e.target.closest('.swipe-actions')) {
-        e.preventDefault();
-        
-        var chatId = chatItem.dataset.chatId;
-        var userId = chatItem.dataset.userId;
-        
-        console.log('Chat item touched:', chatId, userId);
-        
-        if (chatId && window.openChat) {
-            window.openChat(chatId, userId);
-        }
-    }
-}, false);
+// Chat item click/touch handlers - ALL REMOVED, single handler in bugfix.js
 
 // ==========================================
 // Debug Chat Opening
@@ -19216,3 +19105,16 @@ window.showTypingInHeader = function(chatId, userName) {
         }
     }, 3000);
 };
+
+// ==========================================
+// Hide Loading Screen when app is ready
+// ==========================================
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        var loader = document.getElementById('app-loading-screen');
+        if (loader) {
+            loader.classList.add('hide');
+            setTimeout(function() { loader.remove(); }, 500);
+        }
+    }, 1000);
+});
