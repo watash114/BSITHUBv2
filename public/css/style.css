@@ -19167,3 +19167,166 @@ html:not([data-theme="dark"]) .message.received > .message-bubble {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* ==========================================
+   Sidebar Enhancement - Fit All Features
+   ========================================== */
+
+/* Sidebar scrollable */
+.sidebar {
+    overflow: hidden !important;
+}
+
+.sidebar-nav {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 8px !important;
+}
+
+.nav-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    border-radius: 10px !important;
+    color: var(--text-primary) !important;
+    text-decoration: none !important;
+    margin-bottom: 2px !important;
+    transition: all 0.15s !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+}
+
+.nav-item:hover {
+    background: var(--bg-secondary) !important;
+}
+
+.nav-item.active {
+    background: var(--bg-secondary) !important;
+    color: var(--primary) !important;
+}
+
+.nav-item i {
+    width: 24px !important;
+    text-align: center !important;
+    font-size: 18px !important;
+}
+
+.nav-item .badge {
+    margin-left: auto !important;
+    background: var(--primary) !important;
+    color: white !important;
+    font-size: 11px !important;
+    padding: 2px 8px !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+}
+
+/* Sidebar footer - compact */
+.sidebar-footer {
+    padding: 12px !important;
+    border-top: 1px solid var(--border) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.sidebar-footer .user-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.sidebar-footer .user-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: var(--primary) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+}
+
+.sidebar-footer .user-details {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+.sidebar-footer .user-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.sidebar-footer .user-status {
+    font-size: 12px !important;
+    color: var(--text-secondary) !important;
+}
+
+.sidebar-actions {
+    display: flex !important;
+    gap: 4px !important;
+}
+
+.sidebar-actions .btn-icon {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+}
+
+.version-info {
+    text-align: center !important;
+    padding: 8px !important;
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+}
+
+/* Sidebar header */
+.sidebar-header {
+    padding: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.brand i {
+    font-size: 24px !important;
+    color: var(--primary) !important;
+}
+
+.brand span {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+}
+
+/* Status row */
+.status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+}
+
+.status-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+}
+
+.status-dot.online { background: #2ecc71 !important; }
+.status-dot.away { background: #f39c12 !important; }
+.status-dot.busy { background: #e74c3c !important; }
+.status-dot.offline { background: var(--text-muted) !important; }
