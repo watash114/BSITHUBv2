@@ -1,166 +1,130 @@
 /* ==========================================
-   BSITHUB Bug Fix CSS Patch
-   Facebook Messenger Style
+   BSITHUB Chat - Simple & Clean CSS
    ========================================== */
 
-/* ===== RESET MESSAGE ROW - Remove old bubble styles from .message ===== */
+/* Chat Messages Container */
+#chat-messages {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    background: var(--bg-primary) !important;
+    width: 100% !important;
+}
+
+/* Individual Message */
 .message {
     display: flex !important;
-    padding: 1px 16px !important;
-    margin-bottom: 1px !important;
-    max-width: 100% !important;
-    background: none !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    color: inherit !important;
-    animation: none !important;
+    padding: 2px 12px !important;
+    margin-bottom: 2px !important;
 }
 
-.message:hover {
-    box-shadow: none !important;
-}
+.message.sent { justify-content: flex-end !important; }
+.message.received { justify-content: flex-start !important; }
 
-.message.sent {
-    justify-content: flex-end !important;
-    background: none !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    align-self: auto !important;
-}
-
-.message.received {
-    justify-content: flex-start !important;
-    background: none !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    align-self: auto !important;
-}
-
+/* Message Bubble */
 .message-bubble {
     display: inline-block !important;
     width: auto !important;
-    max-width: 55% !important;
+    max-width: 60% !important;
     padding: 8px 12px !important;
     border-radius: 18px !important;
-    box-shadow: none !important;
-    border: none !important;
-    background-image: none !important;
     position: relative !important;
+    word-wrap: break-word !important;
 }
 
 .message.sent .message-bubble {
-    background-color: #0084ff !important;
+    background: #0084ff !important;
     color: #fff !important;
     border-bottom-right-radius: 4px !important;
 }
 
 .message.received .message-bubble {
-    background-color: #303030 !important;
+    background: #3a3b3c !important;
     color: #e4e6eb !important;
     border-bottom-left-radius: 4px !important;
 }
 
 html:not([data-theme="dark"]) .message.received .message-bubble {
-    background-color: #e4e6eb !important;
+    background: #e4e6eb !important;
     color: #050505 !important;
 }
 
+/* Message Text */
 .message-text {
     font-size: 15px !important;
-    line-height: 1.36 !important;
+    line-height: 1.35 !important;
 }
 
-/* ===== FOOTER - Minimal like Messenger ===== */
+/* Time - Hidden until hover */
 .message-footer {
     display: none !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+    margin-top: 2px !important;
+    font-size: 10px !important;
+    opacity: 0.7 !important;
 }
 
 .message:hover .message-footer {
     display: flex !important;
-    justify-content: flex-end !important;
-    align-items: center !important;
-    gap: 4px !important;
-    margin-top: 2px !important;
 }
 
-.message-time {
-    font-size: 10px !important;
-    opacity: 0.6 !important;
+.message.sent .message-footer {
+    color: rgba(255,255,255,0.7) !important;
 }
 
-.message-status {
-    font-size: 10px !important;
-}
-
-.message.sent .message-status i,
-.message.sent .message-time {
-    color: rgba(255,255,255,0.6) !important;
-}
-
-/* ===== ACTIONS - Facebook Messenger style ===== */
-/* Only show 3 icons: React, Reply, More */
+/* Actions - Hidden until hover */
 .message-actions {
-    position: absolute !important;
     display: none !important;
-    align-items: center !important;
-    gap: 0 !important;
+    position: absolute !important;
+    gap: 2px !important;
     background: var(--bg-primary) !important;
-    border-radius: 20px !important;
-    padding: 2px 4px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+    border-radius: 18px !important;
+    padding: 3px 5px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
     z-index: 50 !important;
     top: 50% !important;
+    transform: translateY(-50%) !important;
 }
 
 .message.sent .message-actions {
-    right: 100% !important;
-    left: auto !important;
-    transform: translateY(-50%) !important;
-    margin-right: 4px !important;
-    flex-direction: row-reverse !important;
+    left: -50px !important;
+    right: auto !important;
 }
 
 .message.received .message-actions {
-    left: 100% !important;
-    right: auto !important;
-    transform: translateY(-50%) !important;
-    margin-left: 4px !important;
+    right: -50px !important;
+    left: auto !important;
 }
 
 .message:hover .message-actions {
     display: flex !important;
 }
 
-/* Action buttons - TINY like Messenger */
+/* Action buttons */
 .message-action-btn {
-    width: 30px !important;
-    height: 30px !important;
-    min-width: 30px !important;
-    font-size: 14px !important;
+    width: 28px !important;
+    height: 28px !important;
     border: none !important;
     background: transparent !important;
     border-radius: 50% !important;
     cursor: pointer !important;
     color: var(--text-secondary) !important;
+    font-size: 12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 0 !important;
-    transition: background 0.1s !important;
 }
 
 .message-action-btn:hover {
     background: var(--bg-secondary) !important;
 }
 
-/* Hide extra buttons - Only show React, Reply, More (3 icons like Messenger) */
+/* Hide extra actions - keep only React, Reply, Delete */
 .message-action-btn[title="Forward"],
 .message-action-btn[title="Translate"],
 .message-action-btn[title="Star"],
@@ -169,20 +133,8 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
     display: none !important;
 }
 
-/* Keep only: Reply, React, Delete/More */
-.message-action-btn[title="Reply"],
-.message-action-btn[title="React"],
-.message-action-btn[title="Delete"] {
-    display: flex !important;
-}
-
-/* Delete button style */
-.message-action-btn.delete-btn:hover {
-    color: #e74c3c !important;
-}
-
-/* ===== CHAT INPUT - Messenger style ===== */
-#chat-input, .chat-input, #message-input {
+/* Chat Input */
+#chat-input, #message-input {
     border-radius: 20px !important;
     padding: 10px 16px !important;
     font-size: 15px !important;
@@ -190,28 +142,29 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
     border: none !important;
 }
 
+/* Send Button */
 .btn-send {
     background: #0084ff !important;
     color: white !important;
     border-radius: 50% !important;
     width: 36px !important;
     height: 36px !important;
-    border: none !important;
 }
 
-/* ===== MOBILE FULL SCREEN CHAT ===== */
+/* Date Separator */
+.date-separator {
+    text-align: center !important;
+    padding: 12px 0 !important;
+}
+
+.date-separator span {
+    font-size: 12px !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Mobile Full Screen Chat */
 @media (max-width: 768px) {
-    /* When chat is open - FULL SCREEN */
-    body.chat-is-open .chat-sidebar,
-    body.chat-is-open .chat-container > .chat-sidebar {
-        display: none !important;
-    }
-    
-    body.chat-is-open .chat-main,
-    body.chat-is-open .chat-container > .chat-main {
-        width: 100% !important;
-        flex: 1 !important;
-    }
+    body.chat-is-open .chat-sidebar { display: none !important; }
     
     body.chat-is-open #chat-active {
         display: flex !important;
@@ -231,36 +184,11 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
     
     body.chat-is-open .mobile-nav { display: none !important; }
     body.chat-is-open .mobile-header { z-index: 9999 !important; }
-    body.chat-is-open .fab-button { display: none !important; }
-    
     body:not(.chat-is-open) #chat-active { display: none !important; }
-    
-    /* Chat header inside chat */
-    body.chat-is-open .chat-main-header {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 100 !important;
-        background: var(--bg-primary) !important;
-    }
-    
-    /* Messages area */
-    body.chat-is-open #chat-messages {
-        flex: 1 !important;
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        width: 100% !important;
-    }
-    
-    /* Input at bottom */
-    body.chat-is-open .chat-input-wrapper {
-        flex-shrink: 0 !important;
-        width: 100% !important;
-        padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
-    }
     
     .message-bubble { max-width: 80% !important; }
     
-    /* Mobile message actions */
+    /* Show actions below on mobile tap */
     .message-actions {
         position: static !important;
         display: none !important;
@@ -277,45 +205,4 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
     }
     
     .message.sent .message-actions { justify-content: flex-end !important; }
-    
-    .message-action-btn {
-        width: 32px !important;
-        height: 32px !important;
-    }
-    
-    .message-action-btn[title="Forward"],
-    .message-action-btn[title="Star"],
-    .message-action-btn[title="Edit"] {
-        display: flex !important;
-    }
-    
-    .message-action-btn[title="Translate"],
-    .message-action-btn[title="Pin"] {
-        display: none !important;
-    }
-}
-
-/* ===== DATE SEPARATOR ===== */
-.date-separator {
-    text-align: center !important;
-    padding: 10px 0 !important;
-    margin: 0 !important;
-}
-
-.date-separator span {
-    font-size: 12px !important;
-    color: var(--text-secondary) !important;
-    background: none !important;
-    font-weight: 400 !important;
-}
-
-/* ===== SYSTEM MESSAGES ===== */
-.system-message { justify-content: center !important; }
-
-.system-message-content {
-    background: var(--bg-secondary) !important;
-    padding: 6px 14px !important;
-    border-radius: 16px !important;
-    font-size: 12px !important;
-    color: var(--text-secondary) !important;
 }
