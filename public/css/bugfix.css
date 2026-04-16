@@ -133,33 +133,21 @@
     position: relative !important;
 }
 
-#chat-placeholder {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex: 1 !important;
-    height: auto !important;
-    color: var(--text-secondary) !important;
-}
-
+/* chat-active - NO !important so JS can control it */
 #chat-active {
-    display: none !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    height: auto !important;
-    overflow: hidden !important;
+    flex-direction: column;
+    flex: 1;
+    height: auto;
+    overflow: hidden;
 }
 
-/* Show chat active */
-#chat-active[style*="display: flex"] {
-    display: flex !important;
-}
-
-/* Hide placeholder when chat is open */
-#chat-active[style*="display: flex"] ~ #chat-placeholder,
-#chat-active[style*="display:flex"] ~ #chat-placeholder {
-    display: none !important;
+#chat-placeholder {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    height: auto;
+    color: var(--text-secondary);
 }
 
 /* Chat Header */
