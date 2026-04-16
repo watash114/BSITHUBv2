@@ -133,6 +133,46 @@
     position: relative !important;
 }
 
+/* Fix chat-wallpaper taking up space */
+#chat-wallpaper {
+    display: none !important;
+}
+
+/* Fix chat messages container */
+.chat-messages,
+#chat-messages {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+}
+
+/* Fix chat-active flex layout */
+.chat-active,
+#chat-active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Fix chat input */
+.chat-input {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 12px 16px !important;
+    background: var(--bg-primary) !important;
+    border-top: 1px solid var(--border) !important;
+    flex-shrink: 0 !important;
+}
+
+/* Fix reply-preview and typing indicator */
+.reply-preview,
+.typing-indicator {
+    flex-shrink: 0 !important;
+}
+
 /* chat-active - NO !important so JS can control it */
 #chat-active {
     flex-direction: column;
