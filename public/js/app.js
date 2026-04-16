@@ -3446,7 +3446,7 @@ function replyToMessage(messageId) {
     preview.style.display = 'flex';
     
     // Focus input
-    document.getElementById('chat-input').focus();
+    document.getElementById('message-input').focus();
 }
 
 function editMessage(messageId) {
@@ -3765,7 +3765,7 @@ function handleMentionInput(input) {
 
 function showMentionsDropdown(users, mentionLength) {
     var dropdown = document.getElementById('mentions-dropdown');
-    var input = document.getElementById('chat-input') || document.getElementById('message-input');
+    var input = document.getElementById('message-input') || document.getElementById('message-input');
     if (!dropdown || !input) return;
     
     var html = '';
@@ -3781,7 +3781,7 @@ function showMentionsDropdown(users, mentionLength) {
 }
 
 function selectMention(username, mentionLength) {
-    var input = document.getElementById('chat-input') || document.getElementById('message-input');
+    var input = document.getElementById('message-input') || document.getElementById('message-input');
     if (!input) return;
     
     var text = input.value;
@@ -6039,7 +6039,7 @@ function initEmojiCategories() {
 }
 
 function insertEmoji(emoji) {
-    var input = document.getElementById('chat-input') || document.getElementById('message-input');
+    var input = document.getElementById('message-input');
     if (!input) return;
     input.value += emoji;
     input.focus();
@@ -7924,11 +7924,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('new-chat-btn not found!');
     }
     document.getElementById('send-btn').onclick = function() {
-        var input = document.getElementById('chat-input');
+        var input = document.getElementById('message-input');
         sendMessage(input.value);
         input.value = '';
     };
-    var chatInput = document.getElementById('chat-input') || document.getElementById('message-input');
+    var chatInput = document.getElementById('message-input') || document.getElementById('message-input');
     if (chatInput) {
         chatInput.onkeypress = function(e) {
             if (e.key === 'Enter') {
@@ -9083,8 +9083,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     window.sendQuickReply = function(text) {
         if (!activeChat) return;
-        document.getElementById('chat-input').value = text;
-        document.getElementById('chat-input').focus();
+        document.getElementById('message-input').value = text;
+        document.getElementById('message-input').focus();
     };
     
     // ==========================================
@@ -14991,7 +14991,7 @@ function initImagePinchZoom() {
 
 // 4. Draft Auto-save
 function initDraftAutoSave() {
-    var chatInput = document.getElementById('chat-input');
+    var chatInput = document.getElementById('message-input');
     if (!chatInput) return;
     
     // Load draft when opening chat
@@ -15001,7 +15001,7 @@ function initDraftAutoSave() {
             originalOpenChat(chatId, userId);
             setTimeout(function() {
                 var drafts = Storage.get('messageDrafts') || {};
-                var input = document.getElementById('chat-input');
+                var input = document.getElementById('message-input');
                 if (input && drafts[chatId]) {
                     input.value = drafts[chatId];
                 }
@@ -15011,7 +15011,7 @@ function initDraftAutoSave() {
     
     // Save draft on input
     setInterval(function() {
-        var input = document.getElementById('chat-input');
+        var input = document.getElementById('message-input');
         if (input && activeChat) {
             var drafts = Storage.get('messageDrafts') || {};
             if (input.value.trim()) {
@@ -15508,7 +15508,7 @@ window.setChatWallpaper = function(color) {
 // 18. Draft Messages
 window.saveDraft = function() {
     if (!activeChat) return;
-    var input = document.getElementById('chat-input');
+    var input = document.getElementById('message-input');
     if (!input || !input.value.trim()) return;
     var drafts = Storage.get('drafts') || {};
     drafts[activeChat.id] = input.value;
@@ -15864,7 +15864,7 @@ window.showQuickReplies = function() {
 };
 
 window.useQuickReply = function(text) {
-    var input = document.getElementById('chat-input');
+    var input = document.getElementById('message-input');
     if (input) {
         input.value = text;
         input.focus();
@@ -16792,7 +16792,7 @@ function batchDOMUpdates(updates) {
 }
 
 // Optimize input handling
-var messageInput = document.getElementById('chat-input');
+var messageInput = document.getElementById('message-input');
 if (messageInput) {
     var inputTimeout;
     messageInput.addEventListener('input', function() {
@@ -17086,7 +17086,7 @@ function hapticFeedback(type) {
 
 // Mobile Keyboard Handling
 function handleMobileKeyboard() {
-    var chatInput = document.getElementById('chat-input');
+    var chatInput = document.getElementById('message-input');
     if (!chatInput) return;
     
     chatInput.addEventListener('focus', function() {
