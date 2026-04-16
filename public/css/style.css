@@ -19414,3 +19414,252 @@ html:not([data-theme="dark"]) .message.received > .message-bubble {
         display: none !important;
     }
 }
+
+/* ==========================================
+   COMPREHENSIVE FIX - Make All Features Work
+   ========================================== */
+
+/* Chat Input Area - Ensure visible and functional */
+.chat-input-area,
+.chat-input-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 12px 16px !important;
+    background: var(--bg-primary) !important;
+    border-top: 1px solid var(--border) !important;
+    position: relative !important;
+}
+
+/* All input buttons - Make sure clickable */
+.chat-input-area .btn-icon,
+.chat-input-wrapper .btn-icon,
+.chat-tools .btn-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    cursor: pointer !important;
+    font-size: 18px !important;
+}
+
+.chat-input-area .btn-icon:hover,
+.chat-input-wrapper .btn-icon:hover {
+    background: var(--bg-tertiary) !important;
+}
+
+/* Message Input - Ensure visible */
+#message-input,
+.chat-input {
+    flex: 1 !important;
+    padding: 10px 16px !important;
+    border: none !important;
+    border-radius: 20px !important;
+    background: var(--bg-secondary) !important;
+    font-size: 15px !important;
+    color: var(--text-primary) !important;
+}
+
+#message-input:focus,
+.chat-input:focus {
+    outline: none !important;
+    background: var(--bg-tertiary) !important;
+}
+
+/* Send Button - Make prominent */
+#send-btn,
+.btn-send {
+    background: var(--primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+}
+
+#send-btn:hover,
+.btn-send:hover {
+    opacity: 0.9 !important;
+}
+
+/* Emoji Picker - Ensure visible when opened */
+.emoji-picker {
+    display: none !important;
+    position: absolute !important;
+    bottom: 100% !important;
+    right: 50px !important;
+    margin-bottom: 8px !important;
+    width: 320px !important;
+    background: var(--bg-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+    z-index: 100 !important;
+    flex-direction: column !important;
+    max-height: 350px !important;
+}
+
+#emoji-picker[style*="display: flex"] {
+    display: flex !important;
+}
+
+/* GIF Picker - Ensure visible when opened */
+.gif-picker {
+    display: none !important;
+    position: absolute !important;
+    bottom: 100% !important;
+    right: 0 !important;
+    margin-bottom: 8px !important;
+    width: 320px !important;
+    background: var(--bg-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+    z-index: 100 !important;
+    flex-direction: column !important;
+}
+
+#gif-picker[style*="display: flex"] {
+    display: flex !important;
+}
+
+/* Sidebar - Ensure visible on desktop */
+.sidebar {
+    width: 280px !important;
+    min-width: 280px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: var(--bg-primary) !important;
+    border-right: 1px solid var(--border) !important;
+    overflow: hidden !important;
+}
+
+/* Nav items - Ensure clickable */
+.nav-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+}
+
+.nav-item:hover {
+    background: var(--bg-secondary) !important;
+}
+
+.nav-item.active {
+    background: var(--bg-secondary) !important;
+    color: var(--primary) !important;
+}
+
+/* Chat area - Ensure visible */
+.chat-container {
+    display: flex !important;
+    height: 100% !important;
+}
+
+.chat-sidebar {
+    width: 360px !important;
+    min-width: 360px !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.chat-main {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+}
+
+#chat-active {
+    display: none !important;
+    flex-direction: column !important;
+    height: 100% !important;
+}
+
+/* Modals - Ensure visible */
+.modal {
+    display: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0,0,0,0.5) !important;
+    z-index: 10000 !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.modal.active,
+.modal[style*="display: flex"] {
+    display: flex !important;
+}
+
+.modal-content {
+    background: var(--bg-primary) !important;
+    border-radius: 16px !important;
+    max-width: 90% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+}
+
+/* Toast - Ensure visible */
+.toast-container {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 99999 !important;
+}
+
+.toast {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    padding: 12px 20px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    margin-bottom: 8px !important;
+}
+
+/* Mobile hidden by default */
+@media (min-width: 769px) {
+    .mobile-nav,
+    .mobile-header,
+    .mobile-back-btn {
+        display: none !important;
+    }
+}
+
+/* Mobile overrides */
+@media (max-width: 768px) {
+    .sidebar,
+    .chat-sidebar {
+        display: none !important;
+    }
+    
+    .mobile-nav,
+    .mobile-header {
+        display: flex !important;
+    }
+    
+    .chat-main {
+        width: 100% !important;
+    }
+}
