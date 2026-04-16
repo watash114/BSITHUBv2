@@ -130,6 +130,7 @@
     flex-direction: column !important;
     background: var(--bg-primary) !important;
     overflow: hidden !important;
+    position: relative !important;
 }
 
 #chat-placeholder {
@@ -137,14 +138,28 @@
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    height: 100% !important;
+    flex: 1 !important;
+    height: auto !important;
     color: var(--text-secondary) !important;
 }
 
 #chat-active {
     display: none !important;
     flex-direction: column !important;
-    height: 100% !important;
+    flex: 1 !important;
+    height: auto !important;
+    overflow: hidden !important;
+}
+
+/* Show chat active */
+#chat-active[style*="display: flex"] {
+    display: flex !important;
+}
+
+/* Hide placeholder when chat is open */
+#chat-active[style*="display: flex"] ~ #chat-placeholder,
+#chat-active[style*="display:flex"] ~ #chat-placeholder {
+    display: none !important;
 }
 
 /* Chat Header */
