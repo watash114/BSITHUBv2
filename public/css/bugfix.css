@@ -137,9 +137,18 @@
     position: relative !important;
 }
 
-/* Fix chat-wallpaper taking up space */
+/* Fix chat-wallpaper - absolute so it doesn't take flex space */
 #chat-wallpaper {
-    display: none !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 /* Fix chat messages container */
@@ -149,6 +158,8 @@
     overflow-y: auto !important;
     min-height: 0 !important;
     padding: 16px !important;
+    z-index: 1 !important;
+    position: relative !important;
 }
 
 /* Fix chat-active flex layout */
@@ -160,6 +171,24 @@
     min-height: 0;
     overflow: hidden;
     position: relative;
+}
+
+/* Fix reply-preview and typing - must not take space when hidden */
+#reply-preview[style*="display: none"],
+#typing-indicator[style*="display: none"] {
+    display: none !important;
+}
+
+/* reply-preview when shown */
+#reply-preview,
+.reply-preview {
+    flex-shrink: 0 !important;
+}
+
+/* typing-indicator */
+#typing-indicator,
+.typing-indicator {
+    flex-shrink: 0 !important;
 }
 
 /* Fix chat input */
