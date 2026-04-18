@@ -7923,11 +7923,13 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('new-chat-btn not found!');
     }
-    document.getElementById('send-btn').onclick = function() {
-        var input = document.getElementById('message-input');
-        sendMessage(input.value);
-        input.value = '';
-    };
+    var sendBtn = document.getElementById('send-btn');
+    if (sendBtn) {
+        sendBtn.onclick = function() {
+            var input = document.getElementById('message-input');
+            if (input) { sendMessage(input.value); input.value = ''; }
+        };
+    }
     var chatInput = document.getElementById('message-input') || document.getElementById('message-input');
     if (chatInput) {
         chatInput.onkeypress = function(e) {
@@ -7950,9 +7952,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Image/file upload
-    document.getElementById('image-btn').onclick = function() {
-        document.getElementById('file-input').click();
-    };
+    var imageBtn = document.getElementById('image-btn');
+    if (imageBtn) { imageBtn.onclick = function() { var fi = document.getElementById('file-input'); if(fi) fi.click(); }; }
     
     document.getElementById('file-input').onchange = function(e) {
         var file = e.target.files[0];
@@ -8023,115 +8024,130 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('.profile-container').classList.remove('editing');
     };
     
+    // Safe element click helper
+    function safeClick(id, fn) {
+        var el = document.getElementById(id);
+        if (el) el.onclick = fn;
+    }
+    function safeInput(id, fn) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', fn);
+    }
+    
     // Logout
-    document.getElementById('logout-btn').onclick = logout;
+    safeClick('logout-btn', logout);
     
     // Version History
-    document.getElementById('version-history-btn').onclick = showVersionHistory;
-    
-    // Version panel close
-    document.getElementById('close-version-panel').onclick = function() {
-        document.getElementById('version-panel').classList.remove('active');
-    };
+    safeClick('version-history-btn', showVersionHistory);
+    safeClick('close-version-panel', function() {
+        var vp = document.getElementById('version-panel');
+        if (vp) vp.classList.remove('active');
+    });
     
     // Archived Chats
-    document.getElementById('archived-chats-btn').onclick = toggleArchivedChats;
+    safeClick('archived-chats-btn', toggleArchivedChats);
     
     // Search Messages
-    document.getElementById('search-messages-btn').onclick = toggleMessageSearch;
-    document.getElementById('close-message-search').onclick = closeMessageSearch;
-    document.getElementById('message-search-input').oninput = searchMessages;
+    safeClick('search-messages-btn', toggleMessageSearch);
+    safeClick('close-message-search', closeMessageSearch);
+    safeInput('message-search-input', searchMessages);
     
     // Starred Messages
-    document.getElementById('starred-messages-btn').onclick = showStarredMessages;
+    safeClick('starred-messages-btn', showStarredMessages);
     
     // Pinned Messages
-    document.getElementById('pinned-messages-btn').onclick = showPinnedMessages;
+    safeClick('pinned-messages-btn', showPinnedMessages);
     
     // Quick Actions
-    document.getElementById('quick-actions-btn').onclick = showQuickActions;
+    safeClick('quick-actions-btn', showQuickActionsMenu);
     
-    // Video Call - Jitsi Meet
-    document.getElementById('video-call-btn').onclick = function() {
-        if (typeof startVideoCall === 'function') {
-            startVideoCall();
-        }
-    };
+    // Video Call
+    safeClick('video-call-btn', function() {
+        if (typeof startVideoCall === 'function') startVideoCall();
+    });
+    
+    // Voice Call
+    safeClick('voice-call-btn', function() {
+        if (typeof startVoiceCall === 'function') startVoiceCall();
+    });
     
     // Chat Options
-    document.getElementById('chat-options-btn').onclick = showChatOptions;
+    safeClick('chat-options-btn', showChatOptions);
     
     // Cancel reply
-    document.getElementById('cancel-reply').onclick = function() {
-        document.getElementById('reply-preview').style.display = 'none';
+    safeClick('cancel-reply', function() {
+        var rp = document.getElementById('reply-preview');
+        if (rp) rp.style.display = 'none';
         currentReplyTo = null;
-    };
+    });
     
     // Attach File
-    document.getElementById('attach-file-btn').onclick = attachFile;
+    safeClick('attach-file-btn', attachFile);
     
     // GIF
-    document.getElementById('gif-btn').onclick = showGifPicker;
-    document.getElementById('gif-search').addEventListener('input', function(e) {
-        searchGifs(e.target.value);
-    });
+    safeClick('gif-btn', showGifPicker);
+    safeInput('gif-search', function(e) { searchGifs(e.target.value); });
     
     // Voice Message
-    document.getElementById('voice-btn').onclick = toggleVoiceMessage;
+    safeClick('voice-btn', toggleVoiceMessage);
     
     // Emoji
-    document.getElementById('emoji-btn').onclick = toggleEmojiPicker;
+    safeClick('emoji-btn', toggleEmojiPicker);
     
     // Create Group
-    document.getElementById('create-group-btn').onclick = showCreateGroup;
+    safeClick('create-group-btn', showCreateGroup);
     
     // Change Avatar
-    document.getElementById('change-avatar-btn').onclick = changeAvatar;
-    document.getElementById('avatar-input').addEventListener('change', handleAvatarUpload);
+    safeClick('change-avatar-btn', changeAvatar);
+    var avatarInput = document.getElementById('avatar-input');
+    if (avatarInput) avatarInput.addEventListener('change', handleAvatarUpload);
     
     // Edit Profile
-    document.getElementById('edit-profile-btn').onclick = function() {
-        document.getElementById('profile-card').style.display = 'none';
-        document.getElementById('profile-edit-form').style.display = 'block';
-        document.querySelector('.profile-container').classList.add('editing');
-    };
-    
-    // Change Cover
-    document.getElementById('change-cover-btn').onclick = function() {
-        document.getElementById('cover-input').click();
-    };
-    document.getElementById('cover-input').addEventListener('change', handleCoverUpload);
-    
-    // Load saved cover
-    loadSavedCover();
-    
-    // Chat Wallpaper
-    document.getElementById('chat-wallpaper-btn').onclick = showWallpaperPicker;
-    
-    // Change Password
-    document.getElementById('change-password-btn').onclick = showChangePassword;
-    
-    // Admin user search
-    document.getElementById('admin-user-search').addEventListener('input', function(e) {
-        searchAdminUsers(e.target.value);
+    safeClick('edit-profile-btn', function() {
+        var pc = document.getElementById('profile-card');
+        var pef = document.getElementById('profile-edit-form');
+        var pcont = document.querySelector('.profile-container');
+        if (pc) pc.style.display = 'none';
+        if (pef) pef.style.display = 'block';
+        if (pcont) pcont.classList.add('editing');
     });
     
+    // Change Cover
+    safeClick('change-cover-btn', function() {
+        var ci = document.getElementById('cover-input');
+        if (ci) ci.click();
+    });
+    var coverInput = document.getElementById('cover-input');
+    if (coverInput) coverInput.addEventListener('change', handleCoverUpload);
+    
+    // Load saved cover
+    if (typeof loadSavedCover === 'function') loadSavedCover();
+    
+    // Chat Wallpaper
+    safeClick('chat-wallpaper-btn', showWallpaperPicker);
+    
+    // Change Password
+    safeClick('change-password-btn', showChangePassword);
+    
+    // Admin user search
+    safeInput('admin-user-search', function(e) { searchAdminUsers(e.target.value); });
+    
     // Blocked Users
-    document.getElementById('blocked-users-btn').onclick = showBlockedUsers;
+    safeClick('blocked-users-btn', showBlockedUsers);
     
     // Export Data
-    document.getElementById('export-data-btn').onclick = exportData;
+    safeClick('export-data-btn', exportData);
     
     // Clear Cache
-    document.getElementById('clear-cache-btn').onclick = clearCache;
+    safeClick('clear-cache-btn', clearCache);
     
     // Delete Account
-    document.getElementById('delete-account-btn').onclick = confirmDeleteAccount;
+    safeClick('delete-account-btn', confirmDeleteAccount);
     
     // Modal close
-    document.getElementById('modal').onclick = function(e) {
+    safeClick('modal', function(e) {
         if (e.target.id === 'modal') closeModal();
-    };
+    });
     
     // Handle social login redirect
     if (typeof auth !== 'undefined' && auth.getRedirectResult) {
