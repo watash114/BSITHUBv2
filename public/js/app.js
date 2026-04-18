@@ -1943,10 +1943,7 @@ function loadChats() {
         html += '<div class="chat-item-meta"><div class="chat-item-time">' + (lastMessage ? formatTime(lastMessage.timestamp) : '') + '</div>';
         if (unreadCount > 0) html += '<span class="chat-item-badge">' + unreadCount + '</span>';
         html += '</div></div>';
-        html += '<div class="swipe-actions">';
-        html += '<div class="swipe-action archive" onclick="archiveChatFromSwipe(\'' + chat.id + '\')"><i class="fas fa-archive"></i><span>Archive</span></div>';
-        html += '<div class="swipe-action delete" onclick="deleteChatFromSwipe(\'' + chat.id + '\')"><i class="fas fa-trash"></i><span>Delete</span></div>';
-        html += '</div></div>';
+        html += '</div>';
     });
     
     chatList.innerHTML = html;

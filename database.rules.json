@@ -1,0 +1,18 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "posts": {
+      ".indexOn": ["createdAt", "userId", "timestamp"]
+    },
+    "messages": {
+      ".indexOn": ["chatId", "timestamp", "senderId"]
+    },
+    "users": {
+      ".indexOn": ["username", "email"]
+    },
+    "online": {
+      ".indexOn": ["lastSeen"]
+    }
+  }
+}

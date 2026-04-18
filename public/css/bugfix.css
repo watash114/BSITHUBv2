@@ -708,3 +708,59 @@ textarea,
     display: none !important;
     pointer-events: none !important;
 }
+
+/* ==========================================
+   Fix Swipe Actions - Hidden by Default
+   ========================================== */
+.swipe-actions {
+    display: none !important;
+}
+
+/* Only show on mobile when swiped */
+@media (max-width: 768px) {
+    .chat-item-wrapper.swiped-left .swipe-actions {
+        display: flex !important;
+        position: absolute !important;
+        right: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 160px !important;
+    }
+    
+    .chat-item-wrapper.swiped-right .swipe-actions {
+        display: flex !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 160px !important;
+    }
+}
+
+/* Fix section overlap - sections must not show simultaneously */
+.content-section {
+    display: none !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+}
+
+.content-section.active {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#chats-section.active {
+    display: block !important;
+    padding: 0 !important;
+}
+
+/* Fix dark theme */
+html, body {
+    color-scheme: dark !important;
+}
+
+/* Ensure proper z-index for sections */
+.main-content {
+    position: relative !important;
+    overflow: hidden !important;
+}
