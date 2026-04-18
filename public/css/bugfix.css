@@ -2465,3 +2465,168 @@ textarea.form-input {
 .quick-action-item:hover span {
     color: var(--primary) !important;
 }
+
+/* ==========================================
+   Enhanced Chat Bubbles
+   ========================================== */
+
+/* Sent bubble - cleaner */
+.message.sent .message-bubble {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    color: white !important;
+    border-radius: 18px 18px 4px 18px !important;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.3) !important;
+}
+
+/* Received bubble */
+.message.received .message-bubble {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-radius: 18px 18px 18px 4px !important;
+    border: 1px solid var(--border) !important;
+}
+
+html:not([data-theme="dark"]) .message.received .message-bubble {
+    background: #f0f2f5 !important;
+    color: #050505 !important;
+    border: none !important;
+}
+
+/* Message text */
+.message-text {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    word-break: break-word !important;
+}
+
+/* Time */
+.message.sent .message-footer {
+    color: rgba(255,255,255,0.7) !important;
+}
+
+/* Call Message Bubble */
+.message-call {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 2px 4px !important;
+}
+
+.message-call-icon {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: rgba(255,255,255,0.2) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
+}
+
+.message-call-info {
+    flex: 1 !important;
+}
+
+.message-call-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    display: block !important;
+}
+
+.message-call-sub {
+    font-size: 11px !important;
+    opacity: 0.75 !important;
+}
+
+.message-call-join {
+    background: rgba(255,255,255,0.25) !important;
+    border: none !important;
+    color: white !important;
+    padding: 6px 12px !important;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    transition: background 0.2s !important;
+}
+
+.message-call-join:hover {
+    background: rgba(255,255,255,0.4) !important;
+}
+
+/* Image messages */
+.message-media img {
+    border-radius: 12px !important;
+    max-width: 240px !important;
+    max-height: 280px !important;
+    display: block !important;
+    cursor: pointer !important;
+}
+
+/* Audio messages */
+.message-audio audio {
+    width: 220px !important;
+    height: 36px !important;
+    border-radius: 20px !important;
+}
+
+/* Emoji large */
+.message-emoji-large {
+    font-size: 48px !important;
+    line-height: 1 !important;
+}
+
+/* Date separator */
+.date-separator {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 8px 16px !important;
+}
+
+.date-separator::before,
+.date-separator::after {
+    content: '' !important;
+    flex: 1 !important;
+    height: 1px !important;
+    background: var(--border) !important;
+}
+
+.date-separator span {
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+    background: var(--bg-primary) !important;
+    padding: 3px 10px !important;
+    border-radius: 10px !important;
+    font-weight: 500 !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Reactions */
+.message-reactions {
+    display: flex !important;
+    gap: 4px !important;
+    margin-top: 4px !important;
+    flex-wrap: wrap !important;
+}
+
+.reaction-badge {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 2px 8px !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    transition: all 0.15s !important;
+}
+
+.reaction-badge:hover {
+    transform: scale(1.1) !important;
+}
+
+.message.sent .reaction-badge {
+    background: rgba(255,255,255,0.2) !important;
+    border-color: rgba(255,255,255,0.3) !important;
+}

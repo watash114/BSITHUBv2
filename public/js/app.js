@@ -7024,7 +7024,9 @@ function logCallToChat(type, roomName) {
         chatId: activeChat.id,
         senderId: currentUser.id,
         senderName: currentUser.name,
-        text: (type === 'video' ? '📹' : '📞') + ' Started a ' + type + ' call. Room: ' + roomName,
+        text: (type === 'video' ? '📹' : '📞') + ' Started a ' + type + ' call',
+        isCallMsg: true,
+        callType: type,
         timestamp: new Date().toISOString(),
         read: false,
         status: 'sent',
@@ -19184,3 +19186,39 @@ function toggleChatLock() {
         showToast(chat.locked ? 'Chat locked' : 'Chat unlocked', 'success');
     }
 }
+
+// ==========================================
+// Enhanced Message Rendering - Call Messages
+// ==========================================
+var originalRenderMessages = window.renderMessages;
+window.renderMessages = function(chatId) {
+    if (typeof originalRenderMessages === 'function') {
+        originalRenderMessages(chatId);
+    }
+    
+    // Post-process call messages
+    document.querySelectorAll('[data-message-id]').forEach(function(msgEl) {
+        var msgId = msgEl.dataset.messageId;
+        var messages = Storage.get('messages') || [];
+        var msg = messages.find(function(m) { return m.id === msgId; });
+        
+        if (msg && msg.isCallMsg) {
+            var bubble = msgEl.querySelector('.message-bubble');
+            if (bubble && !bubble.querySelector('.message-call')) {
+                var textEl = bubble.querySelector('.message-text');
+                if (textEl) {
+                    var icon = msg.callType === 'video' ? 'fas fa-video' : 'fas fa-phone';
+                    var title = msg.callType === 'video' ? 'Video Call' : 'Voice Call';
+                    textEl.innerHTML = 
+                        '<div class="message-call">' +
+                        '<div class="message-call-icon"><i class="' + icon + '"></i></div>' +
+                        '<div class="message-call-info">' +
+                        '<span class="message-call-title">' + title + '</span>' +
+                        '<span class="message-call-sub">Tap to join again</span>' +
+                        '</div>' +
+                        '</div>';
+                }
+            }
+        }
+    });
+};
