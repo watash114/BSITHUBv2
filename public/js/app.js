@@ -1460,14 +1460,22 @@ function addLog(type, message) {
 // Page Navigation
 // ==========================================
 function showAuthPage() {
-    document.getElementById('auth-page').classList.add('active');
-    document.getElementById('app-page').classList.remove('active');
+    var auth = document.getElementById('auth-page');
+    var app = document.getElementById('app-page');
+    if (auth) { auth.classList.add('active'); auth.style.display = 'flex'; }
+    if (app) { app.classList.remove('active'); app.style.display = 'none'; }
+    document.body.classList.add('auth-active');
+    document.body.classList.remove('app-active');
 }
 
 function showApp() {
     console.log('showApp called, currentUser:', currentUser);
-    document.getElementById('auth-page').classList.remove('active');
-    document.getElementById('app-page').classList.add('active');
+    var auth = document.getElementById('auth-page');
+    var app = document.getElementById('app-page');
+    if (auth) { auth.classList.remove('active'); auth.style.display = 'none'; }
+    if (app) { app.classList.add('active'); app.style.display = 'flex'; }
+    document.body.classList.remove('auth-active');
+    document.body.classList.add('app-active');
     
     // Initialize Firebase
     initFirebase();
