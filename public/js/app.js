@@ -2538,6 +2538,15 @@ function renderMessages(chatId) {
             return; // Skip the rest of the message rendering
         }
         
+        // Show deleted messages differently
+        if (msg.deleted) {
+            html += '<div class="message ' + (isSent ? 'sent' : 'received') + '" data-message-id="' + msg.id + '">';
+            html += '<div class="message-bubble message-deleted">';
+            html += '<span class="deleted-label"><i class="fas fa-ban"></i> ' + (isSent ? 'You deleted this message' : 'This message was deleted') + '</span>';
+            html += '</div></div>';
+            return;
+        }
+        
         html += '<div class="message ' + (isSent ? 'sent' : 'received') + (msg.pinned ? ' pinned' : '') + '" data-message-id="' + msg.id + '">';
         html += '<div class="message-bubble">';
         
@@ -2638,7 +2647,7 @@ function renderMessages(chatId) {
         
         // Show edited indicator
         if (msg.edited) {
-            html += '<span class="message-edited">(edited)</span>';
+            html += '<span class="message-edited"><i class="fas fa-pencil-alt"></i> edited</span>';
         }
         
         html += '<div class="message-footer">';
@@ -3497,32 +3506,31 @@ function editMessage(messageId) {
     var message = messages.find(function(m) { return m.id === messageId; });
     if (!message) return;
     
-    // Can't edit GIFs, files, or audio
-    if (message.gifUrl || message.fileData || message.audioData) {
+    if (message.gifUrl || message.fileData || message.audioData || message.deleted) {
         showToast('Cannot edit this message type', 'error');
         return;
     }
     
-    var html = '<div class="edit-message-modal"><h3>Edit Message</h3>';
-    html += '<textarea id="edit-message-input" rows="3">' + escapeHtml(message.text) + '</textarea>';
-    html += '<div class="modal-buttons">';
-    html += '<button class="btn" onclick="closeModal()">Cancel</button>';
-    html += '<button class="btn btn-primary" onclick="saveEditedMessage(\'' + messageId + '\')">Save</button>';
+    var html = '<div style="padding:20px;min-width:300px">';
+    html += '<h3 style="margin-bottom:14px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="fas fa-pencil-alt" style="color:var(--primary)"></i> Edit Message</h3>';
+    html += '<div style="background:var(--bg-secondary);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--text-secondary)">Original: ' + escapeHtml((message.text || '').substring(0, 60)) + (message.text && message.text.length > 60 ? '...' : '') + '</div>';
+    html += '<textarea id="edit-message-input" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;resize:vertical;font-family:inherit">' + escapeHtml(message.text || '') + '</textarea>';
+    html += '<div style="display:flex;gap:8px;margin-top:12px">';
+    html += '<button class="btn" onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="saveEditedMessage(\'' + messageId + '\')" style="flex:2;padding:10px;border-radius:10px"><i class="fas fa-save"></i> Save Changes</button>';
     html += '</div></div>';
     showModal(html);
     
-    // Focus the input
     setTimeout(function() {
-        document.getElementById('edit-message-input').focus();
+        var input = document.getElementById('edit-message-input');
+        if (input) { input.focus(); input.selectionStart = input.value.length; }
     }, 100);
 }
 
 function saveEditedMessage(messageId) {
-    var newText = document.getElementById('edit-message-input').value.trim();
-    if (!newText) {
-        showToast('Message cannot be empty', 'error');
-        return;
-    }
+    var input = document.getElementById('edit-message-input');
+    var newText = input ? input.value.trim() : '';
+    if (!newText) { showToast('Message cannot be empty', 'error'); return; }
     
     var messages = Storage.get('messages') || [];
     var messageIndex = messages.findIndex(function(m) { return m.id === messageId; });
@@ -3530,46 +3538,51 @@ function saveEditedMessage(messageId) {
     
     messages[messageIndex].text = newText;
     messages[messageIndex].edited = true;
+    messages[messageIndex].editedAt = new Date().toISOString();
     Storage.set('messages', messages);
     
-    // Sync to Firebase
     if (typeof sendMsgToFirebase === 'function') {
         sendMsgToFirebase(messages[messageIndex]);
     }
     
     closeModal();
-    if (activeChat) {
-        renderMessages(activeChat.id);
-    }
+    if (activeChat) renderMessages(activeChat.id);
     showToast('Message edited', 'success');
 }
 
 function deleteMessage(messageId) {
-    showModal('<div class="delete-confirm"><h3>Delete Message?</h3><p>This will delete the message for everyone.</p><div class="modal-buttons"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn danger" onclick="confirmDeleteMessage(\'' + messageId + '\')">Delete</button></div></div>');
+    var messages = Storage.get('messages') || [];
+    var msg = messages.find(function(m) { return m.id === messageId; });
+    var preview = msg ? escapeHtml((msg.text || 'this message').substring(0, 40)) : 'this message';
+    
+    var html = '<div style="padding:20px;min-width:280px;text-align:center">';
+    html += '<div style="width:56px;height:56px;background:rgba(239,68,68,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="fas fa-trash" style="color:#ef4444;font-size:22px"></i></div>';
+    html += '<h3 style="font-size:16px;font-weight:700;margin-bottom:8px">Delete Message?</h3>';
+    html += '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">This message will be removed for everyone.</p>';
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="btn" onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px">Cancel</button>';
+    html += '<button onclick="confirmDeleteMessage(\'' + messageId + '\')" style="flex:1;padding:10px;border-radius:10px;background:#ef4444;color:white;border:none;font-weight:600;cursor:pointer"><i class="fas fa-trash"></i> Delete</button>';
+    html += '</div></div>';
+    showModal(html);
 }
 
 function confirmDeleteMessage(messageId) {
     var messages = Storage.get('messages') || [];
     var chatId = null;
+    var msgIndex = messages.findIndex(function(m) { return m.id === messageId; });
     
-    messages = messages.filter(function(m) {
-        if (m.id === messageId) {
-            chatId = m.chatId;
-            return false;
-        }
-        return true;
-    });
+    if (msgIndex !== -1) {
+        chatId = messages[msgIndex].chatId;
+        // Mark as deleted instead of removing - shows "Message removed"
+        messages[msgIndex].deleted = true;
+        messages[msgIndex].text = '';
+        messages[msgIndex].deletedAt = new Date().toISOString();
+    }
     
     Storage.set('messages', messages);
     
-    // Sync deletion to Firebase (store a "deleted" message)
     if (typeof sendMsgToFirebase === 'function' && chatId) {
-        var deletedMessage = {
-            id: messageId,
-            chatId: chatId,
-            deleted: true
-        };
-        sendMsgToFirebase(deletedMessage);
+        sendMsgToFirebase({ id: messageId, chatId: chatId, deleted: true, text: '' });
     }
     
     closeModal();
