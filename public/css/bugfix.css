@@ -2000,25 +2000,45 @@ textarea.form-input {
    Brand Logo
    ========================================== */
 .brand-logo {
-    width: 44px !important;
-    height: 44px !important;
+    width: 120px !important;
+    height: 120px !important;
     object-fit: contain !important;
-    border-radius: 8px !important;
+    border-radius: 12px !important;
     flex-shrink: 0 !important;
+    display: block !important;
 }
 
 .brand {
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    gap: 10px !important;
+    justify-content: center !important;
+    gap: 4px !important;
     text-decoration: none !important;
+    padding: 8px 0 !important;
 }
 
 .brand span {
-    font-size: 18px !important;
+    font-size: 16px !important;
     font-weight: 800 !important;
     color: var(--text-primary) !important;
-    letter-spacing: -0.5px !important;
+    letter-spacing: 1px !important;
+    text-align: center !important;
+}
+
+.sidebar-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 16px 12px 8px !important;
+    border-bottom: 1px solid var(--border) !important;
+    position: relative !important;
+}
+
+.sidebar-header .notification-bell {
+    position: absolute !important;
+    top: 16px !important;
+    right: 12px !important;
 }
 
 /* Loading screen logo */
