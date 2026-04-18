@@ -19194,3 +19194,40 @@ function toggleChatLock() {
 }
 
 // Call message rendering handled inline in renderMessages
+
+// ==========================================
+// Missing Chat Option Functions
+// ==========================================
+function showNicknameEditor() {
+    if (!activeChat) return;
+    var users = Storage.get('users') || [];
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    var otherUserId = chat ? chat.participants.find(function(p) { return p !== currentUser.id; }) : null;
+    var otherUser = users.find(function(u) { return u.id === otherUserId; });
+    var currentNick = chat && chat.nicknames ? (chat.nicknames[otherUserId] || '') : '';
+    
+    var html = '<div style="padding:20px;min-width:280px">';
+    html += '<h3 style="margin-bottom:16px;font-size:16px;font-weight:700">Set Nickname</h3>';
+    html += '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">For ' + (otherUser ? escapeHtml(otherUser.name) : 'this user') + '</p>';
+    html += '<input type="text" id="nickname-input" value="' + escapeHtml(currentNick) + '" placeholder="Enter nickname..." style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;margin-bottom:16px">';
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="btn btn-outline" onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px">Cancel</button>';
+    html += '<button class="btn btn-primary" onclick="saveNickname(\'' + otherUserId + '\')" style="flex:1;padding:10px;border-radius:10px">Save</button>';
+    html += '</div></div>';
+    showModal(html);
+}
+
+window.saveNickname = function(userId) {
+    var input = document.getElementById('nickname-input');
+    if (!input || !activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (chat) {
+        if (!chat.nicknames) chat.nicknames = {};
+        chat.nicknames[userId] = input.value.trim();
+        Storage.set('chats', chats);
+        closeModal();
+        showToast('Nickname saved!', 'success');
+    }
+};
