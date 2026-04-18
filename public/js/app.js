@@ -6305,52 +6305,102 @@ function loadSavedCover() {
 // Settings Functions
 // ==========================================
 function showWallpaperPicker() {
-    if (!activeChat) {
-        showToast('Select a chat first', 'info');
-        return;
-    }
+    if (!activeChat) { showToast('Select a chat first', 'info'); return; }
     
-    var wallpapers = [
-        'none',
-        '#f5f5f5', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec', '#f3e5f5',
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
+    var gradients = [
+        { name: 'None', value: 'none' },
+        { name: 'Purple', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+        { name: 'Sunset', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+        { name: 'Ocean', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+        { name: 'Forest', value: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+        { name: 'Rose', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+        { name: 'Dawn', value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+        { name: 'Peach', value: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
+        { name: 'Night', value: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' },
+        { name: 'Fire', value: 'linear-gradient(135deg, #f7971e, #ffd200)' },
+        { name: 'Teal', value: 'linear-gradient(135deg, #11998e, #38ef7d)' },
+        { name: 'Dark', value: '#1a1a2e' }
     ];
     
-    var html = '<div class="wallpaper-picker"><h3>Chat Wallpaper</h3><div class="wallpaper-options">';
-    wallpapers.forEach(function(w) {
-        html += '<div class="wallpaper-option" style="background:' + w + '" onclick="setWallpaper(\'' + w.replace(/'/g, "\\'") + '\')"></div>';
+    var colors = ['#f5f5f5', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec', '#f3e5f5', '#e0f7fa', '#fff8e1', '#efebe9', '#e8eaf6'];
+    
+    var html = '<div class="wallpaper-picker-modal">';
+    html += '<h3><i class="fas fa-palette"></i> Chat Wallpaper</h3>';
+    
+    // Custom image upload
+    html += '<div class="wallpaper-section-title">📷 Custom Image</div>';
+    html += '<div class="wallpaper-upload-area" onclick="document.getElementById(\'wallpaper-file-input\').click()">';
+    html += '<i class="fas fa-cloud-upload-alt"></i>';
+    html += '<span>Upload Image</span>';
+    html += '<small>PNG, JPG, GIF supported</small>';
+    html += '</div>';
+    html += '<input type="file" id="wallpaper-file-input" accept="image/*" style="display:none" onchange="uploadWallpaper(this)">';
+    
+    // Gradients
+    html += '<div class="wallpaper-section-title">✨ Gradients</div>';
+    html += '<div class="wallpaper-grid">';
+    gradients.forEach(function(g) {
+        var bg = g.value === 'none' ? 'var(--bg-secondary)' : g.value;
+        var border = g.value === 'none' ? '2px dashed var(--border)' : 'none';
+        html += '<div class="wallpaper-option-new" style="background:' + bg + ';border:' + border + '" onclick="setWallpaper(\'' + g.value.replace(/'/g, "\\'") + '\')" title="' + g.name + '">';
+        if (g.value === 'none') html += '<i class="fas fa-ban" style="color:var(--text-muted)"></i>';
+        html += '<span>' + g.name + '</span>';
+        html += '</div>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    
+    // Solid Colors
+    html += '<div class="wallpaper-section-title">🎨 Solid Colors</div>';
+    html += '<div class="wallpaper-colors">';
+    colors.forEach(function(c) {
+        html += '<div class="wallpaper-color-dot" style="background:' + c + '" onclick="setWallpaper(\'' + c + '\')" title="' + c + '"></div>';
+    });
+    html += '</div>';
+    
+    html += '</div>';
     showModal(html);
 }
 
-function setWallpaper(color) {
-    document.getElementById('chat-wallpaper').style.background = color;
+window.uploadWallpaper = function(input) {
+    var file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast('Image too large (max 5MB)', 'error'); return; }
     
-    // Save to current chat if active
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        setWallpaper('url(' + e.target.result + ')');
+    };
+    reader.readAsDataURL(file);
+};
+
+function setWallpaper(value) {
+    var wallpaperEl = document.getElementById('chat-wallpaper');
+    if (wallpaperEl) {
+        if (value === 'none') {
+            wallpaperEl.style.background = 'none';
+            wallpaperEl.style.backgroundImage = 'none';
+        } else if (value.startsWith('url(')) {
+            wallpaperEl.style.background = 'none';
+            wallpaperEl.style.backgroundImage = value;
+            wallpaperEl.style.backgroundSize = 'cover';
+            wallpaperEl.style.backgroundPosition = 'center';
+        } else {
+            wallpaperEl.style.background = value;
+            wallpaperEl.style.backgroundImage = '';
+        }
+    }
+    
     if (activeChat) {
         var chats = Storage.get('chats') || [];
         var chat = chats.find(function(c) { return c.id === activeChat.id; });
         if (chat) {
-            chat.wallpaper = color;
+            chat.wallpaper = value;
             Storage.set('chats', chats);
-            
-            // Sync to Firebase
-            if (typeof syncChat === 'function') {
-                syncChat(chat);
-            }
         }
     }
     
     closeModal();
-    showToast('Wallpaper changed', 'success');
+    showToast('Wallpaper changed!', 'success');
 }
 
 function showChangePassword() {

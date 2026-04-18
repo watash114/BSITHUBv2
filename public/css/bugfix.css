@@ -3137,3 +3137,126 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
 .option-toggle.active::after {
     transform: translateX(14px) !important;
 }
+
+/* ==========================================
+   Enhanced Wallpaper Picker
+   ========================================== */
+.wallpaper-picker-modal {
+    padding: 20px !important;
+    max-width: 420px !important;
+    min-width: 360px !important;
+}
+
+.wallpaper-picker-modal h3 {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    margin-bottom: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.wallpaper-section-title {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+    color: var(--text-secondary) !important;
+    margin: 14px 0 8px !important;
+}
+
+/* Upload Area */
+.wallpaper-upload-area {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 20px !important;
+    border: 2px dashed var(--primary) !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    background: rgba(102,126,234,0.05) !important;
+    transition: all 0.2s !important;
+    text-align: center !important;
+}
+
+.wallpaper-upload-area:hover {
+    background: rgba(102,126,234,0.12) !important;
+    border-color: #764ba2 !important;
+}
+
+.wallpaper-upload-area i {
+    font-size: 28px !important;
+    color: var(--primary) !important;
+}
+
+.wallpaper-upload-area span {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--primary) !important;
+}
+
+.wallpaper-upload-area small {
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+}
+
+/* Gradient Grid */
+.wallpaper-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+}
+
+.wallpaper-option-new {
+    height: 64px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    padding-bottom: 6px !important;
+    transition: transform 0.15s, box-shadow 0.15s !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.wallpaper-option-new:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+
+.wallpaper-option-new span {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: white !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+    background: rgba(0,0,0,0.2) !important;
+    padding: 1px 6px !important;
+    border-radius: 6px !important;
+}
+
+/* Color Dots */
+.wallpaper-colors {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 4px !important;
+}
+
+.wallpaper-color-dot {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    border: 2px solid transparent !important;
+    transition: all 0.15s !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+}
+
+.wallpaper-color-dot:hover {
+    transform: scale(1.15) !important;
+    border-color: var(--primary) !important;
+}
