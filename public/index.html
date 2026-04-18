@@ -444,40 +444,13 @@
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
-                                <div class="chat-input">
-                                    <button class="btn-icon" title="Attach File" id="attach-file-btn">
-                                        <i class="fas fa-paperclip"></i>
-                                    </button>
-                                    <input type="file" id="file-input" style="display: none;" accept="image/*,.pdf,.doc,.docx,.txt">
-                                    <button class="btn-icon" title="GIF" id="gif-btn">
-                                        <i class="fas fa-image"></i>
-                                    </button>
-                                    <div class="gif-picker" id="gif-picker" style="display: none;">
+                                <div class="chat-input-bar" id="chat-input-bar">
+                                    <!-- Pickers (popup - outside flow) -->
+                                    <div class="gif-picker" id="gif-picker" style="display:none;">
                                         <input type="text" id="gif-search" placeholder="Search GIFs...">
                                         <div class="gif-grid" id="gif-grid"></div>
                                     </div>
-                                    <div class="mentions-dropdown" id="mentions-dropdown" style="display: none;"></div>
-                                    <input type="text" id="message-input" placeholder="Type a message... Use @ to mention" autocomplete="off">
-                                    <input type="file" id="file-input" accept="image/*" style="display: none;">
-                                    <button class="btn-icon" title="Send Image" id="image-btn">
-                                        <i class="fas fa-image"></i>
-                                    </button>
-                                    <button class="btn-icon" title="Voice Message" id="voice-btn">
-                                        <i class="fas fa-microphone"></i>
-                                    </button>
-                                    <button class="btn-icon" title="Emoji" id="emoji-btn">
-                                        <i class="fas fa-smile"></i>
-                                    </button>
-                                    <button class="btn-icon" onclick="showQuickReplies()" title="Quick Replies">
-                                        <i class="fas fa-bolt"></i>
-                                    </button>
-                                    <button class="btn-icon" onclick="showScheduleMessage()" title="Schedule Message">
-                                        <i class="fas fa-clock"></i>
-                                    </button>
-                                    <button class="btn-icon" onclick="showPinnedMessages()" title="Pinned Messages">
-                                        <i class="fas fa-thumbtack"></i>
-                                    </button>
-                                    <div class="emoji-picker" id="emoji-picker" style="display: none;">
+                                    <div class="emoji-picker" id="emoji-picker" style="display:none;">
                                         <div class="emoji-categories">
                                             <button class="emoji-category active" data-category="smileys">😀</button>
                                             <button class="emoji-category" data-category="hearts">❤️</button>
@@ -487,9 +460,29 @@
                                         </div>
                                         <div class="emoji-list" id="emoji-list"></div>
                                     </div>
-                                    <button class="btn-icon btn-send" id="send-btn" title="Send">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
+                                    <!-- Input row -->
+                                    <div class="chat-input-row">
+                                        <button class="input-icon-btn" title="Attach" id="attach-file-btn">
+                                            <i class="fas fa-paperclip"></i>
+                                        </button>
+                                        <input type="file" id="file-input" style="display:none" accept="image/*,.pdf,.doc,.docx,.txt">
+                                        <button class="input-icon-btn" title="GIF" id="gif-btn">
+                                            <i class="fas fa-film"></i>
+                                        </button>
+                                        <div class="input-field-wrapper">
+                                            <div class="mentions-dropdown" id="mentions-dropdown" style="display:none;"></div>
+                                            <input type="text" id="message-input" class="chat-text-input" placeholder="Type a message..." autocomplete="off">
+                                        </div>
+                                        <button class="input-icon-btn" title="Emoji" id="emoji-btn">
+                                            <i class="fas fa-smile"></i>
+                                        </button>
+                                        <button class="input-icon-btn" title="Voice" id="voice-btn">
+                                            <i class="fas fa-microphone"></i>
+                                        </button>
+                                        <button class="input-send-btn" id="send-btn" title="Send">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

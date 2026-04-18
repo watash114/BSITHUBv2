@@ -523,3 +523,107 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
         display: none !important;
     }
 }
+
+/* ==========================================
+   Clean Chat Input Bar
+   ========================================== */
+
+/* Main input bar container */
+.chat-input-bar {
+    flex-shrink: 0 !important;
+    padding: 10px 16px !important;
+    background: var(--bg-primary) !important;
+    border-top: 1px solid var(--border) !important;
+    position: relative !important;
+}
+
+/* Input row */
+.chat-input-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 24px !important;
+    padding: 6px 8px !important;
+}
+
+/* Input field wrapper */
+.input-field-wrapper {
+    flex: 1 !important;
+    position: relative !important;
+    min-width: 0 !important;
+}
+
+/* Text input */
+.chat-text-input,
+#message-input {
+    width: 100% !important;
+    border: none !important;
+    background: transparent !important;
+    font-size: 15px !important;
+    color: var(--text-primary) !important;
+    outline: none !important;
+    padding: 6px 4px !important;
+}
+
+.chat-text-input::placeholder,
+#message-input::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Icon buttons in input */
+.input-icon-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 17px !important;
+    transition: all 0.15s !important;
+    flex-shrink: 0 !important;
+}
+
+.input-icon-btn:hover {
+    background: var(--bg-tertiary) !important;
+    color: var(--primary) !important;
+}
+
+/* Send button */
+.input-send-btn,
+#send-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border: none !important;
+    background: var(--primary) !important;
+    color: white !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
+    transition: opacity 0.15s !important;
+}
+
+.input-send-btn:hover,
+#send-btn:hover {
+    opacity: 0.85 !important;
+}
+
+/* Old .chat-input class - hide it if still used */
+.chat-input:not(.chat-input-bar) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 10px 16px !important;
+    background: var(--bg-primary) !important;
+    border-top: 1px solid var(--border) !important;
+}

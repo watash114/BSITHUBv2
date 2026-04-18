@@ -231,3 +231,53 @@
     }
     
 })();
+
+// ==========================================
+// Fix input bar - ensure send button works
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Fix send button
+    var sendBtn = document.getElementById('send-btn');
+    if (sendBtn) {
+        sendBtn.onclick = function() {
+            var input = document.getElementById('message-input');
+            if (input && input.value.trim()) {
+                if (typeof sendMessage === 'function') {
+                    sendMessage(input.value.trim());
+                    input.value = '';
+                }
+            }
+        };
+    }
+    
+    // Fix enter key on message input
+    var msgInput = document.getElementById('message-input');
+    if (msgInput) {
+        msgInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                var sendBtn = document.getElementById('send-btn');
+                if (sendBtn) sendBtn.click();
+            }
+        });
+        
+        msgInput.addEventListener('input', function() {
+            if (typeof sendTypingIndicator === 'function') sendTypingIndicator();
+            if (typeof handleMentionInput === 'function') handleMentionInput(this);
+        });
+    }
+    
+    // More input options popup
+    window.showMoreInputOptions = function() {
+        var html = '<div style="padding:12px"><h4 style="margin-bottom:12px">More Options</h4>';
+        html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
+        html += '<button onclick="showQuickReplies();closeModal()" style="padding:12px;border:none;background:var(--bg-secondary);border-radius:10px;cursor:pointer"><i class="fas fa-bolt" style="display:block;font-size:20px;margin-bottom:6px;color:var(--primary)"></i>Quick Reply</button>';
+        html += '<button onclick="showScheduleMessage();closeModal()" style="padding:12px;border:none;background:var(--bg-secondary);border-radius:10px;cursor:pointer"><i class="fas fa-clock" style="display:block;font-size:20px;margin-bottom:6px;color:var(--primary)"></i>Schedule</button>';
+        html += '<button onclick="showPinnedMessages();closeModal()" style="padding:12px;border:none;background:var(--bg-secondary);border-radius:10px;cursor:pointer"><i class="fas fa-thumbtack" style="display:block;font-size:20px;margin-bottom:6px;color:var(--primary)"></i>Pinned</button>';
+        html += '<button onclick="shareLocation();closeModal()" style="padding:12px;border:none;background:var(--bg-secondary);border-radius:10px;cursor:pointer"><i class="fas fa-map-marker-alt" style="display:block;font-size:20px;margin-bottom:6px;color:var(--primary)"></i>Location</button>';
+        html += '<button onclick="showCreatePoll();closeModal()" style="padding:12px;border:none;background:var(--bg-secondary);border-radius:10px;cursor:pointer"><i class="fas fa-poll" style="display:block;font-size:20px;margin-bottom:6px;color:var(--primary)"></i>Poll</button>';
+        html += '<button onclick="showStickers();closeModal()" style="padding:12px;border:none;background:var(--bg-secondary);border-radius:10px;cursor:pointer"><i class="fas fa-sticky-note" style="display:block;font-size:20px;margin-bottom:6px;color:var(--primary)"></i>Stickers</button>';
+        html += '</div></div>';
+        if (typeof showModal === 'function') showModal(html);
+    };
+});
