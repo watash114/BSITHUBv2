@@ -10484,6 +10484,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         if (firebaseDb) {
+            // Note: Add ".indexOn": "createdAt" at /posts in Firebase Console to fix index warning
             firebaseDb.ref('posts').orderByChild('createdAt').limitToLast(50).on('value', function(snapshot) {
                 var fbPosts = [];
                 snapshot.forEach(function(child) { var p = child.val(); if (p) fbPosts.push(p); });
