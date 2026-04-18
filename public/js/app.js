@@ -4613,14 +4613,6 @@ function showChatOptions() {
         html += '</div>';
     }
     
-    // Lock Chat
-    var isLocked = chat && chat.locked;
-    html += '<div class="option-item" onclick="toggleChatLock()">';
-    html += '<i class="fas fa-lock' + (isLocked ? '' : '') + '"></i>';
-    html += '<span>' + (isLocked ? 'Unlock' : 'Lock') + ' Chat</span>';
-    html += '<div class="option-toggle ' + (isLocked ? 'active' : '') + '"></div>';
-    html += '</div>';
-    
     // Clear history
     html += '<div class="option-item" onclick="clearChatHistory()">';
     html += '<i class="fas fa-eraser"></i>';
