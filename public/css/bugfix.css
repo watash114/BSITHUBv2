@@ -2039,3 +2039,74 @@ textarea.form-input {
     object-fit: contain !important;
     border-radius: 16px !important;
 }
+
+/* ==========================================
+   Enhanced Loading Screen
+   ========================================== */
+#app-loading-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: #0f0f1a !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 99999 !important;
+    gap: 0 !important;
+}
+
+.loading-logo {
+    width: 90px !important;
+    height: 90px !important;
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    border-radius: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 42px !important;
+    font-weight: 900 !important;
+    color: white !important;
+    margin-bottom: 24px !important;
+    box-shadow: 0 0 40px rgba(102,126,234,0.5), 0 0 80px rgba(102,126,234,0.2) !important;
+    animation: logoPulse 2s ease-in-out infinite !important;
+}
+
+@keyframes logoPulse {
+    0%, 100% { box-shadow: 0 0 40px rgba(102,126,234,0.5), 0 0 80px rgba(102,126,234,0.2); transform: scale(1); }
+    50% { box-shadow: 0 0 60px rgba(102,126,234,0.8), 0 0 120px rgba(102,126,234,0.4); transform: scale(1.05); }
+}
+
+.loading-text {
+    font-size: 32px !important;
+    font-weight: 900 !important;
+    letter-spacing: 6px !important;
+    background: linear-gradient(135deg, #667eea, #a78bfa, #06b6d4) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    margin-bottom: 8px !important;
+}
+
+.loading-sub {
+    font-size: 14px !important;
+    color: rgba(255,255,255,0.4) !important;
+    letter-spacing: 3px !important;
+    text-transform: uppercase !important;
+    margin-bottom: 40px !important;
+}
+
+.loading-spinner {
+    width: 40px !important;
+    height: 40px !important;
+    border: 3px solid rgba(102,126,234,0.15) !important;
+    border-top-color: #667eea !important;
+    border-radius: 50% !important;
+    animation: spin 0.8s linear infinite !important;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
