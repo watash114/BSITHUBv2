@@ -4546,55 +4546,59 @@ function showChatOptions() {
     
     var chats = Storage.get('chats') || [];
     var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    var isMuted = chat && chat.muted;
+    var isPinned = chat && chat.pinned;
+    var isLocked = chat && chat.locked;
+    var isGroup = chat && chat.isGroup;
+    var chatName = isGroup ? (chat.groupName || 'Group') : 'Chat';
     
     var html = '<div class="chat-options-modal">';
     html += '<div class="chat-options-header">';
-    html += '<h3><i class="fas fa-cog"></i> Chat Options</h3>';
+    html += '<h3><i class="fas fa-cog"></i> ' + escapeHtml(chatName) + '</h3>';
     html += '</div>';
     html += '<div class="chat-options-list">';
     
     // Group-specific options
-    if (chat && chat.isGroup) {
-        html += '<div class="option-item" onclick="showGroupInfo()">';
-        html += '<i class="fas fa-users"></i>';
-        html += '<span>Group Info</span>';
-        html += '<i class="fas fa-chevron-right"></i>';
+    if (isGroup) {
+        html += '<div class="option-item" onclick="showGroupInfo(); closeModal();">';
+        html += '<i class="fas fa-users"></i><span>Group Info</span><i class="fas fa-chevron-right"></i>';
         html += '</div>';
-        html += '<div class="option-item" onclick="leaveGroup()">';
-        html += '<i class="fas fa-sign-out-alt" style="color: #ff4d4d;"></i>';
-        html += '<span style="color: #ff4d4d;">Leave Group</span>';
-        html += '<i class="fas fa-chevron-right"></i>';
+        html += '<div class="option-item" onclick="leaveGroup();">';
+        html += '<i class="fas fa-sign-out-alt" style="color:#ef4444"></i><span style="color:#ef4444">Leave Group</span><i class="fas fa-chevron-right"></i>';
         html += '</div>';
         html += '<div class="option-divider"></div>';
     }
     
-    // Notification toggle
-    var isMuted = chat && chat.muted;
+    // Mute
     html += '<div class="option-item" onclick="toggleMuteChat()">';
     html += '<i class="fas fa-bell' + (isMuted ? '-slash' : '') + '"></i>';
     html += '<span>' + (isMuted ? 'Unmute' : 'Mute') + ' Notifications</span>';
-    html += '<div class="option-toggle ' + (isMuted ? 'active' : '') + '"></div>';
-    html += '</div>';
+    html += '<div class="option-toggle ' + (isMuted ? 'active' : '') + '"></div></div>';
     
-    // Pin toggle
-    var isPinned = chat && chat.pinned;
+    // Pin
     html += '<div class="option-item" onclick="togglePinChat()">';
     html += '<i class="fas fa-thumbtack"></i>';
     html += '<span>' + (isPinned ? 'Unpin' : 'Pin') + ' Chat</span>';
-    html += '<div class="option-toggle ' + (isPinned ? 'active' : '') + '"></div>';
-    html += '</div>';
+    html += '<div class="option-toggle ' + (isPinned ? 'active' : '') + '"></div></div>';
+    
+    // Lock
+    html += '<div class="option-item" onclick="toggleChatLock()">';
+    html += '<i class="fas fa-' + (isLocked ? 'lock' : 'lock-open') + '"></i>';
+    html += '<span>' + (isLocked ? 'Unlock' : 'Lock') + ' Chat</span>';
+    html += '<div class="option-toggle ' + (isLocked ? 'active' : '') + '"></div></div>';
     
     html += '<div class="option-divider"></div>';
     
     // Wallpaper
-    html += '<div class="option-item" onclick="showWallpaperPicker()">';
-    html += '<i class="fas fa-palette"></i>';
-    html += '<span>Chat Wallpaper</span>';
-    html += '<i class="fas fa-chevron-right"></i>';
-    html += '</div>';
+    html += '<div class="option-item" onclick="showWallpaperPicker(); closeModal();">';
+    html += '<i class="fas fa-palette"></i><span>Chat Wallpaper</span><i class="fas fa-chevron-right"></i></div>';
+    
+    // Media Gallery
+    html += '<div class="option-item" onclick="showMediaGallery(); closeModal();">';
+    html += '<i class="fas fa-images"></i><span>Shared Media</span><i class="fas fa-chevron-right"></i></div>';
     
     // Archive
-    html += '<div class="option-item" onclick="archiveChat()">';
+    html += '<div class="option-item" onclick="archiveChat();">';
     html += '<i class="fas fa-archive"></i>';
     html += '<span>Archive Chat</span>';
     html += '<i class="fas fa-chevron-right"></i>';
@@ -19164,3 +19168,18 @@ window.addEventListener('load', function() {
         }
     }, 1000);
 });
+
+// ==========================================
+// Chat Options - Missing Functions
+// ==========================================
+function toggleChatLock() {
+    if (!activeChat) return;
+    var chats = Storage.get('chats') || [];
+    var chat = chats.find(function(c) { return c.id === activeChat.id; });
+    if (chat) {
+        chat.locked = !chat.locked;
+        Storage.set('chats', chats);
+        closeModal();
+        showToast(chat.locked ? 'Chat locked' : 'Chat unlocked', 'success');
+    }
+}

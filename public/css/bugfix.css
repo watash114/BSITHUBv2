@@ -747,3 +747,148 @@ html, body {
     position: relative !important;
     overflow: hidden !important;
 }
+
+/* ==========================================
+   Enhanced Chat Options Modal
+   ========================================== */
+.chat-options-modal {
+    padding: 0 !important;
+    min-width: 280px !important;
+    max-width: 320px !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+}
+
+.chat-options-header {
+    padding: 16px 20px !important;
+    border-bottom: 1px solid var(--border) !important;
+    background: var(--bg-secondary) !important;
+}
+
+.chat-options-header h3 {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    color: var(--text-primary) !important;
+}
+
+.chat-options-header h3 i {
+    color: var(--primary) !important;
+    font-size: 14px !important;
+}
+
+.chat-options-list {
+    padding: 8px !important;
+}
+
+.option-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 14px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: background 0.15s !important;
+    margin-bottom: 2px !important;
+}
+
+.option-item:hover {
+    background: var(--bg-secondary) !important;
+}
+
+.option-item:active {
+    background: var(--bg-tertiary) !important;
+    transform: scale(0.99) !important;
+}
+
+.option-item > i:first-child {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: var(--bg-secondary) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    color: var(--primary) !important;
+    flex-shrink: 0 !important;
+}
+
+.option-item span {
+    flex: 1 !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+}
+
+.option-item > i:last-child {
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+}
+
+.option-item.danger > i:first-child {
+    color: #ef4444 !important;
+    background: rgba(239,68,68,0.1) !important;
+}
+
+.option-item.danger span {
+    color: #ef4444 !important;
+}
+
+.option-divider {
+    height: 1px !important;
+    background: var(--border) !important;
+    margin: 6px 4px !important;
+    border-radius: 1px !important;
+}
+
+.option-toggle {
+    width: 38px !important;
+    height: 22px !important;
+    background: var(--bg-tertiary) !important;
+    border-radius: 11px !important;
+    position: relative !important;
+    transition: background 0.2s !important;
+    flex-shrink: 0 !important;
+}
+
+.option-toggle::after {
+    content: '' !important;
+    position: absolute !important;
+    width: 18px !important;
+    height: 18px !important;
+    background: white !important;
+    border-radius: 50% !important;
+    top: 2px !important;
+    left: 2px !important;
+    transition: transform 0.2s !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+}
+
+.option-toggle.active {
+    background: var(--primary) !important;
+}
+
+.option-toggle.active::after {
+    transform: translateX(16px) !important;
+}
+
+/* Modal backdrop - make it blur */
+#modal {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    background: rgba(0,0,0,0.4) !important;
+}
+
+/* Modal content slide in */
+#modal-content {
+    animation: slideUpModal 0.2s ease !important;
+}
+
+@keyframes slideUpModal {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
