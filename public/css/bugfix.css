@@ -2000,10 +2000,10 @@ textarea.form-input {
    Brand Logo
    ========================================== */
 .brand-logo {
-    width: 32px !important;
-    height: 32px !important;
+    width: 44px !important;
+    height: 44px !important;
     object-fit: contain !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     flex-shrink: 0 !important;
 }
 
