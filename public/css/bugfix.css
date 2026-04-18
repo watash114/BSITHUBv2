@@ -627,3 +627,84 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
     background: var(--bg-primary) !important;
     border-top: 1px solid var(--border) !important;
 }
+
+/* ==========================================
+   Fix Click Blocking Issues
+   ========================================== */
+
+/* Ensure all interactive elements are clickable */
+button,
+a,
+input,
+select,
+textarea,
+.btn,
+.btn-icon,
+.nav-item,
+.chat-item,
+.input-icon-btn,
+.input-send-btn,
+.message-action-btn,
+.emoji-item,
+.gif-item,
+.reaction-option,
+.modal-close {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: auto !important;
+}
+
+/* Fix FAB button blocking clicks */
+.fab-container,
+.fab-button,
+#fab-btn {
+    z-index: 100 !important;
+}
+
+/* Ensure modals are clickable */
+.modal-content {
+    pointer-events: auto !important;
+}
+
+/* Fix z-index stacking */
+.chat-active,
+#chat-active {
+    z-index: 1 !important;
+}
+
+#chat-messages {
+    z-index: 2 !important;
+}
+
+.chat-input-bar {
+    z-index: 3 !important;
+}
+
+.modal,
+#modal {
+    z-index: 10000 !important;
+}
+
+/* Sidebar nav items */
+.sidebar-nav .nav-item {
+    pointer-events: auto !important;
+    z-index: 10 !important;
+}
+
+/* Chat list items */
+.chat-list .chat-item,
+.chat-item-wrapper {
+    pointer-events: auto !important;
+}
+
+/* Fix app loading screen not hiding */
+#app-loading-screen {
+    pointer-events: none !important;
+}
+
+#app-loading-screen.hide,
+#app-loading-screen[style*="display: none"] {
+    display: none !important;
+    pointer-events: none !important;
+}

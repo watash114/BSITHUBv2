@@ -199,8 +199,7 @@
             var userId = chatItem.dataset.userId;
             
             if (chatId && typeof window.openChat === 'function') {
-                e.preventDefault();
-                e.stopPropagation();
+                // Do NOT prevent default or stop propagation - breaks other clicks
                 window.openChat(chatId, userId);
             }
         }, true);
