@@ -16965,6 +16965,13 @@ function renderMessagesMobile(chatId) {
             html += '<div class="message-file"><a href="' + msg.fileData + '" download>?? ' + (msg.fileName || 'File') + '</a></div>';
         } else if (msg.poll) {
             html += '<div class="poll-message"><div class="poll-question">?? ' + escapeHtml(msg.poll.question) + '</div></div>';
+        } else if (msg.isCallMsg) {
+            var callIcon = msg.callType === 'video' ? 'fas fa-video' : 'fas fa-phone';
+            var callTitle = msg.callType === 'video' ? 'Video Call' : 'Voice Call';
+            html += '<div class="message-call">';
+            html += '<div class="message-call-icon"><i class="' + callIcon + '"></i></div>';
+            html += '<div class="message-call-info"><span class="message-call-title">' + callTitle + '</span><span class="message-call-sub">Tap to join</span></div>';
+            html += '</div>';
         } else {
             html += '<div class="message-text">' + escapeHtml(text) + '</div>';
         }
@@ -18341,6 +18348,13 @@ window.renderMessagesSimple = function(chatId) {
             html += '<div class="message-audio"><audio controls src="' + msg.audioData + '"></audio></div>';
         } else if (msg.location) {
             html += '<a href="' + msg.location.url + '" target="_blank" class="location-link">?? Location</a>';
+        } else if (msg.isCallMsg) {
+            var ci = msg.callType === 'video' ? 'fas fa-video' : 'fas fa-phone';
+            var ct = msg.callType === 'video' ? 'Video Call' : 'Voice Call';
+            html += '<div class="message-call">';
+            html += '<div class="message-call-icon"><i class="' + ci + '"></i></div>';
+            html += '<div class="message-call-info"><span class="message-call-title">' + ct + '</span><span class="message-call-sub">Tap to join</span></div>';
+            html += '</div>';
         } else {
             html += '<div class="message-text">' + escapeHtml(msg.text || '') + '</div>';
         }
@@ -19187,38 +19201,4 @@ function toggleChatLock() {
     }
 }
 
-// ==========================================
-// Enhanced Message Rendering - Call Messages
-// ==========================================
-var originalRenderMessages = window.renderMessages;
-window.renderMessages = function(chatId) {
-    if (typeof originalRenderMessages === 'function') {
-        originalRenderMessages(chatId);
-    }
-    
-    // Post-process call messages
-    document.querySelectorAll('[data-message-id]').forEach(function(msgEl) {
-        var msgId = msgEl.dataset.messageId;
-        var messages = Storage.get('messages') || [];
-        var msg = messages.find(function(m) { return m.id === msgId; });
-        
-        if (msg && msg.isCallMsg) {
-            var bubble = msgEl.querySelector('.message-bubble');
-            if (bubble && !bubble.querySelector('.message-call')) {
-                var textEl = bubble.querySelector('.message-text');
-                if (textEl) {
-                    var icon = msg.callType === 'video' ? 'fas fa-video' : 'fas fa-phone';
-                    var title = msg.callType === 'video' ? 'Video Call' : 'Voice Call';
-                    textEl.innerHTML = 
-                        '<div class="message-call">' +
-                        '<div class="message-call-icon"><i class="' + icon + '"></i></div>' +
-                        '<div class="message-call-info">' +
-                        '<span class="message-call-title">' + title + '</span>' +
-                        '<span class="message-call-sub">Tap to join again</span>' +
-                        '</div>' +
-                        '</div>';
-                }
-            }
-        }
-    });
-};
+// Call message rendering handled inline in renderMessages

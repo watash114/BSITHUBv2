@@ -2630,3 +2630,43 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
     background: rgba(255,255,255,0.2) !important;
     border-color: rgba(255,255,255,0.3) !important;
 }
+
+/* Fix double bubble on call messages */
+.message.sent .message-bubble:has(.message-call) {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    padding: 10px 14px !important;
+}
+
+/* Fallback for browsers without :has() */
+.message-call {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.message-call-icon {
+    background: rgba(255,255,255,0.2) !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    color: white !important;
+}
+
+.message-call-title {
+    color: white !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    display: block !important;
+}
+
+.message-call-sub {
+    color: rgba(255,255,255,0.7) !important;
+    font-size: 11px !important;
+    display: block !important;
+}
