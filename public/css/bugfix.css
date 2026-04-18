@@ -101,8 +101,8 @@
     display: block !important;
 }
 
-/* Chats Section */
-#chats-section {
+/* Chats Section - only override display when active */
+#chats-section.active {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
