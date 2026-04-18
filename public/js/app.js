@@ -2305,7 +2305,20 @@ function openChat(chatId, userId) {
     // Apply wallpaper
     var wallpaper = chat.wallpaper || (Storage.get('settings') || {}).wallpaper || 'none';
     var chatWallpaper = document.getElementById('chat-wallpaper');
-    if (chatWallpaper) chatWallpaper.style.background = wallpaper;
+    if (chatWallpaper) {
+        if (!wallpaper || wallpaper === 'none') {
+            chatWallpaper.style.background = 'none';
+            chatWallpaper.style.backgroundImage = 'none';
+        } else if (wallpaper.startsWith('url(')) {
+            chatWallpaper.style.background = 'none';
+            chatWallpaper.style.backgroundImage = wallpaper;
+            chatWallpaper.style.backgroundSize = 'cover';
+            chatWallpaper.style.backgroundPosition = 'center';
+        } else {
+            chatWallpaper.style.background = wallpaper;
+            chatWallpaper.style.backgroundImage = '';
+        }
+    }
     
     // Render current messages
     renderMessages(chatId);

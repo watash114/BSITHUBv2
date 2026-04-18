@@ -137,7 +137,7 @@
     position: relative !important;
 }
 
-/* Fix chat-wallpaper - absolute so it doesn't take flex space */
+/* Chat wallpaper - shows behind messages */
 #chat-wallpaper {
     position: absolute !important;
     top: 0 !important;
@@ -146,9 +146,13 @@
     bottom: 0 !important;
     pointer-events: none !important;
     z-index: 0 !important;
-    opacity: 0 !important;
-    width: 0 !important;
-    height: 0 !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    transition: all 0.3s ease !important;
 }
 
 /* Fix chat messages container */
@@ -3259,4 +3263,29 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
 .wallpaper-color-dot:hover {
     transform: scale(1.15) !important;
     border-color: var(--primary) !important;
+}
+
+/* Ensure wallpaper is properly contained */
+#chat-active {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* Messages above wallpaper */
+.chat-main-header,
+#chat-messages,
+.chat-input-bar,
+.typing-indicator,
+.reply-preview,
+.chat-search-bar {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+/* Wallpaper overlay for readability */
+#chat-wallpaper::after {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0,0,0,0.08) !important;
 }
