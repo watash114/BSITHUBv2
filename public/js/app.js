@@ -4539,97 +4539,48 @@ function showStarredMessages() {
 // Chat Options
 // ==========================================
 function showChatOptions() {
-    if (!activeChat) {
-        showToast('Select a chat first', 'info');
-        return;
-    }
+    if (!activeChat) { showToast('Select a chat first', 'info'); return; }
     
     var chats = Storage.get('chats') || [];
     var chat = chats.find(function(c) { return c.id === activeChat.id; });
-    var isMuted = chat && chat.muted;
-    var isPinned = chat && chat.pinned;
-    var isLocked = chat && chat.locked;
-    var isGroup = chat && chat.isGroup;
+    if (!chat) { showToast('Chat not found', 'error'); return; }
+    
+    var isMuted = !!chat.muted;
+    var isPinned = !!chat.pinned;
+    var isLocked = !!chat.locked;
+    var isGroup = !!chat.isGroup;
     var chatName = isGroup ? (chat.groupName || 'Group') : 'Chat';
     
+    // Store chat ID for use in onclick
+    window._chatOptionsId = chat.id;
+    
     var html = '<div class="chat-options-modal">';
-    html += '<div class="chat-options-header">';
-    html += '<h3><i class="fas fa-cog"></i> ' + escapeHtml(chatName) + '</h3>';
-    html += '</div>';
+    html += '<div class="chat-options-header"><h3><i class="fas fa-cog"></i> ' + escapeHtml(chatName) + '</h3></div>';
     html += '<div class="chat-options-list">';
     
-    // Group-specific options
     if (isGroup) {
-        html += '<div class="option-item" onclick="showGroupInfo(); closeModal();">';
-        html += '<i class="fas fa-users"></i><span>Group Info</span><i class="fas fa-chevron-right"></i>';
-        html += '</div>';
-        html += '<div class="option-item" onclick="leaveGroup();">';
-        html += '<i class="fas fa-sign-out-alt" style="color:#ef4444"></i><span style="color:#ef4444">Leave Group</span><i class="fas fa-chevron-right"></i>';
-        html += '</div>';
+        html += '<div class="option-item" onclick="showGroupInfo();"><i class="fas fa-users"></i><span>Group Info</span><i class="fas fa-chevron-right"></i></div>';
+        html += '<div class="option-item" onclick="leaveGroup();"><i class="fas fa-sign-out-alt"></i><span style="color:#ef4444">Leave Group</span><i class="fas fa-chevron-right"></i></div>';
         html += '<div class="option-divider"></div>';
     }
     
-    // Mute
-    html += '<div class="option-item" onclick="toggleMuteChat()">';
-    html += '<i class="fas fa-bell' + (isMuted ? '-slash' : '') + '"></i>';
-    html += '<span>' + (isMuted ? 'Unmute' : 'Mute') + ' Notifications</span>';
-    html += '<div class="option-toggle ' + (isMuted ? 'active' : '') + '"></div></div>';
-    
-    // Pin
-    html += '<div class="option-item" onclick="togglePinChat()">';
-    html += '<i class="fas fa-thumbtack"></i>';
-    html += '<span>' + (isPinned ? 'Unpin' : 'Pin') + ' Chat</span>';
-    html += '<div class="option-toggle ' + (isPinned ? 'active' : '') + '"></div></div>';
-    
-    // Lock
-    html += '<div class="option-item" onclick="toggleChatLock()">';
-    html += '<i class="fas fa-' + (isLocked ? 'lock' : 'lock-open') + '"></i>';
-    html += '<span>' + (isLocked ? 'Unlock' : 'Lock') + ' Chat</span>';
-    html += '<div class="option-toggle ' + (isLocked ? 'active' : '') + '"></div></div>';
-    
+    html += '<div class="option-item" onclick="toggleMuteChat()"><i class="fas fa-bell"></i><span>' + (isMuted ? 'Unmute' : 'Mute') + ' Notifications</span><div class="option-toggle ' + (isMuted ? 'active' : '') + '"></div></div>';
+    html += '<div class="option-item" onclick="togglePinChat()"><i class="fas fa-thumbtack"></i><span>' + (isPinned ? 'Unpin' : 'Pin') + ' Chat</span><div class="option-toggle ' + (isPinned ? 'active' : '') + '"></div></div>';
+    html += '<div class="option-item" onclick="toggleChatLock()"><i class="fas fa-lock"></i><span>' + (isLocked ? 'Unlock' : 'Lock') + ' Chat</span><div class="option-toggle ' + (isLocked ? 'active' : '') + '"></div></div>';
     html += '<div class="option-divider"></div>';
+    html += '<div class="option-item" onclick="closeModal();showWallpaperPicker();"><i class="fas fa-palette"></i><span>Chat Wallpaper</span><i class="fas fa-chevron-right"></i></div>';
+    html += '<div class="option-item" onclick="closeModal();showMediaGallery();"><i class="fas fa-images"></i><span>Shared Media</span><i class="fas fa-chevron-right"></i></div>';
+    html += '<div class="option-item" onclick="closeModal();archiveChat();"><i class="fas fa-archive"></i><span>Archive Chat</span><i class="fas fa-chevron-right"></i></div>';
     
-    // Wallpaper
-    html += '<div class="option-item" onclick="showWallpaperPicker(); closeModal();">';
-    html += '<i class="fas fa-palette"></i><span>Chat Wallpaper</span><i class="fas fa-chevron-right"></i></div>';
-    
-    // Media Gallery
-    html += '<div class="option-item" onclick="showMediaGallery(); closeModal();">';
-    html += '<i class="fas fa-images"></i><span>Shared Media</span><i class="fas fa-chevron-right"></i></div>';
-    
-    // Archive
-    html += '<div class="option-item" onclick="archiveChat();">';
-    html += '<i class="fas fa-archive"></i>';
-    html += '<span>Archive Chat</span>';
-    html += '<i class="fas fa-chevron-right"></i>';
-    html += '</div>';
-    
-    // Nickname (for 1-on-1 chats)
-    if (!chat.isGroup) {
-        html += '<div class="option-item" onclick="showNicknameEditor()">';
-        html += '<i class="fas fa-user-tag"></i>';
-        html += '<span>Set Nickname</span>';
-        html += '<i class="fas fa-chevron-right"></i>';
-        html += '</div>';
+    if (!isGroup) {
+        html += '<div class="option-item" onclick="closeModal();showNicknameEditor();"><i class="fas fa-user-tag"></i><span>Set Nickname</span><i class="fas fa-chevron-right"></i></div>';
     }
     
-    // Clear history
-    html += '<div class="option-item" onclick="clearChatHistory()">';
-    html += '<i class="fas fa-eraser"></i>';
-    html += '<span>Clear Chat History</span>';
-    html += '<i class="fas fa-chevron-right"></i>';
-    html += '</div>';
-    
+    html += '<div class="option-item" onclick="closeModal();clearChatHistory();"><i class="fas fa-eraser"></i><span>Clear Chat History</span><i class="fas fa-chevron-right"></i></div>';
     html += '<div class="option-divider"></div>';
-    
-    // Delete
-    html += '<div class="option-item danger" onclick="deleteChat()">';
-    html += '<i class="fas fa-trash"></i>';
-    html += '<span>Delete Chat</span>';
-    html += '<i class="fas fa-chevron-right"></i>';
-    html += '</div>';
-    
+    html += '<div class="option-item danger" onclick="closeModal();deleteChat();"><i class="fas fa-trash"></i><span>Delete Chat</span><i class="fas fa-chevron-right"></i></div>';
     html += '</div></div>';
+    
     showModal(html);
 }
 
