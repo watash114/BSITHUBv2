@@ -1995,3 +1995,45 @@ textarea.form-input {
     transform: translateY(-1px) !important;
     box-shadow: 0 6px 16px rgba(102,126,234,0.4) !important;
 }
+
+/* ==========================================
+   Brand Logo
+   ========================================== */
+.brand-logo {
+    width: 32px !important;
+    height: 32px !important;
+    object-fit: contain !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important;
+}
+
+.brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    text-decoration: none !important;
+}
+
+.brand span {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: -0.5px !important;
+}
+
+/* Loading screen logo */
+.loading-logo {
+    width: 80px !important;
+    height: 80px !important;
+    background: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.loading-logo img {
+    width: 80px !important;
+    height: 80px !important;
+    object-fit: contain !important;
+    border-radius: 16px !important;
+}
