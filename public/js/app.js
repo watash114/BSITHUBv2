@@ -1414,13 +1414,38 @@ function cancelVerification() {
 }
 
 async function logout() {
-    setUserOffline();
-    if (realtimeInterval) {
-        clearInterval(realtimeInterval);
-    }
-    await DB.signOut();
+    try {
+        setUserOffline();
+    } catch(e) {}
+    
+    try {
+        if (realtimeInterval) {
+            clearInterval(realtimeInterval);
+        }
+    } catch(e) {}
+    
+    try {
+        if (typeof DB !== 'undefined' && DB.signOut) {
+            await DB.signOut();
+        }
+    } catch(e) {}
+    
     currentUser = null;
     Storage.remove('currentUser');
+    
+    // Show auth page
+    var authPage = document.getElementById('auth-page');
+    var appPage = document.getElementById('app-page');
+    
+    if (authPage) {
+        authPage.classList.add('active');
+        authPage.style.display = 'flex';
+    }
+    if (appPage) {
+        appPage.classList.remove('active');
+        appPage.style.display = 'none';
+    }
+    
     showAuthPage();
 }
 
