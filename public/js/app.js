@@ -6388,21 +6388,37 @@ window.uploadWallpaper = function(input) {
 
 function setWallpaper(value) {
     var wallpaperEl = document.getElementById('chat-wallpaper');
+    
     if (wallpaperEl) {
-        if (value === 'none') {
+        // Reset all styles first
+        wallpaperEl.removeAttribute('style');
+        wallpaperEl.style.position = 'absolute';
+        wallpaperEl.style.top = '0';
+        wallpaperEl.style.left = '0';
+        wallpaperEl.style.width = '100%';
+        wallpaperEl.style.height = '100%';
+        wallpaperEl.style.zIndex = '0';
+        wallpaperEl.style.pointerEvents = 'none';
+        wallpaperEl.style.opacity = '1';
+        
+        if (!value || value === 'none') {
             wallpaperEl.style.background = 'none';
             wallpaperEl.style.backgroundImage = 'none';
         } else if (value.startsWith('url(')) {
-            wallpaperEl.style.background = 'none';
             wallpaperEl.style.backgroundImage = value;
             wallpaperEl.style.backgroundSize = 'cover';
             wallpaperEl.style.backgroundPosition = 'center';
+            wallpaperEl.style.backgroundRepeat = 'no-repeat';
         } else {
             wallpaperEl.style.background = value;
-            wallpaperEl.style.backgroundImage = '';
+            wallpaperEl.style.backgroundSize = 'cover';
         }
+        
+        // Force repaint
+        wallpaperEl.offsetHeight;
     }
     
+    // Save to current chat
     if (activeChat) {
         var chats = Storage.get('chats') || [];
         var chat = chats.find(function(c) { return c.id === activeChat.id; });

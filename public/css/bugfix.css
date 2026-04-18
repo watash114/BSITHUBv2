@@ -3289,3 +3289,38 @@ html:not([data-theme="dark"]) .message.received .message-bubble {
     inset: 0 !important;
     background: rgba(0,0,0,0.08) !important;
 }
+
+/* ==========================================
+   FINAL WALLPAPER FIX
+   ========================================== */
+
+/* The chat area that contains wallpaper */
+.chat-active,
+#chat-active {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* Wallpaper fills the entire chat area */
+#chat-wallpaper {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    opacity: 1 !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Everything above wallpaper */
+.chat-main-header { z-index: 5 !important; position: relative !important; }
+#chat-messages { z-index: 1 !important; position: relative !important; }
+.chat-input-bar { z-index: 5 !important; position: relative !important; }
+.chat-input { z-index: 5 !important; position: relative !important; }
+.typing-indicator { z-index: 5 !important; position: relative !important; }
+.reply-preview { z-index: 5 !important; position: relative !important; }
+.chat-search-bar { z-index: 5 !important; position: relative !important; }
